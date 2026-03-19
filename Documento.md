@@ -46,6 +46,7 @@ erDiagram
 		numeric location_accuracy  ""  
 		varchar venue_significance  ""  
 		varchar venue_type  ""  
+		text waypoints_json  ""  
 		datetime created_at  ""  
 	}
 
@@ -150,6 +151,7 @@ erDiagram
 		numeric harsh_turning_score  ""  
 		numeric harsh_acceleration_score  ""  
 		numeric wrong_way_driving_score  ""  
+		text waypoints_json  ""  
 		datetime created_at  ""  
 	}
 
@@ -164,6 +166,7 @@ erDiagram
 		numeric magnitude  ""  
 		numeric confidence  ""  
 		varchar harsh_type  ""  
+		text waypoints_json  ""  
 	}
 
 	DrivingInsightsPhoneEvent {
@@ -174,6 +177,7 @@ erDiagram
 		bigint start_time_epoch  ""  
 		datetime end_time  ""  
 		bigint end_time_epoch  ""  
+		text waypoints_json  ""  
 	}
 
 	DrivingInsightsCallEvent {
@@ -186,6 +190,7 @@ erDiagram
 		bigint end_time_epoch  ""  
 		numeric min_travelled_speed_mps  ""  
 		numeric max_travelled_speed_mps  ""  
+		text waypoints_json  ""  
 	}
 
 	DrivingInsightsSpeedingEvent {
@@ -196,6 +201,7 @@ erDiagram
 		bigint start_time_epoch  ""  
 		datetime end_time  ""  
 		bigint end_time_epoch  ""  
+		text waypoints_json  ""  
 	}
 
 	DrivingInsightsWrongWayDrivingEvent {
@@ -206,6 +212,7 @@ erDiagram
 		bigint start_time_epoch  ""  
 		datetime end_time  ""  
 		bigint end_time_epoch  ""  
+		text waypoints_json  ""  
 	}
 
 	VehicleCrashEvent {
@@ -273,6 +280,7 @@ erDiagram
 		varchar occupant_role  ""  
 		boolean is_provisional  ""  
 		text transport_tags_json  ""  
+		text waypoints_json  ""  
 		datetime created_at  ""  
 		datetime updated_at  ""  
 	}
