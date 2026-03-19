@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
 	direction TB
 	SentianceEventos {
@@ -297,3 +298,4 @@ erDiagram
 	Trip||--o{DrivingInsightsTrip:"es el ancestro de"
 	TimelineEventHistory}o--||Trip:"alimenta a"
 	UserContextEventHistory}o--||Trip:"alimenta a"
+```
