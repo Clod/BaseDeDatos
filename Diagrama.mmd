@@ -1,18 +1,19 @@
 erDiagram
 	direction TB
 	SentianceEventos {
-		bigint sentiance_event_pk PK ""  
-		varchar record_type  ""  
-		varchar sentiance_user_id  ""  
-		datetime event_time  ""  
-		datetime received_at  ""  
-		text payload_json  ""  
-		varchar payload_hash  ""  
+		int id PK ""  
+		varchar sentianceid  ""  
+		datetime fechahora  ""  
+		varchar json  ""  
+		varchar tipo  ""  
+		datetime created_at  ""  
+		bit procesado  ""  
+		varchar app_version  ""  
 	}
 
 	SdkSourceEvent {
 		bigint source_event_id PK ""  
-		bigint sentiance_event_pk FK ""  
+		int id FK ""  
 		varchar record_type  ""  
 		varchar sentiance_user_id  ""  
 		datetime source_time  ""  
