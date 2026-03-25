@@ -11,8 +11,8 @@ flowchart TB
     %% Intermediate Payload Tables
     subgraph Intermediate Processing
         Timeline[TimelineEventHistory]
-        ContextPayload[UserContextPayload]
-        ContextEvents[UserContextEventHistory]
+        ContextPayload[UserContextHeader]
+        ContextEvents[UserContextEventDetail]
     end
     
     %% Canonical Trip
@@ -71,12 +71,12 @@ flowchart TB
 2. **Splitting the Data**
     *   From `SdkSourceEvent`, the data branches out into specific domain tables:
         *   **Timeline events:** Go to `TimelineEventHistory`.
-        *   **User Context events:** The full payload goes to `UserContextPayload`, and the inner events array is broken out into `UserContextEventHistory`.
+        *   **User Context events:** The full payload goes to `UserContextHeader`, and the inner events array is broken out into `UserContextEventDetail`.
         *   **Vehicle Crashes:** Are stored directly into `VehicleCrashEvent`.
         *   **Completed trip scores:** Land safely in `DrivingInsightsTrip`.
 
 3. **Consolidating the Trip**
-    *   Both `TimelineEventHistory` and `UserContextEventHistory` feed into the canonical **`Trip`** model to define the start, end, location, and transport mode of the journey.
+    *   Both `TimelineEventHistory` and `UserContextEventDetail` feed into the canonical **`Trip`** model to define the start, end, location, and transport mode of the journey.
 
 4. **Insights Breakdown**
     *   Once `DrivingInsightsTrip` receives scores for a given transport, it acts as the parent repository for anomalous driving activities.

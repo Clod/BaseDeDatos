@@ -11,8 +11,8 @@ flowchart TB
     %% Intermediate Payload Tables
     subgraph Procesamiento Intermedio
         Timeline[TimelineEventHistory]
-        ContextPayload[UserContextPayload]
-        ContextEvents[UserContextEventHistory]
+        ContextPayload[UserContextHeader]
+        ContextEvents[UserContextEventDetail]
     end
     
     %% Canonical Trip
@@ -71,12 +71,12 @@ flowchart TB
 2. **Bifurcación de los Datos**
     *   A partir de `SdkSourceEvent`, la data se ramifica hacia tablas de dominio específicas:
         *   **Eventos de línea de tiempo (Timeline):** Se dirigen a `TimelineEventHistory`.
-        *   **Eventos de Contexto de Usuario (User Context):** El payload o mensaje completo va hacia `UserContextPayload`, mientras que el array interno de eventos se desgrana a detalle en la tabla `UserContextEventHistory`.
+        *   **Eventos de Contexto de Usuario (User Context):** El payload o mensaje completo va hacia `UserContextHeader`, mientras que el array interno de eventos se desgrana a detalle en la tabla `UserContextEventDetail`.
         *   **Choques de vehículos (Crashes):** Son detectados y almacenados directamente en `VehicleCrashEvent`.
         *   **Puntuación de viajes completados (Scores):** Aterrizan de forma segura en `DrivingInsightsTrip`.
 
 3. **Consolidación del Viaje (Trip)**
-    *   Tanto la tabla `TimelineEventHistory` como `UserContextEventHistory` alimentan al modelo canónico u oficial **`Trip`**. Esta tabla primaria consolida todo el viaje (establece su inicio, fin, ubicaciones concretas y el modo de transporte).
+    *   Tanto la tabla `TimelineEventHistory` como `UserContextEventDetail` alimentan al modelo canónico u oficial **`Trip`**. Esta tabla primaria consolida todo el viaje (establece su inicio, fin, ubicaciones concretas y el modo de transporte).
 
 4. **Desglose de Insights de Manejo**
     *   Una vez que `DrivingInsightsTrip` recibe las puntuaciones finales de un transporte, funciona como matriz y repositorio padre.
