@@ -101,8 +101,14 @@ El SDK expone eventos a través de arrays obtenidos asíncronamente luego del tr
 **Campos:** `usuario`, `json`
 **Equivalencia:** Toda esta información estará resguardada de forma natural al invocar la API de `UserContext` de Sentiance (`getUserContext`), recuperando un abanico inmenso de semánticas vinculadas al usuario como rutinas, segmentos, sub-segmentos (ej. `Home`, `Work`), que pueden simplemente volcarse bajo el campo crudo JSON de dicha tabla SQL.
 
-## Resumen de hallazgos
-La transición a *SentianceEventos* permite reconstruir más del 90-95% del ecosistema de las tablas analíticas, optimizándolo en tiempo real, pero el equipo de BackEnd deberá considerar las siguientes tareas en su Lambda de recolección:
-1.  **Detecciones Complejas Ausentes:** Scores como el *"Anticipative driving"* y eventos granulados *"Screen events"* exclusivos o *"Mounted events"* exclusivos (fuera de llamadas) no son soportados localmente. Si son excluyentes para el negocio, se requiere lógica interna propia para re-derivar.
-2.  **Transformaciones Geográficas:** Generar manualmente la string de `polyline` usando enrutadores y las coordenadas array provistas.`
-3.  **Computación de eventos:** Contar y filtar los eventos "fuertes" en base a atributos como severidad/magnitud expuestos en el Payload base.
+### Decisiones de Negocio y Reglas para AWS Lambda
+
+Con la retroalimentación del negocio, estas son las definiciones que conformarán las reglas de la función de Ingesta (AWL Lambda):
+
+1.  **Omisión de Novedades No-Soportadas Nativamente:** 
+    *   `anticipacion`, `celular_fijo` y `pantalla` **no bloquearán** el desarrollo porque se ignorarán completamente. Se guardarán como valores en cero (0) o nulos en las DBs para cumplir con los schemas, sin detener la importación del viaje.
+2.  **Tabla de Recorridos (`polyline`):**
+    *   Actualmente la BD SQL requiere estrictamente la string de la columna (campo NOT NULL).
+    *   Para satisfacer este esquema actual, la función Lambda construirá automáticamente el string cifrado *Polyline* a partir del listado serializado de `waypoints` crudos extraídos de la Payload (`TransportEvent.waypoints`). No interviene procesamiento extra-complejo, sino una simple librería de encoding (ej. la librería de Python `polyline` o `google-polyline` de NodeJS en Lambda).
+3.  **Filtrado de `EventosSignificantes`:**
+    *   Dado que no hay heurística para definir un nivel significativo hoy por hoy, todos los Eventos recolectados por Sentiance (aceleración, frenado, choques, uso de teléfono) poblarán de manera espejo **tanto la tabla `Eventos` como `EventosSignificantes`** temporalmente, o en su defecto, pospondremos el llenado de la tabla `Significantes` hasta que Operaciones defina los umbrales específicos de velocidad o gravedad `magnitude`.
