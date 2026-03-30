@@ -639,7 +639,7 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | `captured_at` | DATETIME | Instante de persistencia de la actividad. |
 | `activity_type` | VARCHAR | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). |
 | `trip_type` | VARCHAR | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje. |
-| `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. Estacionario. |
+| `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. **⚠️ Permite NULL:** Incluso si la actividad es "STATIONARY", la interfaz nativa los expone como opcionales (`?`); pueden llegar sin coordenadas si el celular pierde señal de red/GPS. |
 | `payload_json` | NVARCHAR(MAX) | Copia raw del JSON emitido por si varía en actualizaciones futuras. |
 
 #### 3.5.4. `TechnicalEventHistory`
