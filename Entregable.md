@@ -938,6 +938,9 @@ export interface CallWhileMovingEvent extends DrivingEvent {
 
 export interface SpeedingEvent extends DrivingEvent {}
 
+// Hereda todos los campos de DrivingEvent sin agregar propiedades estructurales adicionales
+export interface WrongWayDrivingEvent extends DrivingEvent {}
+
 export interface TransportEvent {  
   id: string;  
   startTime: string;  
@@ -1052,7 +1055,7 @@ sequenceDiagram
     rect rgb(240, 248, 255)
         ETL->>Raw: SELECT Top(N) WHERE is_processed = 0
         activate ETL
-        Raw-->>ETL: Lote de eventos encriptados JSON
+        Raw-->>ETL: Lote de eventos encapsulados en JSON
         
         ETL->>ETL: Parser: Deserializa e identifica el Event Type
         
