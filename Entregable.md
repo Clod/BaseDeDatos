@@ -248,6 +248,7 @@ erDiagram
 		numeric confidence
 		varchar severity
 		varchar detector_mode
+		text preceding_locations_json
 	}
 
 	SdkStatusHistory {
@@ -582,6 +583,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `confidence`                                    | NUMERIC   | `confidence`                                                                    |
 | `severity`                                      | VARCHAR   | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
 | `detector_mode`                                 | VARCHAR   | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
+| `preceding_locations_json`                      | TEXT      | Stringificado del JSON Array `precedingLocations`                               |
 
 
 #### 3.5.2. `SdkStatusHistory`
