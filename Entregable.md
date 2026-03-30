@@ -559,7 +559,10 @@ Deriva de `getHarshDrivingEvents()`.
 
 #### 3.4.3. `DrivingInsightsPhoneEvent` y `DrivingInsightsCallEvent`
 
-Deriva de inyecciones de `getPhoneUsageEvents()` y `getCallEvents()`.
+Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallEvents()`.
+
+> **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como **`DrivingInsightsCallEvent`** por consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: **`CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent`**.
+
 
 
 | Campo                    | Tipo            | Mapeo Sentiance                                 | Objeto Origen               |
