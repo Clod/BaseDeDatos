@@ -768,6 +768,10 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 
 ```json
 {
+  "criteria": [
+    "CURRENT_EVENT",
+    "ACTIVE_SEGMENTS"
+  ],
   "events": [
     { /* Array de objetos tipados como Timeline Event (Ver 4.1) */ }
   ],
