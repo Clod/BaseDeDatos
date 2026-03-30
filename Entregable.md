@@ -167,8 +167,6 @@ erDiagram
 		numeric harsh_braking_score
 		numeric harsh_turning_score
 		numeric harsh_acceleration_score
-		numeric wrong_way_driving_score
-		numeric attention_score
 		numeric distance_meters
 		datetime created_at
 	}
