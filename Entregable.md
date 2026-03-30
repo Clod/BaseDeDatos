@@ -324,7 +324,7 @@ erDiagram
 	UserContextHeader||--o{UserHomeHistory:"contiene"
 	UserContextHeader||--o{UserWorkHistory:"contiene"
 	UserContextHeader||--o{UserContextUpdateCriteria:"contiene"
-	UserContextHeader||--o{UserActivityHistory:"genera"
+	SdkSourceEvent||--o{UserActivityHistory:"genera"
 	UserContextActiveSegmentDetail||--o{UserContextSegmentAttribute:"posee"
 	DrivingInsightsTrip||--o{DrivingInsightsPhoneEvent:"registra"
 	DrivingInsightsTrip||--o{DrivingInsightsSpeedingEvent:"registra"
