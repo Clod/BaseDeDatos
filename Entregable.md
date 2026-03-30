@@ -518,9 +518,9 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_braking_score`      | NUMERIC   | `safetyScores.harshBrakingScore`      | (0 a 1)                                        |
 | `harsh_turning_score`      | NUMERIC   | `safetyScores.harshTurningScore`      | (0 a 1)                                        |
 | `harsh_acceleration_score` | NUMERIC   | `safetyScores.harshAccelerationScore` | (0 a 1)                                        |
-| `wrong_way_driving_score`  | NUMERIC   | `safetyScores.wrongWayDrivingScore`   | (0 a 1)                                        |
-| `attention_score`          | NUMERIC   | `safetyScores.attentionScore`         | (0 a 1)                                        |
 | `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
+| `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | *"DRIVER"*, *"PASSENGER"*                      |
+| `transport_tags_json`      | TEXT      | `transportEvent.transportTags`        | Serializado dict key-value                     |
 | `waypoints_json`           | TEXT      | `transportEvent.waypoints`            | Serializado JSON global                        |
 
 
@@ -622,20 +622,22 @@ Logs técnicos de actividad o errores.
 | ---------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
 | `canonical_transport_event_id`           | VARCHAR PK | ID único extraído de `event.id` (Timeline) o `transportEvent.id` (DrivingInsights)               |
 | `first_seen_from`                        | VARCHAR | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (String insertado por el backend indicando qué listener creó la fila primaria) |
-| `transport_mode`                         | VARCHAR | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*). Hereda de Timeline pero se **actualiza** si llega en DrivingInsights. |
-| `start_time` / `epoch`                   | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`. Hereda de Timeline pero se **actualiza** si llega en DrivingInsights. |
+| `transport_mode`                         | VARCHAR | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*). |
+| `start_time` / `epoch`                   | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.  |
 | `end_time` / `epoch`                     | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                |
 | `duration_in_seconds`                    | NUMERIC | Extraído de `durationInSeconds` |
 | `distance_meters`                        | NUMERIC | Extraído de `distance` |
-| `is_provisional`                         | BOOLEAN | Mapeado desde `isProvisional`. Crucial para controlar si el registro `Trip` puede seguir sufriendo alteraciones. |
+| `occupant_role`                          | VARCHAR | Extraído de `occupantRole` (*"DRIVER"*, *"PASSENGER"*). Fundamental para inferir autoría de faltas en "DrivingInsights". |
+| `is_provisional`                         | BOOLEAN | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
+| `transport_tags_json`                    | TEXT | Recuperado del objeto libre `transportTags`.  |
 | `waypoints_json`                         | TEXT | Extraído del array de objetos `waypoints[]` y guardado como texto.       |
 
 
-> **Ejemplo de Consolidación de la tabla `Trip` (Cómo actúan `transport_mode`, `start_time` e `is_provisional`)**:
-> 1. Un usuario comienza a moverse. El SDK aún no sabe en qué, pero envía a través del listener de Timeline un `TimelineEvent` en tiempo real con `transportMode = "UNKNOWN"`,  `id = "e_123"`, e `isProvisional = true`. 
->    *↳ El backend inserta un nuevo registro en `Trip` con el modo "UNKNOWN" y lo marca provisional.*
-> 2. Pasan 15 minutos, el viaje termina y el teléfono envía su volcado a los servidores de Sentiance. El modelo de IA de Sentiance concluye que el usuario venía en auto, lo que detona un nuevo listener local en el teléfono pasándole el objeto `DrivingInsights` para el evento `"e_123"`. En este objeto final el `transportMode` ahora es `"CAR"`, el viaje tiene scores de frenado, y tal vez precisó unos segundos mejor el `startTime`.
->    *↳ El backend busca en la tabla `Trip` el registro con `canonical_transport_event_id = "e_123"` y hace un **UPDATE**: Reemplaza el `transport_mode` a "CAR", ajusta el `start_time`, cambia `is_provisional` a false, e inicializa su viaje hijo `DrivingInsightsTrip`.*
+> **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:
+> Según la documentación de Sentiance, los eventos provisionales generados en tiempo real **se generan independientemente a los finales y NO tienen el mismo ID**. 
+> - A medida que el usuario se mueve, el SDK genera eventos provisorios en tiempo real (ej: "En movimiento IN_TRANSPORT") donde `isProvisional` es `true`. Estos se iteran e insertan en la tabla `Trip` como historias/segmentos. 
+> - Una vez que el usuario se vuelve a quedar estacionario, Sentiance consolida todo el movimiento previo, procesa los scores y emite los eventos **Finales** (`isProvisional = false`). Los eventos finales tienen **IDs completamente nuevos** y Sentiance no provee links/claves foráneas apuntando a sus eventos "borrador" preliminares.
+> - *↳ **Resultado en Base de Datos**: El backend **no actualiza ni reemplaza (UPDATE)** los records provisionales. Simplemente ingresa la nueva fila definitiva enviada por el evento final. Para análisis de scores de viaje limpio, reporting, o consumo en la UI usuaria final, la base de datos se debe filtrar buscando excluyentemente `WHERE is_provisional = false` para aislar el output definitivo del viaje, descartando los borradores en tiempo real.*
 
 
 ---
@@ -764,9 +766,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
     "overallScore": 0.89,
     "harshBrakingScore": 0.80,
     "harshTurningScore": 0.95,
-    "harshAccelerationScore": 0.85,
-    "wrongWayDrivingScore": 1.0,
-    "attentionScore": 0.91
+    "harshAccelerationScore": 0.85
   }
 }
 ```
