@@ -26,7 +26,6 @@ erDiagram
 	SentianceEventos {
 		int id PK 
 		varchar sentianceid
-		datetime fechahora
 		nvarchar(max) json
 		varchar tipo
 		datetime created_at
@@ -363,10 +362,9 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | ------------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `id`          | INT (PK) | Auto-Generado Interno                                                                              |
 | `sentianceid` | VARCHAR  | UUID del dispositivo extraído pre-procesamiento / Autenticación Custom                             |
-| `fechahora`   | DATETIME | Timestamp de inserción                                                                             |
 | `json`        | NVARCHAR(MAX)     | **Payload exacto emitido desde la app React Native**.                                              |
 | `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
-| `created_at`  | DATETIME | Fecha/Hora Backend de escritura                                                                    |
+| `created_at`  | DATETIME | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`) |
 | `procesado`   | BIT      | Flag para ETL indicando si fue parseada a las tablas detalladas                                    |
 | `app_version` | VARCHAR  | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                              |
 
