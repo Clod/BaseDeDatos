@@ -1,23 +1,33 @@
-# Reporte: Arquitectura Serverless para Ingesta de Telemetría desde Aplicaciones Móviles
+# Arquitectura Serverless para Ingesta de Telemetría desde Aplicaciones Móviles
 
-**Fecha:** 20 de Marzo de 2026  
-**Ubicación:** Buenos Aires, Argentina  
 **Contexto:** Ingesta de datos de telemetría desde miles de teléfonos móviles hacia AWS Lambda
 
 ---
 
 ## 1. Problema Inicial
 
-Se requiere construir una arquitectura escalable para enviar datos de telemetría continua desde **miles de dispositivos móviles** hacia un pool de funciones AWS Lambda. Los datos incluyen:
-
-- Coordenadas GPS en tiempo real
-- Velocidad actual y límite de velocidad
-- Puntuaciones de seguridad (aceleración, frenado, etc.)
-- Timestamps de alta precisión
+Se requiere construir una arquitectura escalable para enviar datos de telemetría continua desde **miles de dispositivos móviles** hacia un pool de funciones AWS Lambda. 
 
 **Volumen:** Potencialmente cientos de miles de mensajes por segundo desde aplicaciones React Native en teléfonos repartidos geográficamente.
 
-**Payload típico:** Entre 100 KB y 150 KB por batch.
+
+| Event Type (`tipo`)  | **Cant.** | Longitud media (bytes) | Longitud máx. (bytes) |
+| -------------------- | --------- | ---------------------- | --------------------- |
+| `requestUserContext` | 7,504     | ~35,746 (35 KB)        | 876,732 (856 KB)      |
+| `DrivingInsights`    | 19,700    | ~33,820 (33 KB)        | 811,869 (792 KB)      |
+| `TimelineEvents`     | 35        | ~14,486 (14 KB)        | 95,067 (92 KB)        |
+| `userContextUpdate`  | 4,344     | ~10,846 (10 KB)        | 319,049 (311 KB)      |
+| `SDKStatus`          | 1,095     | ~869                   | 1,259                 |
+| `VehicleCrash`       | 477       | ~274                   | 344                   |
+
+
+Hice un par de pruebas y zippeando se puede comprimir mucho (unas 6 veces):
+
+> BaseDeDatos % ls -l json*
+> -rw-r--r--@ 1 claudiograsso  staff  **35011** Mar 30 14:52 json_promedio.json
+> -rw-r--r--@ 1 claudiograsso  staff   **5864** Mar 30 14:47 json_promedio.json.gz
+
+Eso sólo zippeando. Seguimos mandando los labels json. Tal vez se podría usar un protocolo más o menos nuevo para usar json con IA y que los comprime para que use menos tokens.
 
 ---
 
@@ -40,7 +50,7 @@ Se requiere construir una arquitectura escalable para enviar datos de telemetrí
 
 **Ventajas:**
 
-- Conexión persistente bidireccional
+- Conexión persistente bidireccional (no lo necesitamos)
 - Overhead por mensaje mínimo después del upgrade inicial
 
 **Desventajas:**
@@ -90,22 +100,18 @@ MQTT es el protocolo estándar de la industria IoT, diseñado específicamente p
 Antes de recomendar MQTT, debe considerarse el tamaño del payload:
 
 
-| Servicio            | Límite Máximo                   | Notas                                    |
-| ------------------- | ------------------------------- | ---------------------------------------- |
-| AWS IoT Core (MQTT) | 128 KB                          | Hard limit por mensaje                   |
-| API Gateway (HTTP)  | 10 MB                           | Soporta payloads grandes                 |
-| API Gateway (REST)  | Configurable, típicamente 10 MB |                                          |
-| AWS Lambda          | 6 MB                            | Si se invoca directamente                |
-| Amazon SQS          | 256 KB                          | Nativo; se puede usar S3 Extended Client |
+| Servicio            | Límite Máximo                   | Notas                                                                                                            |
+| ------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| AWS IoT Core (MQTT) | 128 KB                          | Hard limit por mensaje. Tenemos JSON más grandes, pero si vamos por acá no podemos seguir mandando JSON enteros. |
+| API Gateway (HTTP)  | 10 MB                           | Soporta payloads grandes                                                                                         |
+| API Gateway (REST)  | Configurable, típicamente 10 MB |                                                                                                                  |
+| AWS Lambda          | 6 MB                            | Si se invoca directamente                                                                                        |
+| Amazon SQS          | 256 KB                          | Nativo; se puede usar S3 Extended Client                                                                         |
 
-
-**Tu caso:** 145 KB > 128 KB del MQTT limit
-
-**Solución:** Comprimir el payload con GZIP o Zstandard (reduce ~145 KB a ~10-15 KB)
 
 ---
 
-## 4. Arquitectura Serverless Propuesta
+## 4. Arquitectura Serverless Posible
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
@@ -201,9 +207,9 @@ Antes de recomendar MQTT, debe considerarse el tamaño del payload:
 
 ### 5.1 Cliente MQTT en React Native
 
-**Librerías recomendadas:**
+**Librerías:**
 
-1. **sp-react-native-mqtt** (RECOMENDADA para tu caso)
+1. **sp-react-native-mqtt** (Parecería la más recomendable)
   ```javascript
    // Usa backend nativo (CocoaMQTT en iOS, Paho Java en Android)
    // - Soporta TCP puro en puerto 8883 (mejor que WebSocket)
@@ -222,7 +228,7 @@ Antes de recomendar MQTT, debe considerarse el tamaño del payload:
 
 ### 5.2 AWS IoT Core - El Broker MQTT Gestionado
 
-**No necesitas desarrollar ni mantener un servidor MQTT.** AWS proporciona un endpoint MQTT totalmente escalable:
+**No necesitamos desarrollar ni mantener un servidor MQTT.** AWS proporciona un endpoint MQTT totalmente escalable:
 
 - **Endpoint:** `{device-id}.iot.{region}.amazonaws.com:8883`
 - **Escalabilidad:** Maneja millones de conexiones simultáneas
@@ -315,7 +321,7 @@ el device ID como group ID automáticamente.
 ### 5.5 AWS Lambda - Procesamiento
 
 ```text
-Configuración recomendada:
+Configuración posible:
 
 ┌─────────────────────────────────────┐
 │ Lambda Function (Event Processor)   │
@@ -345,7 +351,7 @@ Configuración recomendada:
 PASO 1: CAPTURA EN DISPOSITIVO
 ────────────────────────────────
 Cuando se dispara un listener:
-  └─► Comprimir JSON a GZIP
+  └─► Comprimir JSON a GZIP (yo no usaría el JSON como viene)
   └─► Publicar a MQTT topic "telemetry/{deviceId}/waypoints"
 
 
@@ -428,7 +434,7 @@ Datos en BD / Data Lake:
 
 ## 8. Checklist de Implementación
 
-### Fase 1: Preparación (Semana 1)
+### Fase 1: Preparación 
 
 - [ ] Crear política IAM para dispositivos
 - [ ] Generar certificados X.509 para dispositivos
@@ -438,7 +444,7 @@ Datos en BD / Data Lake:
 - [ ] Crear Thing Resource en AWS IoT Core por dispositivo
 - [ ] Preparar política IoT Core (permisos: publish/subscribe)
 
-### Fase 2: Backend AWS (Semana 2)
+### Fase 2: Backend AWS
 
 - [ ] Crear SQS Queue (standard o FIFO según necesidad)
 - [ ] Crear Regla IoT para rutear MQTT → SQS
@@ -450,7 +456,7 @@ Datos en BD / Data Lake:
   - [ ] Código: descomprimir, validar, escribir BD
   - [ ] Testing con mensajes simulados
 
-### Fase 3: Cliente React Native (Semana 2-3)
+### Fase 3: Cliente React Native 
 
 - [ ] Instalar librería MQTT (sp-react-native-mqtt recomendado)
 - [ ] Integrar certificados en app
@@ -463,7 +469,7 @@ Datos en BD / Data Lake:
 - [ ] Agregar compresión GZIP antes de publicar
 - [ ] Testing en dispositivo real (conectado/desconectado)
 
-### Fase 4: Testing & Monitoreo (Semana 4)
+### Fase 4: Testing & Monitoreo
 
 - [ ] Load testing: simular 1000+ dispositivos concurrentes
 - [ ] Verificar latencia end-to-end
