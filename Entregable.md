@@ -362,7 +362,7 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | Campo         | Tipo     | Mapeo Sentiance                                                                                    |
 | ------------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `id`          | INT (PK) | Auto-Generado Interno                                                                              |
-| `sentianceid` | VARCHAR  | UUID del dispositivo extraído pre-procesamiento / Autenticación Custom                             |
+| `sentianceid` | VARCHAR  | Identificador del usuario emisor (`sentiance_user_id`). Extraído típicamente de la capa de Auth/JWT perimetral previa al insert RAW. |
 | `json`        | NVARCHAR(MAX)     | **Payload exacto emitido desde la app React Native**.                                              |
 | `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
 | `created_at`  | DATETIME | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`) |
