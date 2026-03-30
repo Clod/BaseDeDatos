@@ -540,7 +540,7 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_turning_score`      | NUMERIC   | `safetyScores.harshTurningScore`      | (0 a 1)                                        |
 | `harsh_acceleration_score` | NUMERIC   | `safetyScores.harshAccelerationScore` | (0 a 1)                                        |
 | `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
-| `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | *"DRIVER"*, *"PASSENGER"*                      |
+| `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
 | `transport_tags_json`      | NVARCHAR(MAX)      | `transportEvent.transportTags`        | Serializado dict key-value                     |
 
 
@@ -666,7 +666,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `end_time` / `epoch`           | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                                                                        |
 | `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                     |
 | `distance_meters`              | NUMERIC           | Extraído de `distance`                                                                                                                                              |
-| `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (*"DRIVER"*, *"PASSENGER"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                            |
+| `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                            |
 | `is_provisional`               | BIT           | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
 | `transport_tags_json`          | NVARCHAR(MAX)              | Recuperado del objeto libre `transportTags`.                                                                                                                        |
 | `waypoints_json`               | NVARCHAR(MAX)              | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                  |
