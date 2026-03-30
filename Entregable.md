@@ -404,7 +404,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `source_event_id`           | BIGINT FK | N/A                   | Relación a `SdkSourceEvent`                         |
 | `sentiance_user_id`         | VARCHAR   | N/A                   | ID Sentiance                                        |
 | `event_id`                  | VARCHAR   | `id`                  | Id único del evento temporal                        |
-| `event_type`                | VARCHAR   | `type`                | *"STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*      |
+| `event_type`                | VARCHAR   | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*      |
 | `start_time`                | DATETIME  | `startTime`           | ISO 8601 string                                     |
 | `start_time_epoch`          | BIGINT    | `startTimeEpoch`      | UTC milisegundos                                    |
 | `last_update_time`          | DATETIME  | `lastUpdateTime`      | ISO 8601 string                                     |
