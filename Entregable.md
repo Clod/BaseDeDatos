@@ -420,8 +420,8 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `location_latitude`         | DECIMAL   | `location.latitude`   | Presente sólo para `STATIONARY`                     |
 | `location_longitude`        | DECIMAL   | `location.longitude`  | Presente sólo para `STATIONARY`                     |
 | `location_accuracy`         | NUMERIC   | `location.accuracy`   | Precisión estacionaria (mts)                        |
-| `venue_significance`        | VARCHAR   | `venue.significance`  | *"HOME", "WORK", "POINT_OF_INTEREST"*               |
-| `venue_type`                | VARCHAR   | `venue.type`          | *"SHOP_LONG", "OFFICE", "RESIDENTIAL"...*           |
+| `venue_significance`        | VARCHAR   | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*               |
+| `venue_type`                | VARCHAR   | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.) |
 
 
 ---
