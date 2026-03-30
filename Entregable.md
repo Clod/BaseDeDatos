@@ -256,10 +256,15 @@ erDiagram
 		bigint sdk_status_history_id PK 
 		bigint source_event_id FK 
 		varchar sentiance_user_id
+		varchar start_status
+		varchar detection_status
 		varchar location_permission
 		boolean precise_location_granted
-		varchar detection_status
-		boolean is_quota_exceeded
+		varchar quota_status_wifi
+		varchar quota_status_mobile
+		varchar quota_status_disk
+		boolean is_location_available
+		boolean can_detect
 		datetime captured_at
 	}
 
@@ -268,6 +273,10 @@ erDiagram
 		bigint source_event_id FK 
 		varchar sentiance_user_id
 		varchar activity_type
+		varchar trip_type
+		decimal stationary_latitude
+		decimal stationary_longitude
+		text payload_json
 		datetime captured_at
 	}
 
