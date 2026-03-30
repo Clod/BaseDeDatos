@@ -690,8 +690,8 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 2. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):  
    Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
 
-3. **Índice sobre `is_provisional`** (Baja Cardinalidad pero Crítico para Filtros):  
-   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = false`. Generar un índice (particularmente un *Partial Index* en PostgreSQL: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = false`) hará que listar la billetera de viajes finalizados sea instantáneo.
+3. **Índice Filtrado por `is_provisional`:**
+   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
 
 4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:  
    Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent` o `DrivingInsightsTrip`). Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre `Trip` y la tabla satélite dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
