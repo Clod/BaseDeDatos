@@ -585,28 +585,34 @@ Provisto a través de `addVehicleCrashEventListener`.
 
 #### 3.5.2. `SdkStatusHistory`
 
-Estado general de recolección en los dispositivos a través de status update listeners.
+Estado general de recolección en los dispositivos a través del listener de status updates. Mapeado desde el payload nativo `SdkStatus`.
 
+| Campo | Tipo | Mapeo Sentiance y Detalles |
+| :--- | :--- | :--- |
+| `start_status` | VARCHAR | Extraído de `startStatus` (Estado general del arranque). |
+| `detection_status` | VARCHAR | Extraído de `detectionStatus` (Porción operativa del SDK). |
+| `location_permission` | VARCHAR | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
+| `precise_location_granted`| BOOLEAN | Extraído de `isPreciseLocationAuthorizationGranted`. |
+| `quota_status_wifi` | VARCHAR | Extraído de `wifiQuotaStatus`. |
+| `quota_status_mobile` | VARCHAR | Extraído de `mobileQuotaStatus`. |
+| `quota_status_disk` | VARCHAR | Extraído de `diskQuotaStatus`. |
+| `is_location_available` | BOOLEAN | Extraído de `isLocationAvailable`. |
+| `can_detect` | BOOLEAN | Extraído de `canDetect`. |
 
-| Campo                      | Tipo    | Base Teórica                                                    |
-| -------------------------- | ------- | --------------------------------------------------------------- |
-| `location_permission`      | VARCHAR | Si los permisos Android/iOS correspondientes están garantizados |
-| `precise_location_granted` | BOOLEAN | Permisos granulares                                             |
-| `detection_status`         | VARCHAR | Porción operativa del SDK                                       |
-| `is_quota_exceeded`        | BOOLEAN | Límite API / Offload                                            |
+#### 3.5.3. `UserActivityHistory`
 
+Recopilación de contextos gruesos emitidos por el listener de User Activity. Mapeado del payload nativo `UserActivity`.
 
-#### 3.5.3. `UserActivityHistory` y `TechnicalEventHistory`
+| Campo | Tipo | Mapeo Sentiance y Lógica |
+| :--- | :--- | :--- |
+| `activity_type` | VARCHAR | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). |
+| `trip_type` | VARCHAR | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje. |
+| `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. Estacionario. |
+| `payload_json` | TEXT | Copia raw del JSON emitido por si varía en actualizaciones futuras. |
 
-Logs técnicos de actividad o errores.
+#### 3.5.4. `TechnicalEventHistory`
 
-
-| Campo                  | Tipo    | Detalles                                                 |
-| ---------------------- | ------- | -------------------------------------------------------- |
-| `activity_type`        | VARCHAR | Resumen ligero de actividad (Ej. *"TRIP", "STATIONARY"*) |
-| `technical_event_type` | VARCHAR | Categoría Log de error / advertencia SDK                 |
-| `message`              | TEXT    | Detalle del error                                        |
-| `payload_json`         | TEXT    | Trace de Error/Dump                                      |
+Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin depender del volcado Offload (Payload sujeto a implementación de logger).
 
 
 ---
@@ -618,27 +624,26 @@ Logs técnicos de actividad o errores.
 **Importantísimo**: No es directamente poblada por un listener JSON Sentiance unitario, sino un integrador de viajes (Transports).
 
 
-| Campo                                    | Tipo | Mapeo Sentiance y Lógica de Construcción                                                                                           |
-| ---------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
-| `canonical_transport_event_id`           | VARCHAR PK | ID único extraído de `event.id` (Timeline) o `transportEvent.id` (DrivingInsights)               |
-| `first_seen_from`                        | VARCHAR | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (String insertado por el backend indicando qué listener creó la fila primaria) |
-| `transport_mode`                         | VARCHAR | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*). |
-| `start_time` / `epoch`                   | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.  |
-| `end_time` / `epoch`                     | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                |
-| `duration_in_seconds`                    | NUMERIC | Extraído de `durationInSeconds` |
-| `distance_meters`                        | NUMERIC | Extraído de `distance` |
-| `occupant_role`                          | VARCHAR | Extraído de `occupantRole` (*"DRIVER"*, *"PASSENGER"*). Fundamental para inferir autoría de faltas en "DrivingInsights". |
-| `is_provisional`                         | BOOLEAN | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
-| `transport_tags_json`                    | TEXT | Recuperado del objeto libre `transportTags`.  |
-| `waypoints_json`                         | TEXT | Extraído del array de objetos `waypoints[]` y guardado como texto.       |
+| Campo                          | Tipo              | Mapeo Sentiance y Lógica de Construcción                                                                                                                            |
+| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `canonical_transport_event_id` | VARCHAR PK        | ID único extraído de `event.id` (Timeline) o `transportEvent.id` (DrivingInsights)                                                                                  |
+| `first_seen_from`              | VARCHAR           | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (String insertado por el backend indicando qué listener creó la fila primaria)                               |
+| `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*).                                                                                   |
+| `start_time` / `epoch`         | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.                                                                                                                         |
+| `end_time` / `epoch`           | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                                                                        |
+| `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                     |
+| `distance_meters`              | NUMERIC           | Extraído de `distance`                                                                                                                                              |
+| `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (*"DRIVER"*, *"PASSENGER"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                            |
+| `is_provisional`               | BOOLEAN           | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
+| `transport_tags_json`          | TEXT              | Recuperado del objeto libre `transportTags`.                                                                                                                        |
+| `waypoints_json`               | TEXT              | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                  |
 
 
-> **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:
+> **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:  
 > Según la documentación de Sentiance, los eventos provisionales generados en tiempo real **se generan independientemente a los finales y NO tienen el mismo ID**. 
 > - A medida que el usuario se mueve, el SDK genera eventos provisorios en tiempo real (ej: "En movimiento IN_TRANSPORT") donde `isProvisional` es `true`. Estos se iteran e insertan en la tabla `Trip` como historias/segmentos. 
 > - Una vez que el usuario se vuelve a quedar estacionario, Sentiance consolida todo el movimiento previo, procesa los scores y emite los eventos **Finales** (`isProvisional = false`). Los eventos finales tienen **IDs completamente nuevos** y Sentiance no provee links/claves foráneas apuntando a sus eventos "borrador" preliminares.
 > - *↳ **Resultado en Base de Datos**: El backend **no actualiza ni reemplaza (UPDATE)** los records provisionales. Simplemente ingresa la nueva fila definitiva enviada por el evento final. Para análisis de scores de viaje limpio, reporting, o consumo en la UI usuaria final, la base de datos se debe filtrar buscando excluyentemente `WHERE is_provisional = false` para aislar el output definitivo del viaje, descartando los borradores en tiempo real.*
-
 
 ---
 
@@ -829,5 +834,136 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
   "confidence": 0.95,
   "severity": "HIGH",
   "detectorMode": "CAR"
+}
+```
+
+### 4.6. Anexo de Definiciones TypeScript (Referencia SDK React Native)
+
+A continuación se adjuntan, a modo de complemento, las interfaces oficiales y nativas en *TypeScript* que documenta el módulo `@sentiance-react-native/driving-insights`. Este es el contrato real de datos con el que contarán los programadores del Front-End para generar el JSON Final:
+
+```typescript
+export interface DrivingInsights {  
+  transportEvent: TransportEvent;
+  safetyScores: SafetyScores;
+}
+
+export interface SafetyScores {  
+  smoothScore?: number;
+  focusScore?: number;
+  legalScore?: number;
+  callWhileMovingScore?: number;
+  overallScore?: number;
+  harshBrakingScore?: number;
+  harshTurningScore?: number;
+  harshAccelerationScore?: number;
+}
+
+export interface DrivingEvent {  
+  startTime: string;  
+  startTimeEpoch: number; // in milliseconds  
+  endTime: string;  
+  endTimeEpoch: number; // in milliseconds  
+  waypoints: Waypoint[];  
+}
+
+export type HarshDrivingEventType = "ACCELERATION" | "BRAKING" | "TURN";
+
+export interface HarshDrivingEvent extends DrivingEvent {  
+  magnitude: number;  
+  confidence: number;  
+  type: HarshDrivingEventType;  
+}
+
+export interface PhoneUsageEvent extends DrivingEvent {}
+
+export interface CallWhileMovingEvent extends DrivingEvent {  
+  maxTravelledSpeedInMps?: number;  
+  minTravelledSpeedInMps?: number;  
+}
+
+export interface SpeedingEvent extends DrivingEvent {}
+
+export interface TransportEvent {  
+  id: string;  
+  startTime: string;  
+  startTimeEpoch: number; // in milliseconds  
+  lastUpdateTime: string;  
+  lastUpdateTimeEpoch: number; // in milliseconds  
+  endTime: string | null;  
+  endTimeEpoch: number | null; // in milliseconds  
+  durationInSeconds: number | null;  
+  type: string;  
+  transportMode: TransportMode | null;  
+  waypoints: Waypoint[];  
+  distance?: number; // in meters  
+  transportTags: TransportTags;  
+  occupantRole: OccupantRole;  
+  isProvisional: boolean;  
+}
+
+export type TransportTags = { [key: string]: string };
+export type TransportMode = "UNKNOWN" | "BICYCLE" | "WALKING" | "RUNNING" | "TRAM" | "TRAIN" | "CAR" | "BUS" | "MOTORCYCLE";
+export type OccupantRole = "DRIVER" | "PASSENGER" | "UNAVAILABLE";
+
+export interface Waypoint {  
+  latitude: number;  
+  longitude: number;  
+  accuracy: number;   // in meters  
+  timestamp: number;  // UTC epoch time in milliseconds  
+  speedInMps?: number;  // in meters per second  
+  speedLimitInMps?: number;  // in meters per second  
+  hasUnlimitedSpeedLimit: boolean;  
+  isSpeedLimitInfoSet: boolean;  
+  isSynthetic: boolean;  
+}
+
+export interface SdkStatus {
+  startStatus: string;
+  detectionStatus: string;
+  canDetect: boolean;
+  isRemoteEnabled: boolean;
+  isAccelPresent: boolean;
+  isGyroPresent: boolean;
+  isGpsPresent: boolean;
+  wifiQuotaStatus: string;
+  mobileQuotaStatus: string;
+  diskQuotaStatus: string;
+  locationPermission: string;
+  userExists: boolean;
+  isBatterySavingEnabled?: boolean;
+  isActivityRecognitionPermGranted?: boolean;
+  isPreciseLocationAuthorizationGranted: boolean;
+  isBgAccessPermGranted?: boolean; // iOS only
+  locationSetting?: string; // Android only
+  isAirplaneModeEnabled?: boolean; // Android only
+  isLocationAvailable?: boolean;
+  isGooglePlayServicesMissing?: boolean; // Android only
+  isBatteryOptimizationEnabled?: boolean; // Android only
+  isBackgroundProcessingRestricted?: boolean; // Android only
+  isSchedulingExactAlarmsPermitted?: boolean; // Android only
+  backgroundRefreshStatus: string; // iOS only
+}
+
+export interface Location {
+  timestamp?: number; // marked optional to maintain compatibility, but is always present
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  provider?: string; // Android only
+}
+
+export interface StationaryInfo {
+  location?: Location;
+}
+
+export interface TripInfo {
+  type: "TRIP_TYPE_SDK" | "TRIP_TYPE_EXTERNAL" | "TRIP_TYPE_UNRECOGNIZED" | "ANY";
+}
+
+export interface UserActivity {
+  type: "USER_ACTIVITY_TYPE_TRIP" | "USER_ACTIVITY_TYPE_STATIONARY" | "USER_ACTIVITY_TYPE_UNKNOWN" | "USER_ACTIVITY_TYPE_UNRECOGNIZED";
+  tripInfo?: TripInfo;
+  stationaryInfo?: StationaryInfo;
 }
 ```
