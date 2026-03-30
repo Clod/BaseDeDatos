@@ -1007,3 +1007,53 @@ export interface UserActivity {
   stationaryInfo?: StationaryInfo;
 }
 ```
+
+---
+
+## 5. Anexo II: Flujo de Datos y Consolidación (Sequence Diagram)
+
+El siguiente diagrama de secuencia ilustra de forma arquitectónica y cronológica cómo fluyen y se procesan los payloads emitidos por el SDK de Sentiance, desde su concepción por el lado móvil hasta su estructuración atómica normalizada final en el esquema de base de datos relacional previamente delineado.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as App Móvil (SDK Sentiance)
+    participant API as Endpoint Backend
+    participant Raw as DB: SentianceEventos (Raw)
+    participant ETL as Worker / ETL Parser
+    participant Source as DB: SdkSourceEvent
+    participant Trip as DB: Trip (Pivot)
+    participant Satelite as DB: Tablas Satélites (Dependientes)
+
+    note over App,API: Fase 1: Recolección y Volcado (Alta Velocidad)
+    App->>API: POST /webhook (JSON Payload según Listener)
+    activate API
+    API->>Raw: INSERT (payload_json crudo, tipo)
+    Raw-->>API: Retorna `evento_sentiance_id`
+    API-->>App: HTTP 200 OK (Desacoplo del procesamiento)
+    deactivate API
+
+    note over ETL,Satelite: Fase 2: Procesamiento Asíncrono (ETL / Normalización)
+    rect rgb(240, 248, 255)
+        ETL->>Raw: SELECT Top(N) WHERE is_processed = 0
+        activate ETL
+        Raw-->>ETL: Lote de eventos encriptados JSON
+        
+        ETL->>ETL: Parser: Deserializa e identifica el Event Type
+        
+        ETL->>Source: INSERT SdkSourceEvent (Metadatos Generales)
+        Source-->>ETL: Retorna `source_event_id` (Genera Raíz)
+        
+        opt Contiene Trayecto ("transportEvent" o "Event")
+            ETL->>Trip: UPSERT con ON CONFLICT (canonical_transport_event_id)
+            note right of Trip: Si no existe = INSERT (Nuevo viaje). <br>Si existe = UPDATE (Carga final consolida "borrador" y waypoints).
+            Trip-->>ETL: Retorna `trip_id`
+        end
+        
+        ETL->>Satelite: INSERT Tablas Dependientes (DrivingInsightsPhone, TimelineHist, etc.)
+        note right of Satelite: Anclados via FK (source_event_id) y ocasionalmente FK (trip_id)
+        
+        ETL->>Raw: UPDATE SentianceEventos (Marcado como is_processed = 1)
+        deactivate ETL
+    end
+```
