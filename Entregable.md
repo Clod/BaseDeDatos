@@ -705,7 +705,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
       "timestamp": 1698222605000,
       "speedLimitInMps": 16.66,
       "isSpeedLimitEstimated": false,
-      "isSynthesized": true
+      "isSynthetic": true
     }
   ]
 }
