@@ -29,6 +29,7 @@ erDiagram
 		nvarchar(max) json
 		varchar tipo
 		datetime created_at
+		bit is_processed
 		bit procesado
 		varchar app_version
 	}
@@ -365,7 +366,8 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | `json`        | NVARCHAR(MAX)     | **Payload exacto emitido desde la app React Native**.                                              |
 | `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
 | `created_at`  | DATETIME | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`) |
-| `procesado`   | BIT      | Flag para ETL indicando si fue parseada a las tablas detalladas                                    |
+| `is_processed`| BIT      | Flag nativo de control de este pipeline ETL: seteado a `1` una vez el JSON fue parseado y distribuido exitosamente a las tablas normalizadas. |
+| `procesado`   | BIT      | **⚠️ LEGACY / EXTERNO:** Flag preexistente manipulado por rutinas ajenas a esta integración. No tiene relación alguna con este pipeline documental. **Ignorar**. |
 | `app_version` | VARCHAR  | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                              |
 
 
