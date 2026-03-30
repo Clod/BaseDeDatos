@@ -1070,7 +1070,7 @@ sequenceDiagram
         
         opt Contiene Trayecto ("transportEvent" o "Event")
             ETL->>Trip: MERGE (T-SQL Upsert) sobre canonical_transport_event_id
-            note right of Trip: Si no existe = INSERT (Nuevo viaje). <br>Si existe = UPDATE (Carga final consolida "borrador" y waypoints).
+            note right of Trip: Si no existe = INSERT (Inscribe ID único por 1ra vez). <br>Si existe = UPDATE (Agrega info faltante al mismo transport_id reportado por listeners concurrentes).
             Trip-->>ETL: Retorna `trip_id`
         end
         
