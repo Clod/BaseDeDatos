@@ -7,6 +7,7 @@ Este modelo de base de datos está diseñado para almacenar estructuradamente la
 La información ingresa al backend mediante **eventos recibidos a través de los *listeners* u oyentes del SDK en el dispositivo móvil** (principalmente bajo la implementación de React Native u otros lenguajes nativos de la App). 
 
 **Puntos Importantes:**
+
 - **Solo Listeners:** No se consolida información proveniente de los volcados diarios (Offloads). El stream es un pipeline directo donde el Frontend emite el payload JSON directamente al backend.
 - **Formato Crudo (Raw):** El JSON almacenado inicialmente en la tabla `SentianceEventos` es el payload exacto emitido por el SDK, sin agregados, sobres ni modificaciones de parte del backend.
 - **Múltiples Fuentes de Viajes (`Trip`):** La entidad central `Trip` (viaje) no proviene de un solo payload. Es una tabla normalizada alimentada por múltiples fuentes: Eventos temporales (`TimelineEvent` o del `UserContext`) especialmente útiles para viajes cortos, peatonales, bicicletas o colectivos, y objetos de `DrivingInsights` para trayectos motorizados de autos/motos.
@@ -337,191 +338,226 @@ erDiagram
 ### 3.1. Tablas Base y Gestión
 
 #### 3.1.1. `SentianceEventos`
+
 Tabla originaria donde el backend "aterriza" la recepción del payload de la app móvil (Listener raw).
 
-| Campo | Tipo | Mapeo Sentiance | 
-| :--- | :--- | :--- | 
-| `id` | INT (PK) | Auto-Generado Interno |
-| `sentianceid` | VARCHAR | UUID del dispositivo extraído pre-procesamiento / Autenticación Custom |
-| `fechahora` | DATETIME | Timestamp de inserción |
-| `json` | TEXT | **Payload exacto emitido desde la app React Native**. |
-| `tipo` | VARCHAR | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
-| `created_at` | DATETIME | Fecha/Hora Backend de escritura |
-| `procesado` | BIT | Flag para ETL indicando si fue parseada a las tablas detalladas |
-| `app_version`| VARCHAR | Custom Backend (versión de la App si se inyecta en headers HTTP/URL). |
+
+| Campo         | Tipo     | Mapeo Sentiance                                                                                    |
+| ------------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `id`          | INT (PK) | Auto-Generado Interno                                                                              |
+| `sentianceid` | VARCHAR  | UUID del dispositivo extraído pre-procesamiento / Autenticación Custom                             |
+| `fechahora`   | DATETIME | Timestamp de inserción                                                                             |
+| `json`        | TEXT     | **Payload exacto emitido desde la app React Native**.                                              |
+| `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
+| `created_at`  | DATETIME | Fecha/Hora Backend de escritura                                                                    |
+| `procesado`   | BIT      | Flag para ETL indicando si fue parseada a las tablas detalladas                                    |
+| `app_version` | VARCHAR  | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                              |
+
 
 #### 3.1.2. `SdkSourceEvent`
+
 Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON originario.
 
-| Campo | Tipo | Mapeo Interno |
-| :--- | :--- | :--- |
-| `source_event_id` | BIGINT PK | ID subrogado |
-| `id` | INT FK | Referencia al `id` de `SentianceEventos` |
-| `record_type` | VARCHAR | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
-| `sentiance_user_id`| VARCHAR | `user_id` |
-| `source_time` | DATETIME | Obtenido de los epoch del evento principal en el JSON |
-| `source_event_ref`| VARCHAR | ID de referencia directa (`event.id` o `transportEvent.id`) |
-| `payload_hash` | VARCHAR | Hash MD5/SHA para determinar unicidad de JSONs procesados |
-| `created_at` | DATETIME | Tiempo Interno de normalización |
+
+| Campo               | Tipo      | Mapeo Interno                                                         |
+| ------------------- | --------- | --------------------------------------------------------------------- |
+| `source_event_id`   | BIGINT PK | ID subrogado                                                          |
+| `id`                | INT FK    | Referencia al `id` de `SentianceEventos`                              |
+| `record_type`       | VARCHAR   | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
+| `sentiance_user_id` | VARCHAR   | `user_id`                                                             |
+| `source_time`       | DATETIME  | Obtenido de los epoch del evento principal en el JSON                 |
+| `source_event_ref`  | VARCHAR   | ID de referencia directa (`event.id` o `transportEvent.id`)           |
+| `payload_hash`      | VARCHAR   | Hash MD5/SHA para determinar unicidad de JSONs procesados             |
+| `created_at`        | DATETIME  | Tiempo Interno de normalización                                       |
+
 
 ---
 
 ### 3.2. Dominio de Módulo Temporal (Timeline Events)
 
 #### 3.2.1. `TimelineEventHistory`
-Eventos de línea de tiempo del listener `addTimelineUpdateListener`. 
-*Ref SDK: `react-native/event-timeline/timeline/definitions (Event Interface)`*
 
-| Campo | Tipo | Mapeo Sentiance | JSON Detail |
-| :--- | :--- | :--- | :--- |
-| `timeline_event_history_id`| BIGINT PK | N/A | PK de tabla |
-| `source_event_id` | BIGINT FK | N/A | Relación a `SdkSourceEvent` |
-| `sentiance_user_id` | VARCHAR | N/A | ID Sentiance |
-| `event_id` | VARCHAR | `id` | Id único del evento temporal |
-| `event_type` | VARCHAR | `type` | *"STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"* |
-| `start_time` | DATETIME | `startTime` | ISO 8601 string |
-| `start_time_epoch`| BIGINT | `startTimeEpoch` | UTC milisegundos |
-| `last_update_time`| DATETIME | `lastUpdateTime` | ISO 8601 string |
-| `last_update_time_epoch`| BIGINT | `lastUpdateTimeEpoch`| UTC milisegundos |
-| `end_time` | DATETIME | `endTime` | ISO 8601 string |
-| `end_time_epoch` | BIGINT | `endTimeEpoch` | UTC milisegundos |
-| `duration_in_seconds` | NUMERIC | `durationInSeconds` | Nulo si no culminó |
-| `is_provisional` | BOOLEAN | `isProvisional` | Determina si es `true` (en curso) o `false` (final) |
-| `transport_mode` | VARCHAR | `transportMode` | *"CAR", "BICYCLE", "WALKING", "UNKNOWN"...* |
-| `distance_meters` | NUMERIC | `distance` | Distancia del transporte en metros |
-| `occupant_role` | VARCHAR | `occupantRole` | *"DRIVER", "PASSENGER", "UNAVAILABLE"* |
-| `transport_tags_json`| TEXT | `transportTags` | String JSON del objeto Key-Value asignado. |
-| `location_latitude` | DECIMAL | `location.latitude` | Presente sólo para `STATIONARY` |
-| `location_longitude` | DECIMAL | `location.longitude` | Presente sólo para `STATIONARY` |
-| `location_accuracy` | NUMERIC | `location.accuracy` | Precisión estacionaria (mts) |
-| `venue_significance`| VARCHAR | `venue.significance` | *"HOME", "WORK", "POINT_OF_INTEREST"* |
-| `venue_type` | VARCHAR | `venue.type` | *"SHOP_LONG", "OFFICE", "RESIDENTIAL"...* |
-| `waypoints_json` | TEXT | `waypoints` | String JSON de objetos de `Waypoint` |
+Eventos de línea de tiempo del listener `addTimelineUpdateListener`.  
+*Ref SDK: `react-native/event-timeline/timeline/definitions (Event Interface)*`
+
+
+| Campo                       | Tipo      | Mapeo Sentiance       | JSON Detail                                         |
+| --------------------------- | --------- | --------------------- | --------------------------------------------------- |
+| `timeline_event_history_id` | BIGINT PK | N/A                   | PK de tabla                                         |
+| `source_event_id`           | BIGINT FK | N/A                   | Relación a `SdkSourceEvent`                         |
+| `sentiance_user_id`         | VARCHAR   | N/A                   | ID Sentiance                                        |
+| `event_id`                  | VARCHAR   | `id`                  | Id único del evento temporal                        |
+| `event_type`                | VARCHAR   | `type`                | *"STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*      |
+| `start_time`                | DATETIME  | `startTime`           | ISO 8601 string                                     |
+| `start_time_epoch`          | BIGINT    | `startTimeEpoch`      | UTC milisegundos                                    |
+| `last_update_time`          | DATETIME  | `lastUpdateTime`      | ISO 8601 string                                     |
+| `last_update_time_epoch`    | BIGINT    | `lastUpdateTimeEpoch` | UTC milisegundos                                    |
+| `end_time`                  | DATETIME  | `endTime`             | ISO 8601 string                                     |
+| `end_time_epoch`            | BIGINT    | `endTimeEpoch`        | UTC milisegundos                                    |
+| `duration_in_seconds`       | NUMERIC   | `durationInSeconds`   | Nulo si no culminó                                  |
+| `is_provisional`            | BOOLEAN   | `isProvisional`       | Determina si es `true` (en curso) o `false` (final) |
+| `transport_mode`            | VARCHAR   | `transportMode`       | *"CAR", "BICYCLE", "WALKING", "UNKNOWN"...*         |
+| `distance_meters`           | NUMERIC   | `distance`            | Distancia del transporte en metros                  |
+| `occupant_role`             | VARCHAR   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*              |
+| `transport_tags_json`       | TEXT      | `transportTags`       | String JSON del objeto Key-Value asignado.          |
+| `location_latitude`         | DECIMAL   | `location.latitude`   | Presente sólo para `STATIONARY`                     |
+| `location_longitude`        | DECIMAL   | `location.longitude`  | Presente sólo para `STATIONARY`                     |
+| `location_accuracy`         | NUMERIC   | `location.accuracy`   | Precisión estacionaria (mts)                        |
+| `venue_significance`        | VARCHAR   | `venue.significance`  | *"HOME", "WORK", "POINT_OF_INTEREST"*               |
+| `venue_type`                | VARCHAR   | `venue.type`          | *"SHOP_LONG", "OFFICE", "RESIDENTIAL"...*           |
+| `waypoints_json`            | TEXT      | `waypoints`           | String JSON de objetos de `Waypoint`                |
+
 
 ---
 
 ### 3.3. Dominio de Contexto de Usuario (User Context)
 
-Derivados del Listener `addUserContextUpdateListener`. 
-*Ref SDK: `react-native/user-context/definitions (UserContext)`*
+Derivados del Listener `addUserContextUpdateListener`.  
+*Ref SDK: `react-native/user-context/definitions (UserContext)*`
 
 #### 3.3.1. `UserContextHeader`
+
 Contiene la base del objeto superior `UserContextUpdate`.
 
-| Campo | Tipo | Mapeo Sentiance | Detalles |
-| :--- | :--- | :--- | :--- |
-| `user_context_payload_id`| BIGINT PK | N/A | PK Interno |
-| `source_event_id` | BIGINT FK | N/A | PK SdkSourceEvent |
-| `sentiance_user_id`| VARCHAR | N/A | ID Sentiance |
-| `context_source_type`| VARCHAR | N/A | Ejemplo: `USER_CONTEXT_LISTENER` |
-| `semantic_time` | VARCHAR | `userContext.semanticTime` | *"MORNING", "LATE_MORNING", "NIGHT"*, etc. |
-| `last_known_latitude` | DECIMAL | `lastKnownLocation.latitude` | Coordenada Y |
-| `last_known_longitude`| DECIMAL | `lastKnownLocation.longitude`| Coordenada X |
-| `last_known_accuracy` | NUMERIC | `lastKnownLocation.accuracy`| Precisión |
+
+| Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                   |
+| ------------------------- | --------- | ----------------------------- | ------------------------------------------ |
+| `user_context_payload_id` | BIGINT PK | N/A                           | PK Interno                                 |
+| `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                          |
+| `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                               |
+| `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`           |
+| `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc. |
+| `last_known_latitude`     | DECIMAL   | `lastKnownLocation.latitude`  | Coordenada Y                               |
+| `last_known_longitude`    | DECIMAL   | `lastKnownLocation.longitude` | Coordenada X                               |
+| `last_known_accuracy`     | NUMERIC   | `lastKnownLocation.accuracy`  | Precisión                                  |
+
 
 #### 3.3.2. `UserContextUpdateCriteria`
+
 Los motivos de actualización extraídos del arreglo `criteria[]`.
 
-| Campo | Tipo | Mapeo Sentiance |
-| :--- | :--- | :--- |
-| `user_context_update_criteria_id`| BIGINT PK| Auto |
-| `user_context_payload_id` | BIGINT FK| FK Padre |
-| `criteria_code` | VARCHAR | Elementos en `criteria`: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"* |
+
+| Campo                             | Tipo      | Mapeo Sentiance                                                                     |
+| --------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                |
+| `user_context_payload_id`         | BIGINT FK | FK Padre                                                                            |
+| `criteria_code`                   | VARCHAR   | Elementos en `criteria`: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"* |
+
 
 #### 3.3.3. `UserContextEventDetail`
-Itera los eventos activos `events[]` actuales del contexto. 
+
+Itera los eventos activos `events[]` actuales del contexto.  
 Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (contiene `transportMode`, `occupantRole`, locations y demás). Única diferencia: Clave Foránea a `UserContextHeader`.
 
 #### 3.3.4. `UserContextActiveSegmentDetail`
+
 Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos inferidos).
 
-| Campo | Tipo | Mapeo Sentiance |
-| :--- | :--- | :--- |
-| `user_context_segment_history_id`| BIGINT PK| ID Interno |
-| `user_context_payload_id` | BIGINT FK | FK Padre |
-| `sentiance_user_id`| VARCHAR | ID Sentiance |
-| `segment_id` | VARCHAR | `id` (Identificador del Segmento) |
-| `category` | VARCHAR | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*) |
-| `subcategory`| VARCHAR | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*) |
-| `segment_type`| VARCHAR | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*) |
-| `start_time` / `start_time_epoch` | DATETIME / BIGINT | `startTime` / `startTimeEpoch` |
-| `end_time` / `end_time_epoch` | DATETIME / BIGINT | `endTime` / `endTimeEpoch` |
+
+| Campo                             | Tipo              | Mapeo Sentiance                                       |
+| --------------------------------- | ----------------- | ----------------------------------------------------- |
+| `user_context_segment_history_id` | BIGINT PK         | ID Interno                                            |
+| `user_context_payload_id`         | BIGINT FK         | FK Padre                                              |
+| `sentiance_user_id`               | VARCHAR           | ID Sentiance                                          |
+| `segment_id`                      | VARCHAR           | `id` (Identificador del Segmento)                     |
+| `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)     |
+| `subcategory`                     | VARCHAR           | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)   |
+| `segment_type`                    | VARCHAR           | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*) |
+| `start_time` / `start_time_epoch` | DATETIME / BIGINT | `startTime` / `startTimeEpoch`                        |
+| `end_time` / `end_time_epoch`     | DATETIME / BIGINT | `endTime` / `endTimeEpoch`                            |
+
 
 #### 3.3.5. `UserContextSegmentAttribute`
+
 Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegments[]`.
 
-| Campo | Tipo | Mapeo Sentiance |
-| :--- | :--- | :--- |
-| `attribute_name` | VARCHAR | `name` (Nombre del atributo en BD) |
-| `attribute_value` | NUMERIC | `value` (Valor del atributo) |
+
+| Campo             | Tipo    | Mapeo Sentiance                    |
+| ----------------- | ------- | ---------------------------------- |
+| `attribute_name`  | VARCHAR | `name` (Nombre del atributo en BD) |
+| `attribute_value` | NUMERIC | `value` (Valor del atributo)       |
+
 
 #### 3.3.6. `UserHomeHistory` y `UserWorkHistory`
+
 Lugares frecuentes estables `home` y `work` del `UserContext`.
 
-| Campo | Tipo | Mapeo Sentiance |
-| :--- | :--- | :--- |
-| `user_home_history_id` (o work)| BIGINT PK| - | 
-| `significance` | VARCHAR | `significance` ("HOME" / "WORK") |
-| `venue_type` | VARCHAR | `type` ("RESIDENTIAL", "OFFICE"...) |
-| `latitude`, `longitude`, `accuracy` | DECIMAL | En iterado `location` del venue |
+
+| Campo                               | Tipo      | Mapeo Sentiance                     |
+| ----------------------------------- | --------- | ----------------------------------- |
+| `user_home_history_id` (o work)     | BIGINT PK | -                                   |
+| `significance`                      | VARCHAR   | `significance` ("HOME" / "WORK")    |
+| `venue_type`                        | VARCHAR   | `type` ("RESIDENTIAL", "OFFICE"...) |
+| `latitude`, `longitude`, `accuracy` | DECIMAL   | En iterado `location` del venue     |
+
 
 ---
 
 ### 3.4. Dominio de Hábitos Conductuales de Manejo (Driving Insights)
 
-Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes finalizados. Deben incluir a través de la app todas las llamadas auxiliares (`getHarshDrivingEvents`, `getCallEvents` etc.) encoladas en el JSON enviado al backend.
-*Ref SDK: `react-native/driving-insights/definitions`*
+Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes finalizados. Deben incluir a través de la app todas las llamadas auxiliares (`getHarshDrivingEvents`, `getCallEvents` etc.) encoladas en el JSON enviado al backend.  
+*Ref SDK: `react-native/driving-insights/definitions*`
 
 #### 3.4.1. `DrivingInsightsTrip`
+
 Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`).
 
-| Campo | Tipo | Mapeo Sentiance | Notas |
-| :--- | :--- | :--- | :--- |
-| `driving_insights_trip_id`| BIGINT PK| - | - |
-| `source_event_id` | BIGINT FK| - | - |
-| `trip_id` | BIGINT FK| - | FK de la tabla canon `Trip` |
-| `sentiance_user_id` | VARCHAR | - | Obtenido de JWT|ID App |
-| `transport_event_id` | VARCHAR | `transportEvent.id` | La ID original de Trip del Timeline / Contexto |
-| `smooth_score` | NUMERIC | `safetyScores.smoothScore` | (0 a 1) |
-| `focus_score` | NUMERIC | `safetyScores.focusScore` | (0 a 1) |
-| `legal_score` | NUMERIC | `safetyScores.legalScore` | (0 a 1) |
-| `call_while_moving_score`| NUMERIC | `safetyScores.callWhileMovingScore`| (0 a 1) |
-| `overall_score` | NUMERIC | `safetyScores.overallScore`| (0 a 1) |
-| `harsh_braking_score`| NUMERIC | `safetyScores.harshBrakingScore`| (0 a 1) |
-| `harsh_turning_score`| NUMERIC | `safetyScores.harshTurningScore`| (0 a 1) |
-| `harsh_acceleration_score`|NUMERIC | `safetyScores.harshAccelerationScore`| (0 a 1) |
-| `wrong_way_driving_score`| NUMERIC | `safetyScores.wrongWayDrivingScore`| (0 a 1) |
-| `attention_score`| NUMERIC | `safetyScores.attentionScore`| (0 a 1) |
-| `distance_meters`| NUMERIC | `transportEvent.distance` | Distancia extraída en metros |
-| `waypoints_json` | TEXT | `transportEvent.waypoints` | Serializado JSON global |
+
+| Campo                      | Tipo      | Mapeo Sentiance                       | Notas                                          |
+| -------------------------- | --------- | ------------------------------------- | ---------------------------------------------- |
+| `driving_insights_trip_id` | BIGINT PK | -                                     | -                                              |
+| `source_event_id`          | BIGINT FK | -                                     | -                                              |
+| `trip_id`                  | BIGINT FK | -                                     | FK de la tabla canon `Trip`                    |
+| `sentiance_user_id`        | VARCHAR   | -                                     | Obtenido de JWT                                |
+| `transport_event_id`       | VARCHAR   | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto |
+| `smooth_score`             | NUMERIC   | `safetyScores.smoothScore`            | (0 a 1)                                        |
+| `focus_score`              | NUMERIC   | `safetyScores.focusScore`             | (0 a 1)                                        |
+| `legal_score`              | NUMERIC   | `safetyScores.legalScore`             | (0 a 1)                                        |
+| `call_while_moving_score`  | NUMERIC   | `safetyScores.callWhileMovingScore`   | (0 a 1)                                        |
+| `overall_score`            | NUMERIC   | `safetyScores.overallScore`           | (0 a 1)                                        |
+| `harsh_braking_score`      | NUMERIC   | `safetyScores.harshBrakingScore`      | (0 a 1)                                        |
+| `harsh_turning_score`      | NUMERIC   | `safetyScores.harshTurningScore`      | (0 a 1)                                        |
+| `harsh_acceleration_score` | NUMERIC   | `safetyScores.harshAccelerationScore` | (0 a 1)                                        |
+| `wrong_way_driving_score`  | NUMERIC   | `safetyScores.wrongWayDrivingScore`   | (0 a 1)                                        |
+| `attention_score`          | NUMERIC   | `safetyScores.attentionScore`         | (0 a 1)                                        |
+| `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
+| `waypoints_json`           | TEXT      | `transportEvent.waypoints`            | Serializado JSON global                        |
+
 
 #### 3.4.2. `DrivingInsightsHarshEvent`
+
 Deriva de `getHarshDrivingEvents()`.
 
-| Campo | Tipo | Mapeo Sentiance (`HarshDrivingEvent[]`) |
-| :--- | :--- | :--- |
-| `start_time` / `epoch` | DATETIME/BIGINT| `startTime` / `startTimeEpoch` |
-| `end_time` / `epoch` | DATETIME/BIGINT| `endTime` / `endTimeEpoch` |
-| `magnitude` | NUMERIC | `magnitude` |
-| `confidence` | NUMERIC | `confidence` |
-| `harsh_type` | VARCHAR | `type` (*"ACCELERATION", "BRAKING", "TURN"*) |
-| `waypoints_json`| TEXT | `waypoints[]` stringificado |
+
+| Campo                  | Tipo            | Mapeo Sentiance (`HarshDrivingEvent[]`)      |
+| ---------------------- | --------------- | -------------------------------------------- |
+| `start_time` / `epoch` | DATETIME/BIGINT | `startTime` / `startTimeEpoch`               |
+| `end_time` / `epoch`   | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                   |
+| `magnitude`            | NUMERIC         | `magnitude`                                  |
+| `confidence`           | NUMERIC         | `confidence`                                 |
+| `harsh_type`           | VARCHAR         | `type` (*"ACCELERATION", "BRAKING", "TURN"*) |
+| `waypoints_json`       | TEXT            | `waypoints[]` stringificado                  |
+
 
 #### 3.4.3. `DrivingInsightsPhoneEvent` y `DrivingInsightsCallEvent`
+
 Deriva de inyecciones de `getPhoneUsageEvents()` y `getCallEvents()`.
 
-| Campo | Tipo | Mapeo Sentiance | Objeto Origen |
-| :--- | :--- | :--- | :--- |
-| `start_time` / `epoch` | DATETIME/BIGINT| `startTime` / `startTimeEpoch` | En ambos |
-| `end_time` / `epoch` | DATETIME/BIGINT| `endTime` / `endTimeEpoch` | En ambos |
-| `call_state` | VARCHAR | `callState` (*"NO_CALL"*, *"CALL_IN_PROGRESS"*) | Exclusivo de **PhoneEvent** |
-| `min_traveled_speed_mps`| NUMERIC | `minTraveledSpeedInMps` | Exclusivo de **CallEvent** |
-| `max_traveled_speed_mps`| NUMERIC | `maxTraveledSpeedInMps` | Exclusivo de **CallEvent** |
-| `hands_free_state` | VARCHAR | `handsFreeState` (*"HANDS_FREE"*, *"HANDHELD"*) | Exclusivo de **CallEvent** |
-| `waypoints_json` | TEXT | `waypoints[]` stringificado | En ambos |
+
+| Campo                    | Tipo            | Mapeo Sentiance                                 | Objeto Origen               |
+| ------------------------ | --------------- | ----------------------------------------------- | --------------------------- |
+| `start_time` / `epoch`   | DATETIME/BIGINT | `startTime` / `startTimeEpoch`                  | En ambos                    |
+| `end_time` / `epoch`     | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                      | En ambos                    |
+| `call_state`             | VARCHAR         | `callState` (*"NO_CALL"*, *"CALL_IN_PROGRESS"*) | Exclusivo de **PhoneEvent** |
+| `min_traveled_speed_mps` | NUMERIC         | `minTraveledSpeedInMps`                         | Exclusivo de **CallEvent**  |
+| `max_traveled_speed_mps` | NUMERIC         | `maxTraveledSpeedInMps`                         | Exclusivo de **CallEvent**  |
+| `hands_free_state`       | VARCHAR         | `handsFreeState` (*"HANDS_FREE"*, *"HANDHELD"*) | Exclusivo de **CallEvent**  |
+| `waypoints_json`         | TEXT            | `waypoints[]` stringificado                     | En ambos                    |
+
 
 #### 3.4.4. `DrivingInsightsSpeedingEvent` / `DrivingInsightsWrongWayDrivingEvent`
-Análogos derivados de `getSpeedingEvents()` y `getWrongWayDrivingEvents()`.
+
+Análogos derivados de `getSpeedingEvents()` y `getWrongWayDrivingEvents()`.  
 Mapeo idéntico de base (`startTime`, `endTime`, `waypoints`).
 
 ---
@@ -529,56 +565,78 @@ Mapeo idéntico de base (`startTime`, `endTime`, `waypoints`).
 ### 3.5. Excepciones Vehiculares y Estado
 
 #### 3.5.1. `VehicleCrashEvent`
-Provisto a través de `addVehicleCrashEventListener`.
-*Ref SDK: `react-native/crash-detection/definitions`*
 
-| Campo | Tipo | Mapeo Sentiance (`CrashEvent`) |
-| :--- | :--- | :--- |
-| `vehicle_crash_event_id` | BIGINT PK | - |
-| `crash_time_epoch` | BIGINT | `time` |
-| `latitude`, `longitude`, `accuracy`, `altitude`| DECIMAL | Mapeado individual desde el objeto interno `location` al registrarse el impacto |
-| `magnitude` | NUMERIC | `magnitude` |
-| `speed_at_impact`| NUMERIC | `speedAtImpact` |
-| `delta_v` | NUMERIC | `deltaV` (cambio de velocidad en km/h o mph) |
-| `confidence` | NUMERIC | `confidence` |
-| `severity` | VARCHAR | `severity` (*"LOW", "MEDIUM", "HIGH"*) |
-| `detector_mode` | VARCHAR | `detectorMode` (*"CAR", "TWO_WHEELER"*) |
+Provisto a través de `addVehicleCrashEventListener`.  
+*Ref SDK: `react-native/crash-detection/definitions*`
+
+
+| Campo                                           | Tipo      | Mapeo Sentiance (`CrashEvent`)                                                  |
+| ----------------------------------------------- | --------- | ------------------------------------------------------------------------------- |
+| `vehicle_crash_event_id`                        | BIGINT PK | -                                                                               |
+| `crash_time_epoch`                              | BIGINT    | `time`                                                                          |
+| `latitude`, `longitude`, `accuracy`, `altitude` | DECIMAL   | Mapeado individual desde el objeto interno `location` al registrarse el impacto |
+| `magnitude`                                     | NUMERIC   | `magnitude`                                                                     |
+| `speed_at_impact`                               | NUMERIC   | `speedAtImpact`                                                                 |
+| `delta_v`                                       | NUMERIC   | `deltaV` (cambio de velocidad en km/h o mph)                                    |
+| `confidence`                                    | NUMERIC   | `confidence`                                                                    |
+| `severity`                                      | VARCHAR   | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
+| `detector_mode`                                 | VARCHAR   | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
+
 
 #### 3.5.2. `SdkStatusHistory`
+
 Estado general de recolección en los dispositivos a través de status update listeners.
 
-| Campo | Tipo | Base Teórica |
-| :--- | :--- | :--- |
-| `location_permission` | VARCHAR | Si los permisos Android/iOS correspondientes están garantizados |
-| `precise_location_granted`| BOOLEAN | Permisos granulares |
-| `detection_status` | VARCHAR | Porción operativa del SDK |
-| `is_quota_exceeded`| BOOLEAN | Límite API / Offload |
+
+| Campo                      | Tipo    | Base Teórica                                                    |
+| -------------------------- | ------- | --------------------------------------------------------------- |
+| `location_permission`      | VARCHAR | Si los permisos Android/iOS correspondientes están garantizados |
+| `precise_location_granted` | BOOLEAN | Permisos granulares                                             |
+| `detection_status`         | VARCHAR | Porción operativa del SDK                                       |
+| `is_quota_exceeded`        | BOOLEAN | Límite API / Offload                                            |
+
 
 #### 3.5.3. `UserActivityHistory` y `TechnicalEventHistory`
+
 Logs técnicos de actividad o errores.
 
-| Campo | Tipo | Detalles |
-| :--- | :--- | :--- |
-| `activity_type` | VARCHAR | Resumen ligero de actividad (Ej. *"TRIP", "STATIONARY"*) |
-| `technical_event_type`| VARCHAR | Categoría Log de error / advertencia SDK |
-| `message` | TEXT | Detalle del error |
-| `payload_json` | TEXT | Trace de Error/Dump |
+
+| Campo                  | Tipo    | Detalles                                                 |
+| ---------------------- | ------- | -------------------------------------------------------- |
+| `activity_type`        | VARCHAR | Resumen ligero de actividad (Ej. *"TRIP", "STATIONARY"*) |
+| `technical_event_type` | VARCHAR | Categoría Log de error / advertencia SDK                 |
+| `message`              | TEXT    | Detalle del error                                        |
+| `payload_json`         | TEXT    | Trace de Error/Dump                                      |
+
 
 ---
 
 ### 3.6. Tabla Integrada / Pivot ("Canon")
 
 #### 3.6.1. `Trip`
+
 **Importantísimo**: No es directamente poblada por un listener JSON Sentiance unitario, sino un integrador de viajes (Transports).
 
-| Campo | Mapeo Backend a normalizar |
-| :--- | :--- |
-| `canonical_transport_event_id`| ID único originario (`event.id` / `transportEvent.id`) para sincronizar DrivingInsights con Timelines |
-| `first_seen_from` | *"TIMELINE" | "USER_CONTEXT" | "DRIVING_INSIGHTS"* (La fuente desde donde el sistema del servidor vio el ID por primera vez) |
-| `transport_mode`, `start_time` | Mapeado iterando si surge de Timeline, UserContextEvent, o Insight. |
-| `duration_in_seconds`, `distance_meters`| Consolidados al finalizar (`endTime` no nulo) |
-| `is_provisional`| Crucial para controlar el versionado del viaje: indica si el viaje aún puede modificarse y mutar (por Sentiance SDK) |
-| `waypoints_json`| Si no se ha emitido en el DrivingInsight (ej. patines, trenes), se usa el `waypoints` del transportEvent base |
+
+| Campo                                    | Tipo | Mapeo Sentiance y Lógica de Construcción                                                                                           |
+| ---------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
+| `canonical_transport_event_id`           | VARCHAR PK | ID único extraído de `event.id` (Timeline) o `transportEvent.id` (DrivingInsights)               |
+| `first_seen_from`                        | VARCHAR | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (String insertado por el backend indicando qué listener creó la fila primaria) |
+| `transport_mode`                         | VARCHAR | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*). Hereda de Timeline pero se **actualiza** si llega en DrivingInsights. |
+| `start_time` / `epoch`                   | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`. Hereda de Timeline pero se **actualiza** si llega en DrivingInsights. |
+| `end_time` / `epoch`                     | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                |
+| `duration_in_seconds`                    | NUMERIC | Extraído de `durationInSeconds` |
+| `distance_meters`                        | NUMERIC | Extraído de `distance` |
+| `is_provisional`                         | BOOLEAN | Mapeado desde `isProvisional`. Crucial para controlar si el registro `Trip` puede seguir sufriendo alteraciones. |
+| `waypoints_json`                         | TEXT | Extraído del array de objetos `waypoints[]` y guardado como texto.       |
+
+
+> **Ejemplo de Consolidación de la tabla `Trip` (Cómo actúan `transport_mode`, `start_time` e `is_provisional`)**:
+> 1. Un usuario comienza a moverse. El SDK aún no sabe en qué, pero envía a través del listener de Timeline un `TimelineEvent` en tiempo real con `transportMode = "UNKNOWN"`,  `id = "e_123"`, e `isProvisional = true`. 
+>    *↳ El backend inserta un nuevo registro en `Trip` con el modo "UNKNOWN" y lo marca provisional.*
+> 2. Pasan 15 minutos, el viaje termina y el teléfono envía su volcado a los servidores de Sentiance. El modelo de IA de Sentiance concluye que el usuario venía en auto, lo que detona un nuevo listener local en el teléfono pasándole el objeto `DrivingInsights` para el evento `"e_123"`. En este objeto final el `transportMode` ahora es `"CAR"`, el viaje tiene scores de frenado, y tal vez precisó unos segundos mejor el `startTime`.
+>    *↳ El backend busca en la tabla `Trip` el registro con `canonical_transport_event_id = "e_123"` y hace un **UPDATE**: Reemplaza el `transport_mode` a "CAR", ajusta el `start_time`, cambia `is_provisional` a false, e inicializa su viaje hijo `DrivingInsightsTrip`.*
+
 
 ---
 
@@ -587,6 +645,7 @@ Logs técnicos de actividad o errores.
 Según la documentación oficial de Sentiance (React Native), las estructuras de los objetos clave emitidos por los listeners hacia el backend siguen la forma descrita a continuación. Esto es material de referencia para que el equipo backend sepa cómo extraer o deserializar cada propiedad.
 
 ### 4.1. Payload Listener: Timeline (`Event`)
+
 *Estructura base usada tanto en el Timeline como en el detalle de eventos del User Context.*
 
 ```json
@@ -638,8 +697,8 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
   ]
 }
 ```
-*(Nota: `location` y `venue` están típicamente presentes si `type == "STATIONARY"`, mientras que `waypoints`, `distance`, `occupantRole` y `transportMode` están si es `"IN_TRANSPORT"`).*
 
+*(Nota: `location` y `venue` están típicamente presentes si `type == "STATIONARY"`, mientras que `waypoints`, `distance`, `occupantRole` y `transportMode` están si es `"IN_TRANSPORT"`).*
 
 ### 4.2. Payload Listener: User Context (`UserContext`)
 
@@ -686,6 +745,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 ```
 
 ### 4.3. Payload Listener: Driving Insights (`DrivingInsights`)
+
 *Recibido cuando termina de procesarse por completo un viaje motorizado.*
 
 ```json
@@ -716,6 +776,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 > **Nota importante:** La aplicación Front-End envía de forma **independiente** al backend los reportes de eventos derivados (no van empaquetados obligatoriamente dentro del objeto general de `DrivingInsights`). Cuando el backend reciba el JSON correspondiente a las llamadas de `getHarshDrivingEvents()`, `getPhoneUsageEvents()` o afines, percibirá un Array de objetos con el formato pertinente:
 
 **Ejemplo de Payload JSON para Harsh Events (`HarshDrivingEvent[]`):**
+
 ```json
 [
   {
@@ -732,6 +793,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 ```
 
 **Ejemplo de Payload JSON para Eventos Telefónicos (`CallEvent[]`):**
+
 ```json
 [
   {
