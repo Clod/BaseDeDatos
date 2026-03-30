@@ -64,7 +64,6 @@ erDiagram
 		numeric location_accuracy
 		varchar venue_significance
 		varchar venue_type
-		text waypoints_json
 		datetime created_at
 	}
 
@@ -171,7 +170,6 @@ erDiagram
 		numeric wrong_way_driving_score
 		numeric attention_score
 		numeric distance_meters
-		text waypoints_json
 		datetime created_at
 	}
 
@@ -405,7 +403,6 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `location_accuracy`         | NUMERIC   | `location.accuracy`   | Precisión estacionaria (mts)                        |
 | `venue_significance`        | VARCHAR   | `venue.significance`  | *"HOME", "WORK", "POINT_OF_INTEREST"*               |
 | `venue_type`                | VARCHAR   | `venue.type`          | *"SHOP_LONG", "OFFICE", "RESIDENTIAL"...*           |
-| `waypoints_json`            | TEXT      | `waypoints`           | String JSON de objetos de `Waypoint`                |
 
 
 ---
@@ -521,7 +518,6 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
 | `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | *"DRIVER"*, *"PASSENGER"*                      |
 | `transport_tags_json`      | TEXT      | `transportEvent.transportTags`        | Serializado dict key-value                     |
-| `waypoints_json`           | TEXT      | `transportEvent.waypoints`            | Serializado JSON global                        |
 
 
 #### 3.4.2. `DrivingInsightsHarshEvent`
