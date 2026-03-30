@@ -644,7 +644,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | Campo                          | Tipo              | Mapeo Sentiance y Lógica de Construcción                                                                                                                            |
 | ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `trip_id`                      | BIGINT PK         | ID autoincremental de la base de datos (Primary Key Interna).                                                                                                                                                                                                                       |
-| `canonical_transport_event_id` | VARCHAR UNIQUE    | **¿De dónde sale?** Se extrae textualmente de `transportEvent.id` (DrivingInsights) o de `event.id` (Timeline).<br>**Lógica de Consolidación (Upsert):** Al procesar un JSON, si este ID alfanumérico no existe en la tabla, el backend hace un **INSERT**. Si el ID ya existe en la tabla (porque ya había llegado reporte de otro listener para este viaje), el backend hace un **UPDATE** fusionando la nueva información en la misma fila. |
+| `canonical_transport_event_id` | VARCHAR UNIQUE    | **¿De dónde sale?** Se extrae textualmente de `transportEvent.id` (DrivingInsights) o de `event.id` (Timeline).<br>**Lógica de Consolidación (Upsert):** Requiere imperativamente un **UNIQUE CONSTRAINT** u **UNIQUE INDEX** activo en la base de datos sobre este campo. Esto es fundamental para habilitar instrucciones anti-duplicados como `MERGE` en T-SQL de manera atómica transaccional y evitar colisiones cuando múltiples webhooks/listeners insertan datos simultáneamente para el mismo viaje. |
 | `first_seen_from`              | VARCHAR           | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (Indica qué listener reportó el viaje primero y causó el INSERT original).                                                                                                                                   |
 | `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*).                                                                                   |
 | `start_time` / `epoch`         | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.                                                                                                                         |
@@ -682,6 +682,9 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 
 4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:  
    Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent` o `DrivingInsightsTrip`). Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre `Trip` y la tabla satélite dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
+
+5. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:  
+   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única (`UNIQUE INDEX / CONSTRAINT`). Sin ella, el mecanismo atómico de `UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas.
 
 ---
 
