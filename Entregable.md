@@ -168,6 +168,8 @@ erDiagram
 		numeric harsh_turning_score
 		numeric harsh_acceleration_score
 		numeric distance_meters
+		varchar occupant_role
+		text transport_tags_json
 		datetime created_at
 	}
 
