@@ -561,7 +561,7 @@ Deriva de `getHarshDrivingEvents()`.
 
 Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallEvents()`.
 
-> **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como **`DrivingInsightsCallEvent`** por consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: **`CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent`**.
+> **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como **`DrivingInsightsCallEvent`** por mera consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: **`CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent`**.
 
 
 
@@ -606,6 +606,8 @@ Provisto a través de `addVehicleCrashEventListener`.
 #### 3.5.2. `SdkStatusHistory`
 
 Estado general de recolección en los dispositivos a través del listener de status updates. Mapeado desde el payload nativo `SdkStatus`.
+
+> **⚠️ Nota de Captura Parcial (Muestreo Intencional):** La interfaz original TypeScript `SdkStatus` expone casi 18 banderas técnicas (como `isRemoteEnabled`, `isBatteryOptimizationEnabled`, `isAirplaneModeEnabled`, etc.). El modelo de base de datos optó por registrar de forma controlada solo métricas nucleares vinculadas al cuote de tracking y localización, para frenar la saturación con banderas del OS (ruido de telemetría). Esta abstracción es parcial e intencional, por ende no se debe asumir que el esquema SQL será 1:1 con toda la extensión del SDK.
 
 | Campo | Tipo | Mapeo Sentiance y Detalles |
 | :--- | :--- | :--- |
