@@ -519,6 +519,8 @@ Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes 
 
 Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`).
 
+> **⚠️ Nota de Normalización (Omisión de Waypoints):** A pesar de que el objeto nativo extraído `transportEvent` contiene en sus entrañas un array pesado de `waypoints` (tracking geoespacial a milisegundos), esta propiedad fue **purgada intencionalmente** del mapeo DDL de `DrivingInsightsTrip`. Para eficientizar el almacenamiento y evitar gigabytes de coordenadas duplicadas, el guardado de `waypoints_json` de todos los viajes se delega de forma exclusiva y consolidada a la tabla canónica central **`Trip`**.
+
 
 | Campo                      | Tipo      | Mapeo Sentiance                       | Notas                                          |
 | -------------------------- | --------- | ------------------------------------- | ---------------------------------------------- |
@@ -609,6 +611,10 @@ Estado general de recolección en los dispositivos a través del listener de sta
 
 | Campo | Tipo | Mapeo Sentiance y Detalles |
 | :--- | :--- | :--- |
+| `sdk_status_history_id` | BIGINT PK | Identificador único autoincremental de la tabla. |
+| `source_event_id` | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`. |
+| `sentiance_user_id` | VARCHAR | Identificador del usuario emisor del evento. |
+| `captured_at` | DATETIME | Instante de captura local / persistencia del status. |
 | `start_status` | VARCHAR | Extraído de `startStatus` (Estado general del arranque). |
 | `detection_status` | VARCHAR | Extraído de `detectionStatus` (Porción operativa del SDK). |
 | `location_permission` | VARCHAR | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
@@ -625,6 +631,10 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 
 | Campo | Tipo | Mapeo Sentiance y Lógica |
 | :--- | :--- | :--- |
+| `user_activity_history_id` | BIGINT PK | Identificador único autoincremental de la tabla. |
+| `source_event_id` | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`. |
+| `sentiance_user_id` | VARCHAR | Identificador del usuario emisor de la actividad. |
+| `captured_at` | DATETIME | Instante de persistencia de la actividad. |
 | `activity_type` | VARCHAR | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). |
 | `trip_type` | VARCHAR | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje. |
 | `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. Estacionario. |
