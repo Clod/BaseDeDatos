@@ -413,7 +413,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `end_time_epoch`            | BIGINT    | `endTimeEpoch`        | UTC milisegundos                                    |
 | `duration_in_seconds`       | NUMERIC   | `durationInSeconds`   | Nulo si no culminó                                  |
 | `is_provisional`            | BIT   | `isProvisional`       | Determina si es `true` (en curso) o `false` (final) |
-| `transport_mode`            | VARCHAR   | `transportMode`       | *"CAR", "BICYCLE", "WALKING", "UNKNOWN"...*         |
+| `transport_mode`            | VARCHAR   | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"* |
 | `distance_meters`           | NUMERIC   | `distance`            | Distancia del transporte en metros                  |
 | `occupant_role`             | VARCHAR   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*              |
 | `transport_tags_json`       | NVARCHAR(MAX)      | `transportTags`       | String JSON del objeto Key-Value asignado.          |
@@ -661,7 +661,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `trip_id`                      | BIGINT PK         | ID autoincremental de la base de datos (Primary Key Interna).                                                                                                                                                                                                                       |
 | `canonical_transport_event_id` | VARCHAR UNIQUE    | **¿De dónde sale?** Se extrae textualmente de `transportEvent.id` (DrivingInsights) o de `event.id` (Timeline).<br>**Lógica de Consolidación (Upsert):** Requiere imperativamente un **UNIQUE CONSTRAINT** u **UNIQUE INDEX** activo en la base de datos sobre este campo. Esto es fundamental para habilitar instrucciones anti-duplicados como `MERGE` en T-SQL de manera atómica transaccional y evitar colisiones cuando múltiples webhooks/listeners insertan datos simultáneamente para el mismo viaje. |
 | `first_seen_from`              | VARCHAR           | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (Indica qué listener reportó el viaje primero y causó el INSERT original).                                                                                                                                   |
-| `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Ej: *"CAR"*, *"WALKING"*, *"UNKNOWN"*, *"BICYCLE"*).                                                                                   |
+| `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*).                                                                                   |
 | `start_time` / `epoch`         | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.                                                                                                                         |
 | `end_time` / `epoch`           | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                                                                        |
 | `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                     |
