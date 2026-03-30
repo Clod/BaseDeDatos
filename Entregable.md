@@ -23,7 +23,7 @@ erDiagram
 		int id PK 
 		varchar sentianceid
 		datetime fechahora
-		text json
+		nvarchar(max) json
 		varchar tipo
 		datetime created_at
 		bit procesado
@@ -54,11 +54,11 @@ erDiagram
 		datetime end_time
 		bigint end_time_epoch
 		numeric duration_in_seconds
-		boolean is_provisional
+		bit is_provisional
 		varchar transport_mode
 		numeric distance_meters
 		varchar occupant_role
-		text transport_tags_json
+		nvarchar(max) transport_tags_json
 		decimal location_latitude
 		decimal location_longitude
 		numeric location_accuracy
@@ -92,11 +92,11 @@ erDiagram
 		datetime end_time
 		bigint end_time_epoch
 		numeric duration_in_seconds
-		boolean is_provisional
+		bit is_provisional
 		varchar transport_mode
 		numeric distance_meters
 		varchar occupant_role
-		text transport_tags_json
+		nvarchar(max) transport_tags_json
 		decimal location_latitude
 		decimal location_longitude
 		numeric location_accuracy
@@ -169,7 +169,7 @@ erDiagram
 		numeric harsh_acceleration_score
 		numeric distance_meters
 		varchar occupant_role
-		text transport_tags_json
+		nvarchar(max) transport_tags_json
 		datetime created_at
 	}
 
@@ -184,7 +184,7 @@ erDiagram
 		numeric magnitude
 		numeric confidence
 		varchar harsh_type
-		text waypoints_json
+		nvarchar(max) waypoints_json
 	}
 
 	DrivingInsightsPhoneEvent {
@@ -195,7 +195,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime end_time
 		bigint end_time_epoch
-		text waypoints_json
+		nvarchar(max) waypoints_json
 	}
 
 	DrivingInsightsCallEvent {
@@ -208,7 +208,7 @@ erDiagram
 		bigint end_time_epoch
 		numeric min_travelled_speed_mps
 		numeric max_travelled_speed_mps
-		text waypoints_json
+		nvarchar(max) waypoints_json
 	}
 
 	DrivingInsightsSpeedingEvent {
@@ -219,7 +219,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime end_time
 		bigint end_time_epoch
-		text waypoints_json
+		nvarchar(max) waypoints_json
 	}
 
 	DrivingInsightsWrongWayDrivingEvent {
@@ -230,7 +230,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime end_time
 		bigint end_time_epoch
-		text waypoints_json
+		nvarchar(max) waypoints_json
 	}
 
 	VehicleCrashEvent {
@@ -248,7 +248,7 @@ erDiagram
 		numeric confidence
 		varchar severity
 		varchar detector_mode
-		text preceding_locations_json
+		nvarchar(max) preceding_locations_json
 	}
 
 	SdkStatusHistory {
@@ -258,12 +258,12 @@ erDiagram
 		varchar start_status
 		varchar detection_status
 		varchar location_permission
-		boolean precise_location_granted
+		bit precise_location_granted
 		varchar quota_status_wifi
 		varchar quota_status_mobile
 		varchar quota_status_disk
-		boolean is_location_available
-		boolean can_detect
+		bit is_location_available
+		bit can_detect
 		datetime captured_at
 	}
 
@@ -275,7 +275,7 @@ erDiagram
 		varchar trip_type
 		decimal stationary_latitude
 		decimal stationary_longitude
-		text payload_json
+		nvarchar(max) payload_json
 		datetime captured_at
 	}
 
@@ -284,8 +284,8 @@ erDiagram
 		bigint source_event_id FK 
 		varchar sentiance_user_id
 		varchar technical_event_type
-		text message
-		text payload_json
+		nvarchar(max) message
+		nvarchar(max) payload_json
 		datetime captured_at
 	}
 
@@ -304,9 +304,9 @@ erDiagram
 		numeric duration_in_seconds
 		numeric distance_meters
 		varchar occupant_role
-		boolean is_provisional
-		text transport_tags_json
-		text waypoints_json
+		bit is_provisional
+		nvarchar(max) transport_tags_json
+		nvarchar(max) waypoints_json
 		datetime created_at
 		datetime updated_at
 	}
@@ -339,6 +339,13 @@ erDiagram
 
 ## 3. Diccionario de Datos (Mapeo por Tabla)
 
+> **📍 MOTOR OBJETIVO: Microsoft SQL Server (T-SQL)**  
+> Todo el esquema ER y el Diccionario de Datos están pensados estructuralmente para ser implementados en **Microsoft SQL Server**.
+> - Campos booleanos lógicos se expresan como `BIT` (`0` / `1`).
+> - Objetos anidados en JSON y strings extensos (sin longitud predecible) se tipan como `NVARCHAR(MAX)`.
+> - Columnas numéricas usan `NUMERIC`, `DECIMAL` o `BIGINT` en lugar de literales genéricos para garantizar exactitud temporal y espacial.
+
+
 > A continuación, se detalla campo por campo cada tabla presente en el diagrama, vinculándola con la variable equivalente dictada por la documentación oficial de Sentiance react-native.
 
 ### 3.1. Tablas Base y Gestión
@@ -353,7 +360,7 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | `id`          | INT (PK) | Auto-Generado Interno                                                                              |
 | `sentianceid` | VARCHAR  | UUID del dispositivo extraído pre-procesamiento / Autenticación Custom                             |
 | `fechahora`   | DATETIME | Timestamp de inserción                                                                             |
-| `json`        | TEXT     | **Payload exacto emitido desde la app React Native**.                                              |
+| `json`        | NVARCHAR(MAX)     | **Payload exacto emitido desde la app React Native**.                                              |
 | `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
 | `created_at`  | DATETIME | Fecha/Hora Backend de escritura                                                                    |
 | `procesado`   | BIT      | Flag para ETL indicando si fue parseada a las tablas detalladas                                    |
@@ -401,11 +408,11 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `end_time`                  | DATETIME  | `endTime`             | ISO 8601 string                                     |
 | `end_time_epoch`            | BIGINT    | `endTimeEpoch`        | UTC milisegundos                                    |
 | `duration_in_seconds`       | NUMERIC   | `durationInSeconds`   | Nulo si no culminó                                  |
-| `is_provisional`            | BOOLEAN   | `isProvisional`       | Determina si es `true` (en curso) o `false` (final) |
+| `is_provisional`            | BIT   | `isProvisional`       | Determina si es `true` (en curso) o `false` (final) |
 | `transport_mode`            | VARCHAR   | `transportMode`       | *"CAR", "BICYCLE", "WALKING", "UNKNOWN"...*         |
 | `distance_meters`           | NUMERIC   | `distance`            | Distancia del transporte en metros                  |
 | `occupant_role`             | VARCHAR   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*              |
-| `transport_tags_json`       | TEXT      | `transportTags`       | String JSON del objeto Key-Value asignado.          |
+| `transport_tags_json`       | NVARCHAR(MAX)      | `transportTags`       | String JSON del objeto Key-Value asignado.          |
 | `location_latitude`         | DECIMAL   | `location.latitude`   | Presente sólo para `STATIONARY`                     |
 | `location_longitude`        | DECIMAL   | `location.longitude`  | Presente sólo para `STATIONARY`                     |
 | `location_accuracy`         | NUMERIC   | `location.accuracy`   | Precisión estacionaria (mts)                        |
@@ -525,7 +532,7 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_acceleration_score` | NUMERIC   | `safetyScores.harshAccelerationScore` | (0 a 1)                                        |
 | `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
 | `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | *"DRIVER"*, *"PASSENGER"*                      |
-| `transport_tags_json`      | TEXT      | `transportEvent.transportTags`        | Serializado dict key-value                     |
+| `transport_tags_json`      | NVARCHAR(MAX)      | `transportEvent.transportTags`        | Serializado dict key-value                     |
 
 
 #### 3.4.2. `DrivingInsightsHarshEvent`
@@ -540,7 +547,7 @@ Deriva de `getHarshDrivingEvents()`.
 | `magnitude`            | NUMERIC         | `magnitude`                                  |
 | `confidence`           | NUMERIC         | `confidence`                                 |
 | `harsh_type`           | VARCHAR         | `type` (*"ACCELERATION", "BRAKING", "TURN"*) |
-| `waypoints_json`       | TEXT            | `waypoints[]` stringificado                  |
+| `waypoints_json`       | NVARCHAR(MAX)            | `waypoints[]` stringificado                  |
 
 
 #### 3.4.3. `DrivingInsightsPhoneEvent` y `DrivingInsightsCallEvent`
@@ -554,7 +561,7 @@ Deriva de inyecciones de `getPhoneUsageEvents()` y `getCallEvents()`.
 | `end_time` / `epoch`     | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                      | En ambos                    |
 | `min_travelled_speed_mps` | NUMERIC         | `minTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
 | `max_travelled_speed_mps` | NUMERIC         | `maxTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
-| `waypoints_json`         | TEXT            | `waypoints[]` stringificado                     | En ambos                    |
+| `waypoints_json`         | NVARCHAR(MAX)            | `waypoints[]` stringificado                     | En ambos                    |
 
 
 #### 3.4.4. `DrivingInsightsSpeedingEvent` / `DrivingInsightsWrongWayDrivingEvent`
@@ -583,7 +590,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `confidence`                                    | NUMERIC   | `confidence`                                                                    |
 | `severity`                                      | VARCHAR   | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
 | `detector_mode`                                 | VARCHAR   | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
-| `preceding_locations_json`                      | TEXT      | Stringificado del JSON Array `precedingLocations`                               |
+| `preceding_locations_json`                      | NVARCHAR(MAX)      | Stringificado del JSON Array `precedingLocations`                               |
 
 
 #### 3.5.2. `SdkStatusHistory`
@@ -595,12 +602,12 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | `start_status` | VARCHAR | Extraído de `startStatus` (Estado general del arranque). |
 | `detection_status` | VARCHAR | Extraído de `detectionStatus` (Porción operativa del SDK). |
 | `location_permission` | VARCHAR | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
-| `precise_location_granted`| BOOLEAN | Extraído de `isPreciseLocationAuthorizationGranted`. |
+| `precise_location_granted`| BIT | Extraído de `isPreciseLocationAuthorizationGranted`. |
 | `quota_status_wifi` | VARCHAR | Extraído de `wifiQuotaStatus`. |
 | `quota_status_mobile` | VARCHAR | Extraído de `mobileQuotaStatus`. |
 | `quota_status_disk` | VARCHAR | Extraído de `diskQuotaStatus`. |
-| `is_location_available` | BOOLEAN | Extraído de `isLocationAvailable`. |
-| `can_detect` | BOOLEAN | Extraído de `canDetect`. |
+| `is_location_available` | BIT | Extraído de `isLocationAvailable`. |
+| `can_detect` | BIT | Extraído de `canDetect`. |
 
 #### 3.5.3. `UserActivityHistory`
 
@@ -611,7 +618,7 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | `activity_type` | VARCHAR | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). |
 | `trip_type` | VARCHAR | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje. |
 | `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. Estacionario. |
-| `payload_json` | TEXT | Copia raw del JSON emitido por si varía en actualizaciones futuras. |
+| `payload_json` | NVARCHAR(MAX) | Copia raw del JSON emitido por si varía en actualizaciones futuras. |
 
 #### 3.5.4. `TechnicalEventHistory`
 
@@ -638,9 +645,9 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                     |
 | `distance_meters`              | NUMERIC           | Extraído de `distance`                                                                                                                                              |
 | `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (*"DRIVER"*, *"PASSENGER"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                            |
-| `is_provisional`               | BOOLEAN           | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
-| `transport_tags_json`          | TEXT              | Recuperado del objeto libre `transportTags`.                                                                                                                        |
-| `waypoints_json`               | TEXT              | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                  |
+| `is_provisional`               | BIT           | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
+| `transport_tags_json`          | NVARCHAR(MAX)              | Recuperado del objeto libre `transportTags`.                                                                                                                        |
+| `waypoints_json`               | NVARCHAR(MAX)              | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                  |
 
 
 > **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:  
