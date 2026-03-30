@@ -649,6 +649,26 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 
 ---
 
+## 3.7. Índices de Base de Datos Recomendados (Alto Volumen)
+
+Debido a que una plataforma telemática conectada a múltiples dispositivos móviles (especialmente si recopila datos a baja latencia en ~1Hz o al detectar movimiento) genera cientos de miles o millones de filas rápidamente, la definición del DDL debe incluir índices **B-Tree** precisos para no deteriorar los tiempos de las consultas del negocio.
+
+Por el diseño establecido, recomendamos enfáticamente crear los siguientes índices sobre las tablas de alto impacto (`SentianceEventos`, `TimelineEventHistory`, `UserActivityHistory` y `Trip`):
+
+1. **Índice sobre `sentiance_user_id`** (Alta Cardinalidad):  
+   Casi cualquier pantalla principal del sistema (ej: "Consultar viajes del usuario X") o el filtrado por conductor usa esta columna. Al crear un index (ej: `idx_user_context_sentiance_user_id`) se evitan búsquedas Full-Table Scan que demorarían minutos.
+
+2. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):  
+   Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
+
+3. **Índice sobre `is_provisional`** (Baja Cardinalidad pero Crítico para Filtros):  
+   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = false`. Generar un índice (particularmente un *Partial Index* en PostgreSQL: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = false`) hará que listar la billetera de viajes finalizados sea instantáneo.
+
+4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:  
+   Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent` o `DrivingInsightsTrip`). Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre `Trip` y la tabla satélite dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
+
+---
+
 ## 4. Anexo: Estructuras JSON Esperadas (Payloads SDK Principales)
 
 Según la documentación oficial de Sentiance (React Native), las estructuras de los objetos clave emitidos por los listeners hacia el backend siguen la forma descrita a continuación. Esto es material de referencia para que el equipo backend sepa cómo extraer o deserializar cada propiedad.
