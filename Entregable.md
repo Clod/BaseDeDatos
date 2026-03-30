@@ -649,7 +649,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 
 ---
 
-## 4. Anexo: Estructuras JSON Esperadas (Payloads SDK Mails)
+## 4. Anexo: Estructuras JSON Esperadas (Payloads SDK Principales)
 
 Según la documentación oficial de Sentiance (React Native), las estructuras de los objetos clave emitidos por los listeners hacia el backend siguen la forma descrita a continuación. Esto es material de referencia para que el equipo backend sepa cómo extraer o deserializar cada propiedad.
 
