@@ -1058,7 +1058,7 @@ sequenceDiagram
         Source-->>ETL: Retorna `source_event_id` (Genera Raíz)
         
         opt Contiene Trayecto ("transportEvent" o "Event")
-            ETL->>Trip: UPSERT con ON CONFLICT (canonical_transport_event_id)
+            ETL->>Trip: MERGE (T-SQL Upsert) sobre canonical_transport_event_id
             note right of Trip: Si no existe = INSERT (Nuevo viaje). <br>Si existe = UPDATE (Carga final consolida "borrador" y waypoints).
             Trip-->>ETL: Retorna `trip_id`
         end
