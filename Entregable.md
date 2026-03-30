@@ -195,7 +195,6 @@ erDiagram
 		bigint start_time_epoch
 		datetime end_time
 		bigint end_time_epoch
-		varchar call_state
 		text waypoints_json
 	}
 
@@ -209,7 +208,6 @@ erDiagram
 		bigint end_time_epoch
 		numeric min_travelled_speed_mps
 		numeric max_travelled_speed_mps
-		varchar hands_free_state
 		text waypoints_json
 	}
 
@@ -553,10 +551,8 @@ Deriva de inyecciones de `getPhoneUsageEvents()` y `getCallEvents()`.
 | ------------------------ | --------------- | ----------------------------------------------- | --------------------------- |
 | `start_time` / `epoch`   | DATETIME/BIGINT | `startTime` / `startTimeEpoch`                  | En ambos                    |
 | `end_time` / `epoch`     | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                      | En ambos                    |
-| `call_state`             | VARCHAR         | `callState` (*"NO_CALL"*, *"CALL_IN_PROGRESS"*) | Exclusivo de **PhoneEvent** |
 | `min_travelled_speed_mps` | NUMERIC         | `minTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
 | `max_travelled_speed_mps` | NUMERIC         | `maxTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
-| `hands_free_state`       | VARCHAR         | `handsFreeState` (*"HANDS_FREE"*, *"HANDHELD"*) | Exclusivo de **CallEvent**  |
 | `waypoints_json`         | TEXT            | `waypoints[]` stringificado                     | En ambos                    |
 
 
@@ -814,7 +810,6 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
     "endTimeEpoch": 1698223320000,
     "minTravelledSpeedInMps": 10.5,
     "maxTravelledSpeedInMps": 22.3,
-    "handsFreeState": "HANDS_FREE",
     "waypoints": [ ... ]
   }
 ]
