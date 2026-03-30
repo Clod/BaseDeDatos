@@ -1,5 +1,9 @@
 # Diseño de Base de Datos - Eventos Sentiance
 
+> **Versión:** 1.0.0
+> **Última Actualización:** 30 de marzo de 2026
+> **Motor Objetivo:** Microsoft SQL Server (T-SQL)
+
 ## 1. Contexto y Origen de Datos (Payloads)
 
 Este modelo de base de datos está diseñado para almacenar estructuradamente la información recolectada por el **SDK de Sentiance** en aplicaciones móviles.
