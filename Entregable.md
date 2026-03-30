@@ -465,6 +465,9 @@ Los motivos de actualización extraídos del arreglo `criteria[]`.
 Itera los eventos activos `events[]` actuales del contexto.  
 Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (contiene `transportMode`, `occupantRole`, locations y demás). Única diferencia: Clave Foránea a `UserContextHeader`.
 
+> **⚠️ Nota de Normalización y Almacenamiento:** Aunque el objeto nativo extraído `events[]` contiene un voluminoso array de `waypoints` (coordenadas en milisegundos del trayecto), este campo fue **omitido intencionalmente** del esquema `UserContextEventDetail`. Para evitar duplicidad extrema de Megabytes en JSON, dichos recorridos se almacenan de manera única en la tabla pivote **`Trip`**.
+
+
 #### 3.3.4. `UserContextActiveSegmentDetail`
 
 Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos inferidos).
