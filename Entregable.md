@@ -28,7 +28,7 @@ erDiagram
 		varchar sentianceid
 		nvarchar(max) json
 		varchar tipo
-		datetime created_at
+		datetime2(3) created_at
 		bit is_processed
 		bit procesado
 		varchar app_version
@@ -39,10 +39,10 @@ erDiagram
 		bigint id FK 
 		varchar record_type
 		varchar sentiance_user_id
-		datetime source_time
+		datetime2(3) source_time
 		varchar source_event_ref
 		varchar payload_hash
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	TimelineEventHistory {
@@ -51,11 +51,11 @@ erDiagram
 		varchar sentiance_user_id
 		varchar event_id
 		varchar event_type
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime last_update_time
+		datetime2(3) last_update_time
 		bigint last_update_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		numeric duration_in_seconds
 		bit is_provisional
@@ -68,7 +68,7 @@ erDiagram
 		numeric location_accuracy
 		varchar venue_significance
 		varchar venue_type
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	UserContextHeader {
@@ -80,7 +80,7 @@ erDiagram
 		decimal(10, 8) last_known_latitude
 		decimal(11, 8) last_known_longitude
 		numeric last_known_accuracy
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	UserContextEventDetail {
@@ -89,11 +89,11 @@ erDiagram
 		varchar sentiance_user_id
 		varchar event_id
 		varchar event_type
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime last_update_time
+		datetime2(3) last_update_time
 		bigint last_update_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		numeric duration_in_seconds
 		bit is_provisional
@@ -106,7 +106,7 @@ erDiagram
 		numeric location_accuracy
 		varchar venue_significance
 		varchar venue_type
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	UserContextActiveSegmentDetail {
@@ -117,11 +117,11 @@ erDiagram
 		varchar category
 		varchar subcategory
 		varchar segment_type
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	UserContextSegmentAttribute {
@@ -174,16 +174,16 @@ erDiagram
 		numeric distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
-		datetime created_at
+		datetime2(3) created_at
 	}
 
 	DrivingInsightsHarshEvent {
 		bigint harsh_event_id PK 
 		bigint source_event_id FK 
 		bigint driving_insights_trip_id FK 
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		numeric magnitude
 		numeric confidence
@@ -195,9 +195,9 @@ erDiagram
 		bigint phone_event_id PK 
 		bigint source_event_id FK 
 		bigint driving_insights_trip_id FK 
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		nvarchar(max) waypoints_json
 	}
@@ -206,9 +206,9 @@ erDiagram
 		bigint call_event_id PK 
 		bigint source_event_id FK 
 		bigint driving_insights_trip_id FK 
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		numeric min_travelled_speed_mps
 		numeric max_travelled_speed_mps
@@ -219,9 +219,9 @@ erDiagram
 		bigint speeding_event_id PK 
 		bigint source_event_id FK 
 		bigint driving_insights_trip_id FK 
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		nvarchar(max) waypoints_json
 	}
@@ -230,9 +230,9 @@ erDiagram
 		bigint wrong_way_event_id PK 
 		bigint source_event_id FK 
 		bigint driving_insights_trip_id FK 
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		nvarchar(max) waypoints_json
 	}
@@ -268,7 +268,7 @@ erDiagram
 		varchar quota_status_disk
 		bit is_location_available
 		bit can_detect
-		datetime captured_at
+		datetime2(3) captured_at
 	}
 
 	UserActivityHistory {
@@ -280,7 +280,7 @@ erDiagram
 		decimal(10, 8) stationary_latitude
 		decimal(11, 8) stationary_longitude
 		nvarchar(max) payload_json
-		datetime captured_at
+		datetime2(3) captured_at
 	}
 
 	TechnicalEventHistory {
@@ -290,7 +290,7 @@ erDiagram
 		varchar technical_event_type
 		nvarchar(max) message
 		nvarchar(max) payload_json
-		datetime captured_at
+		datetime2(3) captured_at
 	}
 
 	Trip {
@@ -299,11 +299,11 @@ erDiagram
 		varchar canonical_transport_event_id
 		varchar first_seen_from
 		varchar transport_mode
-		datetime start_time
+		datetime2(3) start_time
 		bigint start_time_epoch
-		datetime last_update_time
+		datetime2(3) last_update_time
 		bigint last_update_time_epoch
-		datetime end_time
+		datetime2(3) end_time
 		bigint end_time_epoch
 		numeric duration_in_seconds
 		numeric distance_meters
@@ -311,8 +311,8 @@ erDiagram
 		bit is_provisional
 		nvarchar(max) transport_tags_json
 		nvarchar(max) waypoints_json
-		datetime created_at
-		datetime updated_at
+		datetime2(3) created_at
+		datetime2(3) updated_at
 	}
 
 	SentianceEventos||--o|SdkSourceEvent:"deriva en"
@@ -364,7 +364,7 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | `sentianceid`  | VARCHAR       | Identificador del usuario.                                                                                                                                                   |
 | `json`         | NVARCHAR(MAX) | **Payload exacto emitido desde la app React Native**.                                                                                                                        |
 | `tipo`         | VARCHAR       | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`)                                                                           |
-| `created_at`   | DATETIME      | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`)                                                 |
+| `created_at`   | DATETIME2(3)  | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`)                                                 |
 | `is_processed` | BIT           | Flag nativo de control de este pipeline ETL (Extract -> Transform -> Load): seteado a `1` una vez el JSON fue parseado y distribuido exitosamente a las tablas normalizadas. |
 | `procesado`    | BIT           | **⚠️ LEGACY / EXTERNO:** Flag preexistente manipulado por rutinas ajenas a esta integración. No tiene relación alguna con este pipeline documental. **Ignorar**.             |
 | `app_version`  | VARCHAR       | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                                                                                                        |
@@ -381,10 +381,10 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | `id`                | BIGINT FK | Referencia al `id` de `SentianceEventos`                              |
 | `record_type`       | VARCHAR   | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
 | `sentiance_user_id` | VARCHAR   | `user_id`                                                             |
-| `source_time`       | DATETIME  | Obtenido de los epoch del evento principal en el JSON                 |
+| `source_time`       | DATETIME2(3)| Obtenido de los epoch del evento principal en el JSON                 |
 | `source_event_ref`  | VARCHAR   | ID de referencia directa (`event.id` o `transportEvent.id`)           |
 | `payload_hash`      | VARCHAR   | Hash MD5/SHA para determinar unicidad de JSONs procesados             |
-| `created_at`        | DATETIME  | Tiempo Interno de normalización                                       |
+| `created_at`        | DATETIME2(3)| Tiempo Interno de normalización                                       |
 
 
 **Nota**: tal vez convendría guardar la fecha también en formato legible por 
@@ -406,11 +406,11 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                                                                            |
 | `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla `**Trip**`. |
 | `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                                                                                |
-| `start_time`                | DATETIME      | `startTime`           | ISO 8601 string                                                                                                                                                         |
+| `start_time`                | DATETIME2(3)  | `startTime`           | ISO 8601 string                                                                                                                                                         |
 | `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                                                                                        |
-| `last_update_time`          | DATETIME      | `lastUpdateTime`      | ISO 8601 string                                                                                                                                                         |
+| `last_update_time`          | DATETIME2(3)  | `lastUpdateTime`      | ISO 8601 string                                                                                                                                                         |
 | `last_update_time_epoch`    | BIGINT        | `lastUpdateTimeEpoch` | UTC milisegundos                                                                                                                                                        |
-| `end_time`                  | DATETIME      | `endTime`             | ISO 8601 string                                                                                                                                                         |
+| `end_time`                  | DATETIME2(3)  | `endTime`             | ISO 8601 string                                                                                                                                                         |
 | `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                                                                                        |
 | `duration_in_seconds`       | NUMERIC       | `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
 | `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                                                                                     |
@@ -494,8 +494,8 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 | `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)                |
 | `subcategory`                     | VARCHAR           | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)              |
 | `segment_type`                    | VARCHAR           | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*)            |
-| `start_time` / `start_time_epoch` | DATETIME / BIGINT | `startTime` / `startTimeEpoch`                                   |
-| `end_time` / `end_time_epoch`     | DATETIME / BIGINT | `endTime` / `endTimeEpoch`                                       |
+| `start_time` / `start_time_epoch` | DATETIME2(3) / BIGINT | `startTime` / `startTimeEpoch`                                   |
+| `end_time` / `end_time_epoch`     | DATETIME2(3) / BIGINT | `endTime` / `endTimeEpoch`                                       |
 
 
 #### 3.3.5. `UserContextSegmentAttribute`
@@ -571,9 +571,9 @@ Deriva de `getHarshDrivingEvents()`.
 | `harsh_event_id`           | BIGINT PK     | Auto                                         | Identificador único del evento brusco.                                     |
 | `source_event_id`          | BIGINT FK     | FK Raíz                                      | FK referenciando a `SdkSourceEvent(source_event_id)`.                      |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre                                     | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.        |
-| `start_time`               | DATETIME      | `startTime`                                  | Inicio del evento.                                                         |
+| `start_time`               | DATETIME2(3)  | `startTime`                                  | Inicio del evento.                                                         |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`                             | Tiempo Unix de inicio.                                                     |
-| `end_time`                 | DATETIME      | `endTime`                                    | Fin del evento.                                                            |
+| `end_time`                 | DATETIME2(3)  | `endTime`                                    | Fin del evento.                                                            |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`                               | Tiempo Unix de fin.                                                        |
 | `magnitude`                | NUMERIC       | `magnitude`                                  | Fuerza G máxima detectada.                                                 |
 | `confidence`               | NUMERIC       | `confidence`                                 | Nivel de confianza (0-1).                                                  |
@@ -593,9 +593,9 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `call_event_id`            | BIGINT PK     | Auto                   | Identificador único del evento de llamada.                          |
 | `source_event_id`          | BIGINT FK     | FK Raíz                | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre               | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
-| `start_time`               | DATETIME      | `startTime`            | Inicio de la llamada.                                               |
+| `start_time`               | DATETIME2(3)  | `startTime`            | Inicio de la llamada.                                               |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`       | Tiempo Unix de inicio.                                              |
-| `end_time`                 | DATETIME      | `endTime`              | Fin de la llamada.                                                  |
+| `end_time`                 | DATETIME2(3)  | `endTime`              | Fin de la llamada.                                                  |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                 |
 | `min_travelled_speed_mps`  | NUMERIC       | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
 | `max_travelled_speed_mps`  | NUMERIC       | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
@@ -612,9 +612,9 @@ Deriva de `getSpeedingEvents()`.
 | `speeding_event_id`        | BIGINT PK     | Auto             | Identificador único del evento de exceso de velocidad.              |
 | `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
-| `start_time`               | DATETIME      | `startTime`      | Inicio del exceso de velocidad.                                     |
+| `start_time`               | DATETIME2(3)  | `startTime`      | Inicio del exceso de velocidad.                                     |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
-| `end_time`                 | DATETIME      | `endTime`        | Fin del exceso de velocidad.                                        |
+| `end_time`                 | DATETIME2(3)  | `endTime`        | Fin del exceso de velocidad.                                        |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
@@ -629,9 +629,9 @@ Deriva de `getWrongWayDrivingEvents()`.
 | `wrong_way_event_id`       | BIGINT PK     | Auto             | Identificador único del evento de conducción en contramano.         |
 | `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
-| `start_time`               | DATETIME      | `startTime`      | Inicio de la conducción en contramano.                              |
+| `start_time`               | DATETIME2(3)  | `startTime`      | Inicio de la conducción en contramano.                              |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
-| `end_time`                 | DATETIME      | `endTime`        | Fin de la conducción en contramano.                                 |
+| `end_time`                 | DATETIME2(3)  | `endTime`        | Fin de la conducción en contramano.                                 |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
@@ -645,9 +645,9 @@ Deriva de `getPhoneUsageEvents()`. Representa los momentos en que el conductor i
 | `phone_event_id`           | BIGINT PK     | Auto             | Identificador único del evento de distracción.                      |
 | `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
-| `start_time`               | DATETIME      | `startTime`      | Inicio del uso del teléfono.                                        |
+| `start_time`               | DATETIME2(3)  | `startTime`      | Inicio del uso del teléfono.                                        |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
-| `end_time`                 | DATETIME      | `endTime`        | Fin del uso del teléfono.                                           |
+| `end_time`                 | DATETIME2(3)  | `endTime`        | Fin del uso del teléfono.                                           |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
@@ -701,7 +701,7 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | `quota_status_disk`        | VARCHAR   | `quotaStatusDisk`                                     | Estado de cuota en disco.         |
 | `is_location_available`    | BIT       | `isLocationAvailable`                                 | Si la ubicación está encendida.   |
 | `can_detect`               | BIT       | `canDetect`                                           | Si el SDK puede recolectar datos. |
-| `captured_at`              | DATETIME  | Instante de persistencia del status.                  | -                                 |
+| `captured_at`              | DATETIME2(3)| Instante de persistencia del status.                  | -                                 |
 | `precise_location_granted` | BIT       | Extraído de `isPreciseLocationAuthorizationGranted`.  |                                   |
 | `quota_status_wifi`        | VARCHAR   | Extraído de `wifiQuotaStatus`.                        |                                   |
 | `quota_status_mobile`      | VARCHAR   | Extraído de `mobileQuotaStatus`.                      |                                   |
@@ -725,7 +725,7 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | `stationary_latitude`      | DECIMAL(10, 8)| `stationaryInfo.location.latitude`. **⚠️ Permite NULL** si no hay señal.     | -     |
 | `stationary_longitude`     | DECIMAL(11, 8)| `stationaryInfo.location.longitude`. **⚠️ Permite NULL** si no hay señal.    | -     |
 | `payload_json`             | NVARCHAR(MAX) | Copia raw del JSON `UserActivity`.                                           | -     |
-| `captured_at`              | DATETIME      | Instante de persistencia de la actividad.                                    | -     |
+| `captured_at`              | DATETIME2(3)  | Instante de persistencia de la actividad.                                    | -     |
 
 
 #### 3.5.4. `TechnicalEventHistory`
@@ -741,7 +741,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `technical_event_type`       | VARCHAR       | Tipo de evento técnico (ej: *"ERROR"*, *"WARNING"*, *"SDK_LOG"*). | -     |
 | `message`                    | NVARCHAR(MAX) | Descripción textual del evento o error.                           | -     |
 | `payload_json`               | NVARCHAR(MAX) | Contenido crudo del log técnico para análisis profundo.           | -     |
-| `captured_at`                | DATETIME      | Instante de persistencia del evento.                              | -     |
+| `captured_at`                | DATETIME2(3)  | Instante de persistencia del evento.                              | -     |
 
 
 ---
@@ -760,11 +760,11 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `canonical_transport_event_id` | VARCHAR       | `id` (del transporte) | ID original de Sentiance para de-duplicación global.                          |
 | `first_seen_from`              | VARCHAR       | -                     | Origen del primer registro (*"TIMELINE"*, *"CONTEXT"*, *"DRIVING_INSIGHTS"*). |
 | `transport_mode`               | VARCHAR       | `transportMode`       | Modo de transporte (CAR, BUS, WALKING, etc.).                                 |
-| `start_time`                   | DATETIME      | `startTime`           | Inicio global del viaje.                                                      |
+| `start_time`                   | DATETIME2(3)  | `startTime`           | Inicio global del viaje.                                                      |
 | `start_time_epoch`             | BIGINT        | `startTimeEpoch`      | Tiempo Unix de inicio.                                                        |
-| `last_update_time`             | DATETIME      | `lastUpdateTime`      | Fecha de la última actualización reportada por el SDK.                        |
+| `last_update_time`             | DATETIME2(3)  | `lastUpdateTime`      | Fecha de la última actualización reportada por el SDK.                        |
 | `last_update_time_epoch`       | BIGINT        | `lastUpdateTimeEpoch` | Tiempo Unix de la última actualización.                                       |
-| `end_time`                     | DATETIME      | `endTime`             | Fin global del viaje (si ha finalizado).                                      |
+| `end_time`                     | DATETIME2(3)  | `endTime`             | Fin global del viaje (si ha finalizado).                                      |
 | `end_time_epoch`               | BIGINT        | `endTimeEpoch`        | Tiempo Unix de fin.                                                           |
 | `duration_in_seconds`          | NUMERIC       | `durationInSeconds`   | Duración total calculada en segundos.                                         |
 | `distance_meters`              | NUMERIC       | `distanceInMeters`    | Distancia total recorrida en metros.                                          |
@@ -772,8 +772,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `is_provisional`               | BIT           | `isProvisional`       | Flag para distinguir borradores de viajes finales definitivos.                |
 | `transport_tags_json`          | NVARCHAR(MAX) | `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
 | `waypoints_json`               | NVARCHAR(MAX) | `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
-| `created_at`                   | DATETIME      | Auto                  | Fecha de creación técnica del registro.                                       |
-| `updated_at`                   | DATETIME      | Auto                  | Fecha de última actualización técnica del registro.                           |
+| `created_at`                   | DATETIME2(3)  | Auto                  | Fecha de creación técnica del registro.                                       |
+| `updated_at`                   | DATETIME2(3)  | Auto                  | Fecha de última actualización técnica del registro.                           |
 
 
 > **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:  
