@@ -24,7 +24,7 @@ La información ingresa al backend mediante **eventos recibidos a través de los
 erDiagram
 	direction TB
 	SentianceEventos {
-		int id PK 
+		bigint id PK 
 		varchar sentianceid
 		nvarchar(max) json
 		varchar tipo
@@ -36,7 +36,7 @@ erDiagram
 
 	SdkSourceEvent {
 		bigint source_event_id PK 
-		int id FK 
+		bigint id FK 
 		varchar record_type
 		varchar sentiance_user_id
 		datetime source_time
@@ -360,7 +360,7 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 
 | Campo          | Tipo          | Mapeo Sentiance                                                                                                                                                              |
 | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`           | INT (PK)      | Auto-Generado Interno                                                                                                                                                        |
+| `id`           | BIGINT (PK)   | Auto-Generado Interno (IDENTITY 1,1)                                                                                                                                         |
 | `sentianceid`  | VARCHAR       | Identificador del usuario.                                                                                                                                                   |
 | `json`         | NVARCHAR(MAX) | **Payload exacto emitido desde la app React Native**.                                                                                                                        |
 | `tipo`         | VARCHAR       | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`)                                                                           |
@@ -378,7 +378,7 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | Campo               | Tipo      | Mapeo Interno                                                         |
 | ------------------- | --------- | --------------------------------------------------------------------- |
 | `source_event_id`   | BIGINT PK | Clave única autogenerada                                              |
-| `id`                | INT FK    | Referencia al `id` de `SentianceEventos`                              |
+| `id`                | BIGINT FK | Referencia al `id` de `SentianceEventos`                              |
 | `record_type`       | VARCHAR   | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
 | `sentiance_user_id` | VARCHAR   | `user_id`                                                             |
 | `source_time`       | DATETIME  | Obtenido de los epoch del evento principal en el JSON                 |
