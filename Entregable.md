@@ -377,7 +377,7 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 
 | Campo               | Tipo      | Mapeo Interno                                                         |
 | ------------------- | --------- | --------------------------------------------------------------------- |
-| `source_event_id`   | BIGINT PK | ID subrogado                                                          |
+| `source_event_id`   | BIGINT PK | Clave única autogenerada                                              |
 | `id`                | INT FK    | Referencia al `id` de `SentianceEventos`                              |
 | `record_type`       | VARCHAR   | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
 | `sentiance_user_id` | VARCHAR   | `user_id`                                                             |
@@ -387,7 +387,9 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | `created_at`        | DATETIME  | Tiempo Interno de normalización                                       |
 
 
----
+Nota: tal vez convendría guardar la fecha también en formato legible por 
+
+humanos
 
 ### 3.2. Dominio de Módulo Temporal (Timeline Events)
 
