@@ -588,13 +588,18 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 > **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como `**DrivingInsightsCallEvent**` por mera consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: `**CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent**`.
 
 
-| Campo                     | Tipo            | Mapeo Sentiance                | Objeto Origen              |
-| ------------------------- | --------------- | ------------------------------ | -------------------------- |
-| `start_time` / `epoch`    | DATETIME/BIGINT | `startTime` / `startTimeEpoch` | En ambos                   |
-| `end_time` / `epoch`      | DATETIME/BIGINT | `endTime` / `endTimeEpoch`     | En ambos                   |
-| `min_travelled_speed_mps` | NUMERIC         | `minTravelledSpeedInMps`       | Exclusivo de **CallEvent** |
-| `max_travelled_speed_mps` | NUMERIC         | `maxTravelledSpeedInMps`       | Exclusivo de **CallEvent** |
-| `waypoints_json`          | NVARCHAR(MAX)   | `waypoints[]` stringificado    | En ambos                   |
+| Campo                        | Tipo          | Mapeo Sentiance        | Notas                                                                                        |
+| ---------------------------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `call_event_id`              | BIGINT PK     | Auto                   | Identificador único del evento de llamada.                                                   |
+| `source_event_id`            | BIGINT FK     | FK Raíz                | FK referenciando a `SdkSourceEvent(source_event_id)`.                                        |
+| `driving_insights_trip_id`   | BIGINT FK     | FK Padre               | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.                          |
+| `start_time`                 | DATETIME      | `startTime`            | Inicio de la llamada.                                                                        |
+| `start_time_epoch`           | BIGINT        | `startTimeEpoch`       | Tiempo Unix de inicio.                                                                       |
+| `end_time`                   | DATETIME      | `endTime`              | Fin de la llamada.                                                                           |
+| `end_time_epoch`             | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                                          |
+| `min_travelled_speed_mps`    | NUMERIC       | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).                                    |
+| `max_travelled_speed_mps`    | NUMERIC       | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).                                    |
+| `waypoints_json`             | NVARCHAR(MAX) | `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.                            |
 
 
 #### 3.4.4. `DrivingInsightsSpeedingEvent` / `DrivingInsightsWrongWayDrivingEvent`
