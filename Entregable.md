@@ -399,30 +399,30 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 *Ref SDK: `react-native/event-timeline/timeline/definitions (Event Interface)*`
 
 
-| Campo                       | Tipo          | Mapeo Sentiance       | JSON Detail                                                                                                    |
-| --------------------------- | ------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                    |
-| `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                    |
-| `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                   |
-| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla **`Trip`**. |
-| `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                       |
-| `start_time`                | DATETIME      | `startTime`           | ISO 8601 string                                                                                                |
-| `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                               |
-| `last_update_time`          | DATETIME      | `lastUpdateTime`      | ISO 8601 string                                                                                                |
-| `last_update_time_epoch`    | BIGINT        | `lastUpdateTimeEpoch` | UTC milisegundos                                                                                               |
-| `end_time`                  | DATETIME      | `endTime`             | ISO 8601 string                                                                                                |
-| `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                               |
-| `duration_in_seconds`       | NUMERIC       | `durationInSeconds`   | Nulo si no culminó                                                                                             |
-| `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                            |
-| `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*       |
-| `distance_meters`           | NUMERIC       | `distance`            | Distancia del transporte en metros                                                                             |
-| `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                         |
-| `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                     |
-| `location_latitude`         | DECIMAL       | `location.latitude`   | Presente sólo para `STATIONARY`                                                                                |
-| `location_longitude`        | DECIMAL       | `location.longitude`  | Presente sólo para `STATIONARY`                                                                                |
-| `location_accuracy`         | NUMERIC       | `location.accuracy`   | Precisión estacionaria (mts)                                                                                   |
-| `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                |
-| `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.) |
+| Campo                       | Tipo          | Mapeo Sentiance       | JSON Detail                                                                                                                                                             |
+| --------------------------- | ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                                                                             |
+| `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                                                                             |
+| `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                                                                            |
+| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla `**Trip**`. |
+| `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                                                                                |
+| `start_time`                | DATETIME      | `startTime`           | ISO 8601 string                                                                                                                                                         |
+| `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                                                                                        |
+| `last_update_time`          | DATETIME      | `lastUpdateTime`      | ISO 8601 string                                                                                                                                                         |
+| `last_update_time_epoch`    | BIGINT        | `lastUpdateTimeEpoch` | UTC milisegundos                                                                                                                                                        |
+| `end_time`                  | DATETIME      | `endTime`             | ISO 8601 string                                                                                                                                                         |
+| `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                                                                                        |
+| `duration_in_seconds`       | NUMERIC       | `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
+| `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                                                                                     |
+| `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
+| `distance_meters`           | NUMERIC       | `distance`            | Distancia del transporte en metros                                                                                                                                      |
+| `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
+| `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
+| `location_latitude`         | DECIMAL       | `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
+| `location_longitude`        | DECIMAL       | `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
+| `location_accuracy`         | NUMERIC       | `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
+| `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                                                                         |
+| `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.)                                                          |
 
 
 ---
@@ -434,7 +434,17 @@ Derivados del Listener `addUserContextUpdateListener`.
 
 #### 3.3.1. `UserContextHeader`
 
-Contiene la base del objeto superior `UserContextUpdate`.
+Contiene los datos básicos del objeto `UserContextUpdate` y sirve como punto de entrada para los segmentos y eventos que vienen en el mismo lote.
+
+**Relación con Tablas Dependientes**:
+Para recuperar los datos asociados a una actualización, usa el **`source_event_id`** (Foreign Key):
+*   En **`UserContextSegmentHistory`** estarán los segmentos de este lote.
+*   En **`UserTimelineEventHistory`** estarán los eventos de este lote.
+
+**Política de Inserción (UPSERT)**:
+Para evitar registros repetidos en el historial si un mismo evento llega en distintas actualizaciones:
+1.  **Eventos**: No duplicar si el **`event_id`** (Sentiance) ya existe.
+2.  **Segmentos**: No duplicar si el par **`(sentiance_user_id, segment_id)`** ya existe.
 
 
 | Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                   |
@@ -1085,19 +1095,21 @@ sequenceDiagram
         deactivate ETL
     end
 ```
+
 ### 4.7. Anexo de Definiciones: User Context (Comportamiento y Segmentos)
 
-Adicionalmente a las métricas de manejo, el SDK de Sentiance emite información sobre el contexto de vida del usuario a través del objeto **`UserContextUpdate`**. 
+Adicionalmente a las métricas de manejo, el SDK de Sentiance emite información sobre el contexto de vida del usuario a través del objeto `**UserContextUpdate**`. 
 
-**Nota Técnica sobre el Modelado**: 
+**Nota Técnica sobre el Modelado**:  
 A diferencia de los eventos técnicos simples, el contexto de usuario es multidimensional (contiene una lista de segmentos activos, una lista de eventos recientes y lugares de interés como hogar/trabajo). Para evitar el almacenamiento de JSONs masivos y redundantes que degraden el rendimiento de las consultas, el sistema requiere la implementación de **Tablas Auxiliares** de normalización. 
 
 Esto permite:
+
 1. **Histórico de Segmentos**: Consultar la evolución de un usuario (ej. de "Early Bird" a "Night Owl") sin escanear payloads crudos.
 2. **Deduplicación de Venues**: Almacenar una sola vez la coordenada de "Hogar" o "Trabajo" y relacionarla por IDs.
 3. **Optimización de Búsqueda**: Filtrar rápidamente usuarios por `SegmentCategory` (ej. "MOBILITY") para campañas de marketing o análisis de riesgo.
 
-A continuación se detallan las interfaces que componen el objeto raíz **`UserContextUpdate`**:
+A continuación se detallan las interfaces que componen el objeto raíz `**UserContextUpdate**`:
 
 ```typescript
 declare module "@sentiance-react-native/user-context" {
