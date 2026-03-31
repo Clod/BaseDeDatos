@@ -387,7 +387,7 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | `created_at`        | DATETIME  | Tiempo Interno de normalización                                       |
 
 
-Nota: tal vez convendría guardar la fecha también en formato legible por 
+**Nota**: tal vez convendría guardar la fecha también en formato legible por 
 
 humanos
 
@@ -404,7 +404,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                    |
 | `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                    |
 | `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                   |
-| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal                                                                                   |
+| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla **`Trip`**. |
 | `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                       |
 | `start_time`                | DATETIME      | `startTime`           | ISO 8601 string                                                                                                |
 | `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                               |
