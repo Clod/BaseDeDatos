@@ -436,15 +436,17 @@ Derivados del Listener `addUserContextUpdateListener`.
 
 Contiene los datos básicos del objeto `UserContextUpdate` y sirve como punto de entrada para los segmentos y eventos que vienen en el mismo lote.
 
-**Relación con Tablas Dependientes**:
-Para recuperar los datos asociados a una actualización, usa el **`source_event_id`** (Foreign Key):
-*   En **`UserContextSegmentHistory`** estarán los segmentos de este lote.
-*   En **`UserTimelineEventHistory`** estarán los eventos de este lote.
+**Relación con Tablas Dependientes**:  
+Para recuperar los datos asociados a una actualización, usa el `**source_event_id**` (Foreign Key):
 
-**Política de Inserción (UPSERT)**:
+- En `**UserContextSegmentHistory**` estarán los segmentos de este lote.
+- En `**UserTimelineEventHistory**` estarán los eventos de este lote.
+
+**Política de Inserción (UPSERT)**:  
 Para evitar registros repetidos en el historial si un mismo evento llega en distintas actualizaciones:
-1.  **Eventos**: No duplicar si el **`event_id`** (Sentiance) ya existe.
-2.  **Segmentos**: No duplicar si el par **`(sentiance_user_id, segment_id)`** ya existe.
+
+1. **Eventos**: No duplicar si el `**event_id**` (Sentiance) ya existe.
+2. **Segmentos**: No duplicar si el par `**(sentiance_user_id, segment_id)**` ya existe.
 
 
 | Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                   |
@@ -467,8 +469,8 @@ Los motivos de actualización extraídos del arreglo `criteria[]`.
 | Campo                             | Tipo      | Mapeo Sentiance                                                                     |
 | --------------------------------- | --------- | ----------------------------------------------------------------------------------- |
 | `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                |
-| `user_context_payload_id`         | BIGINT FK | FK Padre                                                                            |
-| `criteria_code`                   | VARCHAR   | Elementos en `criteria`: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"* |
+| `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
+| `criteria_code`                   | VARCHAR   | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*. |
 
 
 #### 3.3.3. `UserContextEventDetail`
