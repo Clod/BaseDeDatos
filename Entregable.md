@@ -466,10 +466,10 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 Los motivos de actualización extraídos del arreglo `criteria[]`.
 
 
-| Campo                             | Tipo      | Mapeo Sentiance                                                                     |
-| --------------------------------- | --------- | ----------------------------------------------------------------------------------- |
-| `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                |
-| `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
+| Campo                             | Tipo      | Mapeo Sentiance                                                                                                                                                                                                                                                                                               |
+| --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                                                                                                                                                                                                                                          |
+| `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`.                                                                                                                                                                                                                                              |
 | `criteria_code`                   | VARCHAR   | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*. |
 
 
@@ -488,7 +488,7 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 | Campo                             | Tipo              | Mapeo Sentiance                                       |
 | --------------------------------- | ----------------- | ----------------------------------------------------- |
 | `user_context_segment_history_id` | BIGINT PK         | ID Interno                                            |
-| `user_context_payload_id`         | BIGINT FK         | FK Padre                                              |
+| `user_context_payload_id`         | BIGINT FK         | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
 | `sentiance_user_id`               | VARCHAR           | ID Sentiance                                          |
 | `segment_id`                      | VARCHAR           | `id` (Identificador del Segmento)                     |
 | `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)     |
