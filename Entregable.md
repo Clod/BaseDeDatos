@@ -451,7 +451,7 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 
 | Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                   |
 | ------------------------- | --------- | ----------------------------- | ------------------------------------------ |
-| `user_context_payload_id` | BIGINT PK | N/A                           | PK Interno                                 |
+| `user_context_payload_id` | BIGINT PK | N/A                           | Identificador único e incremental para cada registro de contexto recibido, sirviendo como raíz para las tablas de criterios y segmentos. |
 | `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                          |
 | `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                               |
 | `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`           |
@@ -485,17 +485,17 @@ Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (co
 Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos inferidos).
 
 
-| Campo                             | Tipo              | Mapeo Sentiance                                       |
-| --------------------------------- | ----------------- | ----------------------------------------------------- |
-| `user_context_segment_history_id` | BIGINT PK         | ID Interno                                            |
+| Campo                             | Tipo              | Mapeo Sentiance                                                  |
+| --------------------------------- | ----------------- | ---------------------------------------------------------------- |
+| `user_context_segment_history_id` | BIGINT PK         | ID Interno                                                       |
 | `user_context_payload_id`         | BIGINT FK         | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
-| `sentiance_user_id`               | VARCHAR           | ID Sentiance                                          |
-| `segment_id`                      | VARCHAR           | `id` (Identificador del Segmento)                     |
-| `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)     |
-| `subcategory`                     | VARCHAR           | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)   |
-| `segment_type`                    | VARCHAR           | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*) |
-| `start_time` / `start_time_epoch` | DATETIME / BIGINT | `startTime` / `startTimeEpoch`                        |
-| `end_time` / `end_time_epoch`     | DATETIME / BIGINT | `endTime` / `endTimeEpoch`                            |
+| `sentiance_user_id`               | VARCHAR           | ID Sentiance                                                     |
+| `segment_id`                      | VARCHAR           | `id` (Identificador del Segmento)                                |
+| `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)                |
+| `subcategory`                     | VARCHAR           | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)              |
+| `segment_type`                    | VARCHAR           | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*)            |
+| `start_time` / `start_time_epoch` | DATETIME / BIGINT | `startTime` / `startTimeEpoch`                                   |
+| `end_time` / `end_time_epoch`     | DATETIME / BIGINT | `endTime` / `endTimeEpoch`                                       |
 
 
 #### 3.3.5. `UserContextSegmentAttribute`
