@@ -805,15 +805,17 @@ Debido a que una plataforma telemática conectada a múltiples dispositivos móv
 
 Por el diseño establecido, recomendamos enfáticamente crear los siguientes índices sobre las tablas de alto impacto (`SentianceEventos`, `TimelineEventHistory`, `UserActivityHistory` y `Trip`):
 
-1. **Índice sobre `sentiance_user_id**` (Alta Cardinalidad):
+1. **Índice sobre `sentianceid` en `SentianceEventos`:**
+  Filtros por usuario en el pipeline ETL lo necesitan de forma crítica. Ejemplo: `CREATE INDEX idx_sentianceid ON SentianceEventos(sentianceid)`.
+2. **Índice sobre `sentiance_user_id`** (Alta Cardinalidad):
   Casi cualquier pantalla principal del sistema (ej: "Consultar viajes del usuario X") o el filtrado por conductor usa esta columna. Al crear un index (ej: `idx_user_context_sentiance_user_id`) se evitan búsquedas Full-Table Scan que demorarían minutos.
-2. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):
+3. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):
   Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
-3. **Índice Filtrado por `is_provisional`:**
+4. **Índice Filtrado por `is_provisional`:**
   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
-4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
+5. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
   Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent`, `DrivingInsightsHarshEvent`, etc.) y sobre `source_event_id` en todas las tablas de historial. Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre la tabla maestra `Trip(trip_id)` y las tablas satélites de eventos dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
-5. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
+6. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única (`UNIQUE INDEX / CONSTRAINT`). Sin ella, el mecanismo atómico de `UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas.
 
 ---
