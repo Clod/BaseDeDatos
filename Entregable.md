@@ -818,7 +818,16 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 5. **Índice Filtrado por `is_provisional`:**
   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
 6. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
-  Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent`, `DrivingInsightsHarshEvent`, etc.) y sobre `source_event_id` en todas las tablas de historial. Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre la tabla maestra `Trip(trip_id)` y las tablas satélites de eventos dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
+  La FK `source_event_id` no tiene índice explícito en ninguna de las tablas hija, lo que penaliza los JOINs de auditoría (ej: "dado este evento raw, ¿qué registros derivados generó?"). Deben crearse en cada tabla dependiente:
+  - `CREATE INDEX idx_src_tl    ON TimelineEventHistory(source_event_id)`
+  - `CREATE INDEX idx_src_uch   ON UserContextHeader(source_event_id)`
+  - `CREATE INDEX idx_src_di    ON DrivingInsightsTripData(source_event_id)`
+  - `CREATE INDEX idx_src_harsh ON DrivingInsightsHarshEvent(source_event_id)`
+  - `CREATE INDEX idx_src_phone ON DrivingInsightsPhoneEvent(source_event_id)`
+  - `CREATE INDEX idx_src_crash ON VehicleCrashEvent(source_event_id)`
+  - `CREATE INDEX idx_src_sdk   ON SdkStatusHistory(source_event_id)`
+  - `CREATE INDEX idx_src_act   ON UserActivityHistory(source_event_id)`
+  - `CREATE INDEX idx_src_tech  ON TechnicalEventHistory(source_event_id)`
 7. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única. Sin ella, el mecanismo atómico de `MERGE`/`UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas al momento de recibir los resúmenes del final del viaje. Ejemplo: `CREATE UNIQUE INDEX idx_canonical_trip ON Trip(canonical_transport_event_id)`.
 8. **Índice Único Compuesto en `UserContextActiveSegmentDetail`:**
