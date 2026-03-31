@@ -809,11 +809,17 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 
 ---
 
-## 4. Anexo: Estructuras JSON Esperadas (Payloads SDK Principales)
+## 4. Pipeline de Ingestión ETL (Estructuras JSON)
 
-Según la documentación oficial de Sentiance (React Native), las estructuras de los objetos clave emitidos por los listeners hacia el backend siguen la forma descrita a continuación. Esto es material de referencia para que el equipo backend sepa cómo extraer o deserializar cada propiedad.
+### 4.1. Lógica de Transformación y Mapeo (ETL)
 
-### 4.1. Payload Listener: Timeline (`Event`)
+Para la implementación del Pipeline de Ingestión, el equipo de Backend debe seguir estas reglas estrictas de procesamiento de datos provenientes del SDK:
+
+1.  **Normalización de Nomenclatura**: Todos los campos recibidos en el JSON del SDK en formato `camelCase` (ej: `startTimeEpoch`) deben ser mapeados a sus respectivos nombres en `snake_case` en la base de datos (ej: `start_time_epoch`), tal como se detalla en las tablas de la Sección 3.
+2.  **Identificador Único (`UPSERT`)**: El campo `canonical_transport_event_id` en la tabla `Trip` es la única clave de de-duplicación global. Se debe utilizar una sentencia `MERGE` o un bloque `IF NOT EXISTS` para asegurar que múltiples webhooks del mismo viaje no generen filas duplicadas, sino que actualicen la información (especialmente los Safety Scores que llegan al final).
+3.  **Manejo de Provisionales**: Las filas con `is_provisional = 1` son datos de rastreo en tiempo real y **no deben ser mezcladas** analíticamente con los viajes definitivos (`is_provisional = 0`). Se recomienda mantener ambas versiones para permitir el monitoreo de flotas en vivo y el análisis histórico posterior.
+
+### 4.2. Payload Listener: Timeline (`Event`)
 
 *Estructura base usada tanto en el Timeline como en el detalle de eventos del User Context.*
 
@@ -871,7 +877,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 
 *(Nota: `location` y `venue` están típicamente presentes si `type == "STATIONARY"`, mientras que `waypoints`, `distance`, `occupantRole` y `transportMode` están si es `"IN_TRANSPORT"`).*
 
-### 4.2. Payload Listener: User Context (`UserContext`)
+### 4.3. Payload Listener: User Context (`UserContext`)
 
 ```json
 {
@@ -919,7 +925,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 }
 ```
 
-### 4.3. Payload Listener: Driving Insights (`DrivingInsights`)
+### 4.4. Payload Listener: Driving Insights (`DrivingInsights`)
 
 *Recibido cuando termina de procesarse por completo un viaje motorizado.*
 
@@ -944,7 +950,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 }
 ```
 
-### 4.4. Payloads Independientes: Sub-Eventos de Manejo (Harsh Events, Phone Events, etc.)
+### 4.5. Payloads Independientes: Sub-Eventos de Manejo (Harsh Events, Phone Events, etc.)
 
 > **Nota importante:** La aplicación Front-End envía de forma **independiente** al backend los reportes de eventos derivados (no van empaquetados obligatoriamente dentro del objeto general de `DrivingInsights`). Cuando el backend reciba el JSON correspondiente a las llamadas de `getHarshDrivingEvents()`, `getPhoneUsageEvents()` o afines, percibirá un Array de objetos con el formato pertinente:
 
@@ -981,7 +987,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 ]
 ```
 
-### 4.5. Payload Listener: Crash Detection (`CrashEvent`)
+### 4.6. Payload Listener: Crash Detection (`VehicleCrashEvent`)
 
 ```json
 {
@@ -1004,7 +1010,7 @@ Según la documentación oficial de Sentiance (React Native), las estructuras de
 }
 ```
 
-### 4.6. Anexo de Definiciones TypeScript (Referencia SDK React Native)
+### 4.7. Anexo de Definiciones TypeScript (Referencia SDK React Native)
 
 A continuación se adjuntan, a modo de complemento, las interfaces oficiales y nativas en *TypeScript* que documenta el módulo `@sentiance-react-native/driving-insights`. Este es el contrato real de datos con el que contarán los programadores del Front-End para generar el JSON Final:
 
