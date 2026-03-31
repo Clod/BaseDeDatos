@@ -20,3 +20,4 @@ To prevent accidental or unsolicited changes to files:
 3. **Double-Check Range**: Before applying a `replace_file_content` or `multi_replace_file_content` call, verify that the `StartLine` and `EndLine` cover ONLY the intended target.
 4. **No Assumptions**: If a request is vague, ask for the exact line number or field name before editing.
 5. **User-Defined Boundaries**: If the user specifies a range (e.g., "from line X to Y" or "within section Z"), you MUST restrict ALL modifications to that exact space. Modifying any character outside these bounds (including headers or adjacent rows) is a CRITICAL FAILURE.
+6. **Detailed Foreign Keys**: Whenever you add or describe a Foreign Key (FK), the explanation MUST explicitly include the target table and the target field name it refers to (e.g., `Table(field)`).

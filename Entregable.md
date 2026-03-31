@@ -566,14 +566,19 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 Deriva de `getHarshDrivingEvents()`.
 
 
-| Campo                  | Tipo            | Mapeo Sentiance (`HarshDrivingEvent[]`)      |
-| ---------------------- | --------------- | -------------------------------------------- |
-| `start_time` / `epoch` | DATETIME/BIGINT | `startTime` / `startTimeEpoch`               |
-| `end_time` / `epoch`   | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                   |
-| `magnitude`            | NUMERIC         | `magnitude`                                  |
-| `confidence`           | NUMERIC         | `confidence`                                 |
-| `harsh_type`           | VARCHAR         | `type` (*"ACCELERATION", "BRAKING", "TURN"*) |
-| `waypoints_json`       | NVARCHAR(MAX)   | `waypoints[]` stringificado                  |
+| Campo                    | Tipo          | Mapeo Sentiance                              | Notas                                                                                        |
+| ------------------------ | ------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `harsh_event_id`         | BIGINT PK     | Auto                                         | Identificador único del evento brusco.                                                       |
+| `source_event_id`        | BIGINT FK     | FK Raíz                                      | FK referenciando a `SdkSourceEvent(source_event_id)`.                                        |
+| `driving_insights_trip_id`| BIGINT FK     | FK Padre                                     | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.                          |
+| `start_time`             | DATETIME      | `startTime`                                  | Inicio del evento.                                                                           |
+| `start_time_epoch`       | BIGINT        | `startTimeEpoch`                             | Tiempo Unix de inicio.                                                                       |
+| `end_time`               | DATETIME      | `endTime`                                    | Fin del evento.                                                                              |
+| `end_time_epoch`         | BIGINT        | `endTimeEpoch`                               | Tiempo Unix de fin.                                                                          |
+| `magnitude`              | NUMERIC       | `magnitude`                                  | Fuerza G máxima detectada.                                                                   |
+| `confidence`             | NUMERIC       | `confidence`                                 | Nivel de confianza (0-1).                                                                    |
+| `harsh_type`             | VARCHAR       | `type` (*"ACCELERATION", "BRAKING", "TURN"*) | Tipo de evento brusco.                                                                       |
+| `waypoints_json`         | NVARCHAR(MAX) | `waypoints[]`                                | Array completo de puntos del evento (Lat/Long/Alt) en formato JSON string.                   |
 
 
 #### 3.4.3. `DrivingInsightsCallEvent`
