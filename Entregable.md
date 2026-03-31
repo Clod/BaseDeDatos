@@ -714,6 +714,16 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 
 Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin depender del volcado Offload (Payload sujeto a implementación de logger).
 
+| Campo                        | Tipo          | Mapeo Sentiance y Detalles                                            | Notas                                                                    |
+| ---------------------------- | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `technical_event_history_id` | BIGINT PK     | Auto                                                                  | -                                                                        |
+| `source_event_id`            | BIGINT FK     | FK referenciando a `SdkSourceEvent(source_event_id)`.                 | -                                                                        |
+| `sentiance_user_id`          | VARCHAR       | Identificador del usuario.                                            | -                                                                        |
+| `technical_event_type`       | VARCHAR       | Tipo de evento técnico (ej: *"ERROR"*, *"WARNING"*, *"SDK_LOG"*).      | -                                                                        |
+| `message`                    | NVARCHAR(MAX) | Descripción textual del evento o error.                               | -                                                                        |
+| `payload_json`               | NVARCHAR(MAX) | Contenido crudo del log técnico para análisis profundo.               | -                                                                        |
+| `captured_at`                | DATETIME      | Instante de persistencia del evento.                                  | -                                                                        |
+
 ---
 
 ### 3.6. Tabla Integrada / Pivot ("Canon")
