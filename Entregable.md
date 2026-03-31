@@ -516,12 +516,15 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 Lugares frecuentes estables `home` y `work` del `UserContext`.
 
 
-| Campo                               | Tipo      | Mapeo Sentiance                     |
-| ----------------------------------- | --------- | ----------------------------------- |
-| `user_home_history_id` (o work)     | BIGINT PK | -                                   |
-| `significance`                      | VARCHAR   | `significance` ("HOME" / "WORK")    |
-| `venue_type`                        | VARCHAR   | `type` ("RESIDENTIAL", "OFFICE"...) |
-| `latitude`, `longitude`, `accuracy` | DECIMAL   | En iterado `location` del venue     |
+| Campo                             | Tipo      | Mapeo Sentiance                     |
+| --------------------------------- | --------- | ----------------------------------- |
+| `user_home_history_id` (o work)   | BIGINT PK | Auto                                |
+| `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
+| `significance`                    | VARCHAR   | `significance` (*"HOME" / "WORK"*)  |
+| `venue_type`                      | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)  |
+| `latitude`                        | DECIMAL   | `location.latitude`                 |
+| `longitude`                       | DECIMAL   | `location.longitude`                |
+| `accuracy`                        | NUMERIC   | `location.accuracy`                 |
 
 
 ---
