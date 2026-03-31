@@ -643,16 +643,21 @@ Provisto a través de `addVehicleCrashEventListener`.
 *Ref SDK: `react-native/crash-detection/definitions*`
 
 
-| Campo                                           | Tipo          | Mapeo Sentiance (`CrashEvent`)                                                  |
-| ----------------------------------------------- | ------------- | ------------------------------------------------------------------------------- |
-| `vehicle_crash_event_id`                        | BIGINT PK     | -                                                                               |
-| `crash_time_epoch`                              | BIGINT        | `time`                                                                          |
-| `latitude`, `longitude`, `accuracy`, `altitude` | DECIMAL       | Mapeado individual desde el objeto interno `location` al registrarse el impacto |
-| `magnitude`                                     | NUMERIC       | `magnitude`                                                                     |
-| `speed_at_impact`                               | NUMERIC       | `speedAtImpact`                                                                 |
-| `delta_v`                                       | NUMERIC       | `deltaV` (cambio de velocidad en km/h o mph)                                    |
-| `confidence`                                    | NUMERIC       | `confidence`                                                                    |
-| `severity`                                      | VARCHAR       | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
+| Campo                    | Tipo      | Mapeo Sentiance        | Notas                                                                                        |
+| ------------------------ | --------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `vehicle_crash_event_id` | BIGINT PK | Auto                   | Identificador único del evento de choque.                                                    |
+| `source_event_id`        | BIGINT FK | FK Raíz                | FK referenciando a `SdkSourceEvent(source_event_id)`.                                        |
+| `sentiance_user_id`      | VARCHAR   | -                      | ID del usuario de Sentiance.                                                                 |
+| `crash_time_epoch`       | BIGINT    | `time`                 | Tiempo Unix del impacto.                                                                     |
+| `latitude`               | DECIMAL   | `location.latitude`    | Coordenada Y del impacto.                                                                    |
+| `longitude`              | DECIMAL   | `location.longitude`   | Coordenada X del impacto.                                                                    |
+| `accuracy`               | NUMERIC   | `location.accuracy`    | Precisión del GPS al momento del impacto.                                                    |
+| `altitude`               | NUMERIC   | `location.altitude`    | Altitud al momento del impacto.                                                              |
+| `magnitude`              | NUMERIC   | `magnitude`            | Magnitud del choque.                                                                         |
+| `speed_at_impact`        | NUMERIC   | `speedAtImpact`        | Velocidad al momento del impacto.                                                            |
+| `delta_v`                | NUMERIC   | `deltaV`               | Cambio de velocidad inducido por el impacto.                                                 |
+| `confidence`             | NUMERIC   | `confidence`           | Nivel de confianza del sensor (0-1).                                                         |
+| `severity`               | VARCHAR   | `severity`             | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                                                        |
 | `detector_mode`                                 | VARCHAR       | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
 | `preceding_locations_json`                      | NVARCHAR(MAX) | Stringificado del JSON Array `precedingLocations`                               |
 
