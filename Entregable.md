@@ -449,16 +449,16 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 2. **Segmentos**: No duplicar si el par `**(sentiance_user_id, segment_id)**` ya existe.
 
 
-| Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                   |
-| ------------------------- | --------- | ----------------------------- | ------------------------------------------ |
+| Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                                                                                                                 |
+| ------------------------- | --------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_context_payload_id` | BIGINT PK | N/A                           | Identificador único e incremental para cada registro de contexto recibido, sirviendo como raíz para las tablas de criterios y segmentos. |
-| `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                          |
-| `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                               |
-| `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`           |
-| `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc. |
-| `last_known_latitude`     | DECIMAL   | `lastKnownLocation.latitude`  | Coordenada Y                               |
-| `last_known_longitude`    | DECIMAL   | `lastKnownLocation.longitude` | Coordenada X                               |
-| `last_known_accuracy`     | NUMERIC   | `lastKnownLocation.accuracy`  | Precisión                                  |
+| `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                                                                                                                        |
+| `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                                                                                                                             |
+| `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`                                                                                                         |
+| `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
+| `last_known_latitude`     | DECIMAL   | `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
+| `last_known_longitude`    | DECIMAL   | `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
+| `last_known_accuracy`     | NUMERIC   | `lastKnownLocation.accuracy`  | Precisión                                                                                                                                |
 
 
 #### 3.3.2. `UserContextUpdateCriteria`
@@ -503,10 +503,12 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegments[]`.
 
 
-| Campo             | Tipo    | Mapeo Sentiance                    |
-| ----------------- | ------- | ---------------------------------- |
-| `attribute_name`  | VARCHAR | `name` (Nombre del atributo en BD) |
-| `attribute_value` | NUMERIC | `value` (Valor del atributo)       |
+| Campo                             | Tipo      | Mapeo Sentiance                                    |
+| --------------------------------- | --------- | -------------------------------------------------- |
+| `user_context_segment_attr_id`    | BIGINT PK | Auto                                               |
+| `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextSegmentHistory(user_context_segment_history_id)`. |
+| `attribute_name`                  | VARCHAR   | `name` (Nombre del atributo)                       |
+| `attribute_value`                 | NUMERIC   | `value` (Valor del atributo)                       |
 
 
 #### 3.3.6. `UserHomeHistory` y `UserWorkHistory`
