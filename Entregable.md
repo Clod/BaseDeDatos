@@ -1131,6 +1131,51 @@ declare module "@sentiance-react-native/user-context" {
     work: Venue | null;
   }
 
+  export interface Event {
+    id: string;
+    startTime: string;
+    startTimeEpoch: number;
+    lastUpdateTime: string;
+    lastUpdateTimeEpoch: number;
+    endTime: string | null;
+    endTimeEpoch: number | null;
+    durationInSeconds: number | null;
+    type: "STATIONARY" | "IN_TRANSPORT" | "OFF_THE_GRID" | "UNKNOWN";
+    isProvisional: boolean;
+    // Contexto espacial
+    location: GeoLocation | null;
+    venue: Venue | null;
+    // Contexto de transporte
+    transportMode: string | null;
+    waypoints: Waypoint[];
+    distance?: number;
+    occupantRole: "DRIVER" | "PASSENGER" | "UNAVAILABLE";
+  }
+
+  export interface GeoLocation {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  }
+
+  export interface Waypoint {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    timestamp: number;
+    speedInMps?: number;
+    speedLimitInMps?: number;
+    hasUnlimitedSpeedLimit: boolean;
+    isSpeedLimitInfoSet: boolean;
+    isSynthetic: boolean;
+  }
+
+  export interface Venue {
+    location: GeoLocation | null;
+    significance: "HOME" | "WORK" | "POINT_OF_INTEREST" | "UNKNOWN";
+    type: VenueType;
+  }
+
   export interface Segment {
     category: SegmentCategory;
     subcategory: SegmentSubcategory;
@@ -1140,6 +1185,12 @@ declare module "@sentiance-react-native/user-context" {
     startTimeEpoch: number;
     endTime: string | null;
     endTimeEpoch: number | null;
+    attributes: SegmentAttribute[];
+  }
+
+  export interface SegmentAttribute {
+    name: string;
+    value: number;
   }
 }
 ```
