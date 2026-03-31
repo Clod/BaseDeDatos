@@ -960,6 +960,86 @@ ALTER TABLE SentianceEventos ADD CONSTRAINT chk_tipo
   CHECK (tipo IN ('UserContextUpdate','TimelineUpdate','DrivingInsightsReady','CrashEvent'));
 ```
 
+## 3.9. Seguridad
+
+> **Contexto de infraestructura:** SQL Server está hosteado en **AWS (Amazon RDS for SQL Server)**. Todos los controles T-SQL nativos (RLS, HASHBYTES, parametrización) son aplicables sin restricciones. Las recomendaciones de red y acceso se alinean con controles IAM + VPC de AWS.
+
+---
+
+### 3.9.1. Hash de Deduplicación: MD5 → SHA-256 🟡 ALTO
+
+El campo `payload_hash` en `SdkSourceEvent` actualmente documenta "MD5/SHA" como función de hash. MD5 no es adecuado para un entorno de producción, incluso para deduplicación, por su vulnerabilidad a colisiones.
+
+**Recomendación:** Usar `HASHBYTES('SHA2_256', ...)` de forma consistente en el pipeline ETL.
+
+```sql
+-- Generación del hash en el pipeline ETL (T-SQL)
+INSERT INTO SdkSourceEvent (payload_hash, ...)
+VALUES (
+  CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', @json_payload), 2),
+  ...
+);
+
+-- Verificación de duplicado antes del INSERT
+IF EXISTS (
+  SELECT 1 FROM SdkSourceEvent
+  WHERE payload_hash = CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', @json_payload), 2)
+)
+  RETURN; -- ya procesado, descartar
+```
+
+> `CONVERT(..., 2)` retorna el hash como string hexadecimal de 64 caracteres, compatible con el tipo `VARCHAR(64)` ya definido.
+
+---
+
+### 3.9.2. Sanitización de `app_version` — SQL Injection 🟢 MEDIO
+
+El campo `app_version` en `SentianceEventos` se inyecta desde headers HTTP del cliente móvil. Si el pipeline ETL construye la query concatenando strings, es vulnerable a inyección SQL.
+
+**Recomendación:** El pipeline ETL **siempre debe parametrizar** este campo, nunca concatenarlo:
+
+```sql
+-- ✅ CORRECTO — valor parametrizado
+INSERT INTO SentianceEventos (sentianceid, json, tipo, app_version, created_at)
+VALUES (@sentianceid, @json, @tipo, @app_version, GETDATE());
+
+-- ❌ INCORRECTO — vulnerable
+EXEC('INSERT INTO SentianceEventos VALUES (''' + @app_version + ''', ...)');
+```
+
+Adicionalmente, el campo debe validarse con una whitelist de formato en capa de aplicación antes de llegar al INSERT (ej. regex `^\d+\.\d+\.\d+$`).
+
+---
+
+### 3.9.3. Row-Level Security (RLS) en AWS RDS for SQL Server 🟢 BAJO
+
+SQL Server en AWS RDS soporta RLS mediante T-SQL nativo de la misma forma que on-prem. Dado que la base de datos almacena datos de múltiples usuarios identificados por `sentiance_user_id`, se recomienda habilitar RLS para garantizar aislamiento de datos a nivel de motor, especialmente si el acceso se habilita a múltiples aplicaciones o roles con distinto alcance.
+
+```sql
+-- 1. Crear función de predicado de filtro
+CREATE FUNCTION dbo.fn_rls_by_user(@sentiance_user_id VARCHAR(64))
+RETURNS TABLE
+WITH SCHEMABINDING
+AS
+RETURN SELECT 1 AS fn_result
+  WHERE @sentiance_user_id = SESSION_CONTEXT(N'current_user_id');
+
+-- 2. Aplicar política en tablas principales
+CREATE SECURITY POLICY SentRLS_Trip
+  ADD FILTER PREDICATE dbo.fn_rls_by_user(sentiance_user_id) ON dbo.Trip,
+  ADD FILTER PREDICATE dbo.fn_rls_by_user(sentiance_user_id) ON dbo.TimelineEventHistory,
+  ADD FILTER PREDICATE dbo.fn_rls_by_user(sentiance_user_id) ON dbo.UserActivityHistory
+WITH (STATE = ON);
+
+-- 3. El contexto de sesión se inyecta desde el backend al abrir la conexión
+EXEC sys.sp_set_session_context @key = N'current_user_id', @value = @user_id;
+```
+
+**Consideraciones AWS RDS específicas:**
+- La función debe estar en el schema `dbo` del usuario propietario de la DB.
+- Los usuarios de solo lectura de BI (ej. conectados vía QuickSight o un Lambda ETL) deben tener el `SESSION_CONTEXT` seteado en cada conexión de pool.
+- La política **no aplica** al usuario `sysadmin` ni al propietario de la DB, lo cual es correcto para el pipeline ETL interno.
+
 ---
 
 ## 4. Pipeline de Ingestión ETL (Estructuras JSON)
