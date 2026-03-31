@@ -503,12 +503,12 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegments[]`.
 
 
-| Campo                             | Tipo      | Mapeo Sentiance                                    |
-| --------------------------------- | --------- | -------------------------------------------------- |
-| `user_context_segment_attr_id`    | BIGINT PK | Auto                                               |
+| Campo                             | Tipo      | Mapeo Sentiance                                                                  |
+| --------------------------------- | --------- | -------------------------------------------------------------------------------- |
+| `user_context_segment_attr_id`    | BIGINT PK | Auto                                                                             |
 | `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextSegmentHistory(user_context_segment_history_id)`. |
-| `attribute_name`                  | VARCHAR   | `name` (Nombre del atributo)                       |
-| `attribute_value`                 | NUMERIC   | `value` (Valor del atributo)                       |
+| `attribute_name`                  | VARCHAR   | `name` (Nombre del atributo)                                                     |
+| `attribute_value`                 | NUMERIC   | `value` (Valor del atributo)                                                     |
 
 
 #### 3.3.6. `UserHomeHistory` y `UserWorkHistory`
@@ -516,15 +516,15 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 Lugares frecuentes estables `home` y `work` del `UserContext`.
 
 
-| Campo                             | Tipo      | Mapeo Sentiance                     |
-| --------------------------------- | --------- | ----------------------------------- |
-| `user_home_history_id` (o work)   | BIGINT PK | Auto                                |
-| `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
-| `significance`                    | VARCHAR   | `significance` (*"HOME" / "WORK"*)  |
-| `venue_type`                      | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)  |
-| `latitude`                        | DECIMAL   | `location.latitude`                 |
-| `longitude`                       | DECIMAL   | `location.longitude`                |
-| `accuracy`                        | NUMERIC   | `location.accuracy`                 |
+| Campo                           | Tipo      | Mapeo Sentiance                                                  |
+| ------------------------------- | --------- | ---------------------------------------------------------------- |
+| `user_home_history_id` (o work) | BIGINT PK | Auto                                                             |
+| `user_context_payload_id`       | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
+| `significance`                  | VARCHAR   | `significance` (*"HOME" / "WORK"*)                               |
+| `venue_type`                    | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)                               |
+| `latitude`                      | DECIMAL   | `location.latitude`                                              |
+| `longitude`                     | DECIMAL   | `location.longitude`                                             |
+| `accuracy`                      | NUMERIC   | `location.accuracy`                                              |
 
 
 ---
@@ -544,9 +544,9 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | Campo                      | Tipo          | Mapeo Sentiance                       | Notas                                                     |
 | -------------------------- | ------------- | ------------------------------------- | --------------------------------------------------------- |
 | `driving_insights_trip_id` | BIGINT PK     | -                                     | -                                                         |
-| `source_event_id`          | BIGINT FK     | -                                     | -                                                         |
-| `trip_id`                  | BIGINT FK     | -                                     | FK de la tabla canon `Trip`                               |
-| `sentiance_user_id`        | VARCHAR       | -                                     | Obtenido de JWT                                           |
+| `source_event_id`          | BIGINT FK     | -                                     | FK referenciando a `SdkSourceEvent(source_event_id)`.     |
+| `trip_id`                  | BIGINT FK     | -                                     | FK referenciando a la tabla canónica `Trip(trip_id)`.     |
+| `sentiance_user_id`        | VARCHAR       | -                                     | Sentiance Id                                              |
 | `transport_event_id`       | VARCHAR       | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto            |
 | `smooth_score`             | NUMERIC       | `safetyScores.smoothScore`            | (0 a 1)                                                   |
 | `focus_score`              | NUMERIC       | `safetyScores.focusScore`             | (0 a 1)                                                   |
