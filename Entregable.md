@@ -1087,10 +1087,25 @@ sequenceDiagram
 ```
 ### 4.7. Anexo de Definiciones: User Context (Comportamiento y Segmentos)
 
-Adicionalmente a las métricas de manejo, el SDK de Sentiance emite información sobre el contexto de vida del usuario (segmentos, estilos de vida y tipos de lugares). A continuación se detallan las interfaces de estos objetos:
+Adicionalmente a las métricas de manejo, el SDK de Sentiance emite información sobre el contexto de vida del usuario a través del objeto **`UserContextUpdate`**. 
+
+**Nota Técnica sobre el Modelado**: 
+A diferencia de los eventos técnicos simples, el contexto de usuario es multidimensional (contiene una lista de segmentos activos, una lista de eventos recientes y lugares de interés como hogar/trabajo). Para evitar el almacenamiento de JSONs masivos y redundantes que degraden el rendimiento de las consultas, el sistema requiere la implementación de **Tablas Auxiliares** de normalización. 
+
+Esto permite:
+1. **Histórico de Segmentos**: Consultar la evolución de un usuario (ej. de "Early Bird" a "Night Owl") sin escanear payloads crudos.
+2. **Deduplicación de Venues**: Almacenar una sola vez la coordenada de "Hogar" o "Trabajo" y relacionarla por IDs.
+3. **Optimización de Búsqueda**: Filtrar rápidamente usuarios por `SegmentCategory` (ej. "MOBILITY") para campañas de marketing o análisis de riesgo.
+
+A continuación se detallan las interfaces que componen el objeto raíz **`UserContextUpdate`**:
 
 ```typescript
 declare module "@sentiance-react-native/user-context" {
+  export interface UserContextUpdate {
+    readonly criteria: ("CURRENT_EVENT" | "ACTIVE_SEGMENTS" | "VISITED_VENUES")[];
+    readonly userContext: UserContext;
+  }
+
   export type SegmentCategory = "LEISURE" | "MOBILITY" | "WORK_LIFE";
   
   export type SegmentSubcategory =
@@ -1191,6 +1206,14 @@ declare module "@sentiance-react-native/user-context" {
   export interface SegmentAttribute {
     name: string;
     value: number;
+  }
+
+  export interface SentianceUserContext {
+    requestUserContext(includeProvisionalEvents?: boolean): Promise<UserContext>;
+    addUserContextUpdateListener(
+      onUserContextUpdated: (userContextUpdate: UserContextUpdate) => void,
+      includeProvisionalEvents?: boolean
+    ): Promise<any>;
   }
 }
 ```
