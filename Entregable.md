@@ -62,7 +62,7 @@ erDiagram
 		varchar transport_mode
 		numeric(12, 2) distance_meters
 		varchar occupant_role
-		nvarchar(max) transport_tags_json
+		varbinary(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
 		numeric(12, 2) location_accuracy
@@ -100,7 +100,7 @@ erDiagram
 		varchar transport_mode
 		numeric(12, 2) distance_meters
 		varchar occupant_role
-		nvarchar(max) transport_tags_json
+		varbinary(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
 		numeric(12, 2) location_accuracy
@@ -173,7 +173,7 @@ erDiagram
 		numeric(4, 3) harsh_acceleration_score
 		numeric(12, 2) distance_meters
 		varchar occupant_role
-		nvarchar(max) transport_tags_json
+		varbinary(max) transport_tags_json
 		datetime2(3) created_at
 	}
 
@@ -188,7 +188,7 @@ erDiagram
 		numeric(6, 3) magnitude
 		numeric(4, 3) confidence
 		varchar harsh_type
-		nvarchar(max) waypoints_json
+		varbinary(max) waypoints_json
 	}
 
 	DrivingInsightsPhoneEvent {
@@ -199,7 +199,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		nvarchar(max) waypoints_json
+		varbinary(max) waypoints_json
 	}
 
 	DrivingInsightsCallEvent {
@@ -212,7 +212,7 @@ erDiagram
 		bigint end_time_epoch
 		numeric(7, 2) min_travelled_speed_mps
 		numeric(7, 2) max_travelled_speed_mps
-		nvarchar(max) waypoints_json
+		varbinary(max) waypoints_json
 	}
 
 	DrivingInsightsSpeedingEvent {
@@ -223,7 +223,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		nvarchar(max) waypoints_json
+		varbinary(max) waypoints_json
 	}
 
 	DrivingInsightsWrongWayDrivingEvent {
@@ -234,7 +234,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		nvarchar(max) waypoints_json
+		varbinary(max) waypoints_json
 	}
 
 	VehicleCrashEvent {
@@ -252,7 +252,7 @@ erDiagram
 		numeric(4, 3) confidence
 		varchar severity
 		varchar detector_mode
-		nvarchar(max) preceding_locations_json
+		varbinary(max) preceding_locations_json
 	}
 
 	SdkStatusHistory {
@@ -309,8 +309,8 @@ erDiagram
 		numeric(12, 2) distance_meters
 		varchar occupant_role
 		bit is_provisional
-		nvarchar(max) transport_tags_json
-		nvarchar(max) waypoints_json
+		varbinary(max) transport_tags_json
+		varbinary(max) waypoints_json
 		datetime2(3) created_at
 		datetime2(3) updated_at
 	}
@@ -346,7 +346,16 @@ erDiagram
 > **📍 MOTOR OBJETIVO: Microsoft SQL Server (T-SQL)**  
 > Todo el esquema ER y el Diccionario de Datos están pensados estructuralmente para ser implementados en **Microsoft SQL Server**.
 > - Campos booleanos lógicos se expresan como `BIT` (`0` / `1`).
-> - Objetos anidados en JSON y strings extensos (sin longitud predecible) se tipan como `NVARCHAR(MAX)`. En el caso de los waypoints podría valer la pena guardarolos en algún formato más compacto tipo CBOR ya que es altamente improbable que debamos hacer búsquedas por valores dentro de ese campo.
+> - **Compresión de arreglos extensos:** Los campos volumétricos de metadatos variables como `transport_tags_json`, `waypoints_json` y `preceding_locations_json` se tipifican rigurosamente como **`VARBINARY(MAX)`**. Esto impone que el Backend serialice la cadena JSON usando CBOR o una función de compresión (como GZIP) antes del `INSERT`, ahorrando entre 60% y 80% de disco a costa de perder capacidades de escaneo directo (*JSON_VALUE*) intradata, las cuales son irrelevantes en arreglos kilométricos de coordenadas.
+
+---
+
+### 2.1. Política de Retención y Purga de Telemetría (Data Life-Cycle)
+
+Debido al volumen incuantificable de datos espaciales recopilados mediante lecturas GPS contínuas (1 coordenada por segundo en `Trip` y en Insights), el esquema exige la siguiente política de compactación en frío para prevenir el fallo catastrófico por saturación (bloat) del almacenamiento en SQL Server:
+
+1. **Hot Stage (Datos Activos - 0 a 90 días):** La información se conserva 100% intacta y comprimida. Los campos binarios `waypoints_json` y `transport_tags_json` mantienen el trayecto topográfico inmutable para reportes fluidos, trazados exactos en mapas de la App, y posibles disputas legales de colisiones.
+2. **Cold Purge (Recesión de metadatos volumétricos - > 90 días):** Un proceso/Job programado nocturno debe setear a `NULL` el campo masivo `waypoints_json` y `transport_tags_json` para los viajes de más de 3 meses de antigüedad. **La fila de la tabla y la existencia del viaje se conservan de por vida**, manteniendo todos los scorings predictivos (`overall_score`), timestamps, duraciones en segundos, y contadores analíticos vitales totalmente intactos. Únicamente se sacrifica el *"dibujo"* granular del trayecto GPS para ahorrar masivamente capacidades computacionales y de disco.
 > - Columnas numéricas usan `NUMERIC`, `DECIMAL` o `BIGINT` en lugar de literales genéricos para garantizar exactitud temporal y espacial.
 
 > A continuación, se detalla campo por campo cada tabla presente en el diagrama, vinculándola con la variable equivalente dictada por la documentación  de Sentiance react-native.
@@ -417,7 +426,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
 | `distance_meters`           | NUMERIC(12, 2)| `distance`            | Distancia del transporte en metros                                                                                                                                      |
 | `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
-| `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
+| `transport_tags_json`       | VARBINARY(MAX)| `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
 | `location_latitude`         | DECIMAL(10, 8)| `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_longitude`        | DECIMAL(11, 8)| `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_accuracy`         | NUMERIC(12, 2)| `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
@@ -558,7 +567,7 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_acceleration_score` | NUMERIC(4, 3) | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
 | `distance_meters`          | NUMERIC(12, 2)| `transportEvent.distance`             | Distancia extraída en metros                              |
 | `occupant_role`            | VARCHAR       | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
-| `transport_tags_json`      | NVARCHAR(MAX) | `transportEvent.transportTags`        | Serializado dict key-value                                |
+| `transport_tags_json`      | VARBINARY(MAX)| `transportEvent.transportTags`        | Serializado dict key-value                                |
 
 
 #### 3.4.2. `DrivingInsightsHarshEvent`
@@ -578,7 +587,7 @@ Deriva de `getHarshDrivingEvents()`.
 | `magnitude`                | NUMERIC(6, 3) | `magnitude`                                  | Fuerza G máxima detectada.                                                 |
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                 | Nivel de confianza (0-1).                                                  |
 | `harsh_type`               | VARCHAR       | `type` (*"ACCELERATION", "BRAKING", "TURN"*) | Tipo de evento brusco.                                                     |
-| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`                                | Array completo de puntos del evento (Lat/Long/Alt) en formato JSON string. |
+| `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`                                | Array completo de puntos del evento (Lat/Long/Alt) en formato JSON string. |
 
 
 #### 3.4.3. `DrivingInsightsCallEvent`
@@ -599,7 +608,7 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                 |
 | `min_travelled_speed_mps`  | NUMERIC(7, 2) | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
 | `max_travelled_speed_mps`  | NUMERIC(7, 2) | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
-| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
+| `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
 #### 3.4.4. `DrivingInsightsSpeedingEvent`
@@ -616,7 +625,7 @@ Deriva de `getSpeedingEvents()`.
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`        | Fin del exceso de velocidad.                                        |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
-| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
+| `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
 #### 3.4.5. `DrivingInsightsWrongWayDrivingEvent`
@@ -633,7 +642,7 @@ Deriva de `getWrongWayDrivingEvents()`.
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`        | Fin de la conducción en contramano.                                 |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
-| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
+| `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
 #### 3.4.6. `DrivingInsightsPhoneEvent`
@@ -649,7 +658,7 @@ Deriva de `getPhoneUsageEvents()`. Representa los momentos en que el conductor i
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`        | Fin del uso del teléfono.                                           |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
-| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
+| `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 ---
 
@@ -677,7 +686,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
 | `severity`                 | VARCHAR       | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
 | `detector_mode`            | VARCHAR       | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
-| `preceding_locations_json` | NVARCHAR(MAX) | Stringificado del JSON Array `precedingLocations` |                                                       |
+| `preceding_locations_json` | VARBINARY(MAX)| Stringificado del JSON Array `precedingLocations` |                                                       |
 
 
 #### 3.5.2. `SdkStatusHistory`
@@ -770,8 +779,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `distance_meters`              | NUMERIC(12, 2)| `distanceInMeters`    | Distancia total recorrida en metros.                                          |
 | `occupant_role`                | VARCHAR       | `occupantRole`        | Rol del ocupante (*"DRIVER"*, *"PASSENGER"*).                                 |
 | `is_provisional`               | BIT           | `isProvisional`       | Flag para distinguir borradores de viajes finales definitivos.                |
-| `transport_tags_json`          | NVARCHAR(MAX) | `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
-| `waypoints_json`               | NVARCHAR(MAX) | `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
+| `transport_tags_json`          | VARBINARY(MAX)| `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
+| `waypoints_json`               | VARBINARY(MAX)| `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
 | `created_at`                   | DATETIME2(3)  | Auto                  | Fecha de creación técnica del registro.                                       |
 | `updated_at`                   | DATETIME2(3)  | Auto                  | Fecha de última actualización técnica del registro.                           |
 

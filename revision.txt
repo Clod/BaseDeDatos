@@ -1,0 +1,151 @@
+  Revisión DB — Diseño Base de Datos Sentiance (SQL Server)
+
+  1. Tipado de Datos (Esquema)
+
+  ┌──────────┬──────────────────────────────────────────────────────────────┬─────────────────────────┬──────────────────────────────────────┐
+  │ Gravedad │                           Hallazgo                           │       Tabla/Campo       │            Recomendación             │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │ 🔴       │ id INT PK en SentianceEventos es frágil para una tabla de    │ SentianceEventos.id     │ Cambiar a BIGINT IDENTITY(1,1)       │
+  │ CRÍTICO  │ alta ingestion. Alcanza ~2.1B filas.                         │                         │                                      │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │ 🔴       │ latitude/longitude como DECIMAL sin precisión. Sql Server    │ Todas las tablas de     │ Usar DECIMAL(10, 8) para latitud y   │
+  │ CRÍTICO  │ aproxima a (18,0) por defecto si no se declara.              │ ubicación               │ DECIMAL(11, 8) para longitud         │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │ 🟡 ALTO  │ DATETIME sin precisión de milisegundos. Los epoch del SDK    │ Campos start_time,      │ Cambiar a DATETIME2(3) (3 =          │
+  │          │ son en ms.                                                   │ end_time, etc.          │ milisegundos)                        │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │          │ NUMERIC sin escala/precisión declarada en campos como        │                         │ Declarar explícitamente, ej.         │
+  │ 🟡 ALTO  │ duration_in_seconds, distance_meters                         │ Varias                  │ NUMERIC(10, 0) para segundos/epoch,  │
+  │          │                                                              │                         │ NUMERIC(12, 2) para metros           │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │          │ NVARCHAR(MAX) para transport_tags_json y waypoints_json      │                         │ Documentar política de retención;    │
+  │ 🟡 ALTO  │ impide indexación futura. No hay política de                 │ Trip,                   │ considerar VARBINARY(MAX) con CBOR o │
+  │          │ purga/compactación documentada.                              │ TimelineEventHistory    │  compresión si el volumen lo         │
+  │          │                                                              │                         │ justifica                            │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │          │ Almacenar pares DATETIME + BIGINT epoch es redundante. Sql   │                         │ Evaluar si el epoch es consumido por │
+  │ 🟢 MEDIO │ Server storea DATETIME en 8 bytes; epoch BIGINT también      │ Todas las tablas con    │  alguna query/SOA. Si no, eliminar   │
+  │          │ ocupa 8 bytes. Duplica almacenamiento sin valor si no hay    │ ambos                   │ la columna epoch.                    │
+  │          │ consumo externo del epoch.                                   │                         │                                      │
+  ├──────────┼──────────────────────────────────────────────────────────────┼─────────────────────────┼──────────────────────────────────────┤
+  │          │ VARCHAR sin longitud declarada defaultea a (1) en algunas    │ sentianceid,            │ Declarar longitud explícita:         │
+  │ 🟢 MEDIO │ configs o (MAX) en otras. Inconsistente.                     │ record_type, tipo, etc. │ VARCHAR(64) para IDs, VARCHAR(32)    │
+  │          │                                                              │                         │ para enums                           │
+  └──────────┴──────────────────────────────────────────────────────────────┴─────────────────────────┴──────────────────────────────────────┘
+
+  ---
+  2. Índices (Rendimiento)
+                          
+  Gravedad: 🔴 CRÍTICO                                                                                                                         
+  Hallazgo: No se menciona índice en SentianceEventos.sentianceid. Filtros por usuario en el pipeline ETL lo necesitan.                           
+  Tabla/Campo: SentianceEventos                                                                                                                
+  Recomendación: Crear CREATE INDEX idx_sentianceid ON SentianceEventos(sentianceid)                                                              
+  ────────────────────────────────────────                                                                                                     
+  Gravedad: 🔴 CRÍTICO                                                                                                                            
+  Hallazgo: No se menciona índice en SdkSourceEvent.source_time. Queries analíticas por rango de tiempo lo usan.                               
+  Tabla/Campo: SdkSourceEvent                                                                                                                     
+  Recomendación: CREATE INDEX idx_source_time ON SdkSourceEvent(source_time)                                                                   
+  ────────────────────────────────────────                                                                                                        
+  Gravedad: 🟡 ALTO                                                                                                                               
+  Hallazgo: Trip.canonical_transport_event_id necesita UNIQUE constraint explícito para garantizar el MERGE atómico. La sección 3.7 lo menciona
+    pero no está en el DDL.                                                                                                                       
+  Tabla/Campo: Trip
+  Recomendación: CREATE UNIQUE INDEX idx_canonical_trip ON Trip(canonical_transport_event_id)                                                     
+  ────────────────────────────────────────
+  Gravedad: 🟡 ALTO                                                                                                                               
+  Hallazgo: FK compuestas (sentiance_user_id, segment_id) en UserContextActiveSegmentDetail — la dedup UPSERT se basa en este par. Falta índice
+    único.
+  Tabla/Campo: UserContextActiveSegmentDetail
+  Recomendación: CREATE UNIQUE INDEX idx_user_segment_dedup ON UserContextActiveSegmentDetail(sentiance_user_id, segment_id)
+  ────────────────────────────────────────
+  Gravedad: 🟡 ALTO                                                                                                                               
+  Hallazgo: (sentiance_user_id, start_time_epoch) — índice compuesto cubriría la mayoría de consultas analíticas (trips por usuario por rango). No
+                                                                                                                                                  
+    mencionado.   
+  Tabla/Campo: Trip, TimelineEventHistory
+  Recomendación: CREATE INDEX idx_user_time ON Trip(sentiance_user_id, start_time_epoch)
+  ────────────────────────────────────────
+  Gravedad: 🟢 MEDIO                                                                                                                              
+  Hallazgo: FK source_event_id en todas las tablas dependientes no tiene índice explícito.Útil para JOIN de auditoría.
+  Tabla/Campo: Todas las tablas con source_event_id FK                                                                                            
+  Recomendación: Indexar source_event_id en cada tabla hija
+
+  ---
+  3. Restricciones de Integridad (FK / Constraints)
+                                                                                                                                                  
+  ┌──────────┬─────────────────────────────────────────────────────────────────────────────────────┬─────────────────────────────────────────┐
+  │ Gravedad │                                      Hallazgo                                       │              Recomendación              │    
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────┤
+  │          │ No se especifican acciones ON DELETE ni ON UPDATE en ninguna FK. Tablas daughters   │ Agregar ON DELETE CASCADE o ON DELETE   │
+  │ 🔴       │ como TimelineEventHistory, DrivingInsightsTrip, etc., referencian                   │ SET NULL según corresponda. Preferir    │
+  │ CRÍTICO  │ SdkSourceEvent.source_event_id. Si un source event se borra, las filas hijas quedan │ CASCADE en satélite y SET NULL en audit │    
+  │          │  huérfanas.                                                                         │  trail.                                 │
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────┤    
+  │ 🔴       │ SdkSourceEvent.id FK a SentianceEventos(id) — misma observación. ¿Qué pasa si se    │ Definir política y constraint           │
+  │ CRÍTICO  │ purga SentianceEventos?                                                             │ accordingly                             │    
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────┤
+  │ 🟡 ALTO  │ No hay constraint CHECK para los enums literales (ej. transport_mode IN             │ Agregar CHECK constraints en columnas   │    
+  │          │ ('CAR','BUS','WALKING',...)). Un valor garbage entraría sin resistencia.            │ de enum cerrado                         │    
+  └──────────┴─────────────────────────────────────────────────────────────────────────────────────┴─────────────────────────────────────────┘
+                                                                                                                                                  
+  ---             
+  4. Seguridad
+                                                                                                                                                  
+  ┌──────────┬─────────────────────────────────────────────────────────────────────────────────┬──────────────────────────────────────────────┐
+  │ Gravedad │                                    Hallazgo                                     │                Recomendación                 │   
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ 🟡 ALTO  │ payload_hash usa MD5/SHA para deduplicación. MD5 es criptográficamente débil    │ Usar HASHBYTES('SHA2_256', json) o           │
+  │          │ (no es problema para dedup, pero SHA-256 es preferible por consistencia).       │ CHECKSUM() si se requiere velocidad.         │
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────┤   
+  │ 🟢 MEDIO │ app_version en SentianceEventos — ¿se sanitiza antes del INSERT? SQL injection  │ El pipeline ETL debe parametrizar este       │
+  │          │ si viene de headers no validados.                                               │ valor, no concatenar strings.                │   
+  ├──────────┼─────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ 🟢 BAJO  │ No hay ROWLEVEL SECURITY definido (no aplica en SQL Server on-prem, pero sí en  │ Documentar que en Azure SQL se debe          │   
+  │          │ Azure SQL). Si esto sube a Azure, es requisito.                                 │ habilitar RLS por sentiance_user_id.         │   
+  └──────────┴─────────────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────┘
+                                                                                                                                                  
+  ---             
+  5. Observaciones de Diseño
+                            
+  ┌──────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │   Aspecto    │                                                        Observación                                                         │   
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✅ buena     │ Centralizar waypoints_json en la tabla Trip como "único punto de verdad" — evita duplicación masiva.                       │   
+  │ práctica     │                                                                                                                            │
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   
+  │ ✅ buena     │ Separación clara entre tabla raw (SentianceEventos) y normalizada — desacopla ingestion de parsing.                        │   
+  │ práctica     │                                                                                                                            │   
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   
+  │ ✅ buena     │ Uso de is_provisional para distinguir borradores de eventos finales — esencial para la lógica de MERGE.                    │
+  │ práctica     │                                                                                                                            │   
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ⚠️  riesgo    │ No hay política de purga documentada para la tabla raw SentianceEventos. La sección 1 dice "purga periódica" pero no se    │   
+  │              │ detalla scheduling ni retención.                                                                                           │
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ⚠️  riesgo    │ SentianceEventos.json almacenado descompactado — si los payloads son grandes y la frecuencia es alta (~1Hz), el            │
+  │              │ crecimiento de la tabla será agresivo. Considerar compresión en página o PAGE compression en SQL Server.                   │   
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ⚠️  riesgo    │ La tabla UserContextEventDetail mapea lo mismo que TimelineEventHistory. Esto es intencional por contexto diferente, pero  │   
+  │              │ genera datos casi idénticos. Monitorear duplicación real de filas.                                                         │   
+  └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                                                                                                                  
+  ---             
+  6. Checklist de Revisión
+                          
+  - SentianceEventos.id → BIGINT
+  - Lat/Long → DECIMAL(10,8) / DECIMAL(11,8)                                                                                                      
+  - DATETIME → DATETIME2(3)                                                                                                                       
+  - Índices en sentianceid, source_time, FKs                                                                                                      
+  - UNIQUE constraint en Trip.canonical_transport_event_id                                                                                        
+  - UNIQUE constraint en (sentiance_user_id, segment_id) en UserContextActiveSegmentDetail
+  - ON DELETE/ON UPDATE en todas las FK                                                                                                           
+  - CHECK constraints en enums cerrados                                                                                                           
+  - Política de purga documentada para SentianceEventos                                                                                           
+  - Política de compresión para SentianceEventos.json                                                                                             
+  - Evaluar eliminación de columnas epoch redundantes
+  - Longitudes explícitas en todos los VARCHAR                                                                                                    
+                  
+  ---                                                                                                                                             
+  Prioridad sugerida: Los puntos 🔴 CRÍTICO (tipado de id, índices en sentianceid/source_time, FK sin ON DELETE) son blockers antes de pasar a
+  producción con volumen real.                                                                                                                    
+                              
