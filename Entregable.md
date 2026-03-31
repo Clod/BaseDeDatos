@@ -1,19 +1,19 @@
 # Diseño de Base de Datos - Eventos Sentiance
 
-> **Versión:** 1.0.0
-> **Última Actualización:** 30 de marzo de 2026
+> **Versión:** 1.0.0  
+> **Última Actualización:** 30 de marzo de 2026  
 > **Motor Objetivo:** Microsoft SQL Server (T-SQL)
 
 ## 1. Contexto y Origen de Datos (Payloads)
 
 Este modelo de base de datos está diseñado para almacenar estructuradamente la información recolectada por el **SDK de Sentiance** en aplicaciones móviles.
 
-La información ingresa al backend mediante **eventos recibidos a través de los *listeners* u oyentes del SDK en el dispositivo móvil** (principalmente bajo la implementación de React Native u otros lenguajes nativos de la App). 
+La información ingresa al backend mediante **eventos recibidos a través de los *listeners* del SDK en el dispositivo móvil** (en nuestro caso, bajo la implementación de React Native). 
 
 **Puntos Importantes:**
 
-- **Solo Listeners:** No se consolida información proveniente de los volcados diarios (Offloads). El stream es un pipeline directo donde el Frontend emite el payload JSON directamente al backend.
-- **Formato Crudo (Raw):** El JSON almacenado inicialmente en la tabla `SentianceEventos` es el payload exacto emitido por el SDK, sin agregados, sobres ni modificaciones de parte del backend.
+- **Solo Listeners:** No se consolida información proveniente de los volcados diarios (Offloads). El stream es un pipeline directo donde la app móvil emite el payload JSON directamente al backend.
+- **Formato Crudo (Raw):** El JSON almacenado inicialmente en la tabla `SentianceEventos` es el payload exacto emitido por el SDK, sin agregados, sobres ni modificaciones de parte del backend.  Si bien la idea es comprimir el mensaje antes de enviarlo, mi propuesta es guardarlo descompactado y legible por humanos para facilitar el debugging. El presente esquema propuesto permite purgar periódicamente esta tabla de modo que no hay peligro de un crecimiento descontrolado de la necesidad de almacenamiento.
 - **Múltiples Fuentes de Viajes (`Trip`):** La entidad central `Trip` (viaje) no proviene de un solo payload. Es una tabla normalizada alimentada por múltiples fuentes: Eventos temporales (`TimelineEvent` o del `UserContext`) especialmente útiles para viajes cortos, peatonales, bicicletas o colectivos, y objetos de `DrivingInsights` para trayectos motorizados de autos/motos.
 
 ---
@@ -346,11 +346,10 @@ erDiagram
 > **📍 MOTOR OBJETIVO: Microsoft SQL Server (T-SQL)**  
 > Todo el esquema ER y el Diccionario de Datos están pensados estructuralmente para ser implementados en **Microsoft SQL Server**.
 > - Campos booleanos lógicos se expresan como `BIT` (`0` / `1`).
-> - Objetos anidados en JSON y strings extensos (sin longitud predecible) se tipan como `NVARCHAR(MAX)`.
+> - Objetos anidados en JSON y strings extensos (sin longitud predecible) se tipan como `NVARCHAR(MAX)`. En el caso de los waypoints podría valer la pena guardarolos en algún formato más compacto tipo CBOR ya que es altamente improbable que debamos hacer búsquedas por valores dentro de ese campo.
 > - Columnas numéricas usan `NUMERIC`, `DECIMAL` o `BIGINT` en lugar de literales genéricos para garantizar exactitud temporal y espacial.
 
-
-> A continuación, se detalla campo por campo cada tabla presente en el diagrama, vinculándola con la variable equivalente dictada por la documentación oficial de Sentiance react-native.
+> A continuación, se detalla campo por campo cada tabla presente en el diagrama, vinculándola con la variable equivalente dictada por la documentación  de Sentiance react-native.
 
 ### 3.1. Tablas Base y Gestión
 
@@ -359,16 +358,16 @@ erDiagram
 Tabla originaria donde el backend "aterriza" la recepción del payload de la app móvil (Listener raw).
 
 
-| Campo         | Tipo     | Mapeo Sentiance                                                                                    |
-| ------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `id`          | INT (PK) | Auto-Generado Interno                                                                              |
-| `sentianceid` | VARCHAR  | Identificador del usuario emisor (`sentiance_user_id`). Extraído típicamente de la capa de Auth/JWT perimetral previa al insert RAW. |
-| `json`        | NVARCHAR(MAX)     | **Payload exacto emitido desde la app React Native**.                                              |
-| `tipo`        | VARCHAR  | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`) |
-| `created_at`  | DATETIME | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`) |
-| `is_processed`| BIT      | Flag nativo de control de este pipeline ETL: seteado a `1` una vez el JSON fue parseado y distribuido exitosamente a las tablas normalizadas. |
-| `procesado`   | BIT      | **⚠️ LEGACY / EXTERNO:** Flag preexistente manipulado por rutinas ajenas a esta integración. No tiene relación alguna con este pipeline documental. **Ignorar**. |
-| `app_version` | VARCHAR  | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                              |
+| Campo          | Tipo          | Mapeo Sentiance                                                                                                                                                  |
+| -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | INT (PK)      | Auto-Generado Interno                                                                                                                                            |
+| `sentianceid`  | VARCHAR       | Identificador del usuario emisor (`sentiance_user_id`). Extraído típicamente de la capa de Auth/JWT perimetral previa al insert RAW.                             |
+| `json`         | NVARCHAR(MAX) | **Payload exacto emitido desde la app React Native**.                                                                                                            |
+| `tipo`         | VARCHAR       | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`)                                                               |
+| `created_at`   | DATETIME      | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`)                                     |
+| `is_processed` | BIT           | Flag nativo de control de este pipeline ETL: seteado a `1` una vez el JSON fue parseado y distribuido exitosamente a las tablas normalizadas.                    |
+| `procesado`    | BIT           | **⚠️ LEGACY / EXTERNO:** Flag preexistente manipulado por rutinas ajenas a esta integración. No tiene relación alguna con este pipeline documental. **Ignorar**. |
+| `app_version`  | VARCHAR       | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                                                                                            |
 
 
 #### 3.1.2. `SdkSourceEvent`
@@ -398,30 +397,30 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 *Ref SDK: `react-native/event-timeline/timeline/definitions (Event Interface)*`
 
 
-| Campo                       | Tipo      | Mapeo Sentiance       | JSON Detail                                         |
-| --------------------------- | --------- | --------------------- | --------------------------------------------------- |
-| `timeline_event_history_id` | BIGINT PK | N/A                   | PK de tabla                                         |
-| `source_event_id`           | BIGINT FK | N/A                   | Relación a `SdkSourceEvent`                         |
-| `sentiance_user_id`         | VARCHAR   | N/A                   | ID Sentiance                                        |
-| `event_id`                  | VARCHAR   | `id`                  | Id único del evento temporal                        |
-| `event_type`                | VARCHAR   | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*      |
-| `start_time`                | DATETIME  | `startTime`           | ISO 8601 string                                     |
-| `start_time_epoch`          | BIGINT    | `startTimeEpoch`      | UTC milisegundos                                    |
-| `last_update_time`          | DATETIME  | `lastUpdateTime`      | ISO 8601 string                                     |
-| `last_update_time_epoch`    | BIGINT    | `lastUpdateTimeEpoch` | UTC milisegundos                                    |
-| `end_time`                  | DATETIME  | `endTime`             | ISO 8601 string                                     |
-| `end_time_epoch`            | BIGINT    | `endTimeEpoch`        | UTC milisegundos                                    |
-| `duration_in_seconds`       | NUMERIC   | `durationInSeconds`   | Nulo si no culminó                                  |
-| `is_provisional`            | BIT   | `isProvisional`       | Determina si es `true` (en curso) o `false` (final) |
-| `transport_mode`            | VARCHAR   | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"* |
-| `distance_meters`           | NUMERIC   | `distance`            | Distancia del transporte en metros                  |
-| `occupant_role`             | VARCHAR   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*              |
-| `transport_tags_json`       | NVARCHAR(MAX)      | `transportTags`       | String JSON del objeto Key-Value asignado.          |
-| `location_latitude`         | DECIMAL   | `location.latitude`   | Presente sólo para `STATIONARY`                     |
-| `location_longitude`        | DECIMAL   | `location.longitude`  | Presente sólo para `STATIONARY`                     |
-| `location_accuracy`         | NUMERIC   | `location.accuracy`   | Precisión estacionaria (mts)                        |
-| `venue_significance`        | VARCHAR   | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*               |
-| `venue_type`                | VARCHAR   | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.) |
+| Campo                       | Tipo          | Mapeo Sentiance       | JSON Detail                                                                                                    |
+| --------------------------- | ------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                    |
+| `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                    |
+| `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                   |
+| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal                                                                                   |
+| `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                       |
+| `start_time`                | DATETIME      | `startTime`           | ISO 8601 string                                                                                                |
+| `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                               |
+| `last_update_time`          | DATETIME      | `lastUpdateTime`      | ISO 8601 string                                                                                                |
+| `last_update_time_epoch`    | BIGINT        | `lastUpdateTimeEpoch` | UTC milisegundos                                                                                               |
+| `end_time`                  | DATETIME      | `endTime`             | ISO 8601 string                                                                                                |
+| `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                               |
+| `duration_in_seconds`       | NUMERIC       | `durationInSeconds`   | Nulo si no culminó                                                                                             |
+| `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                            |
+| `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*       |
+| `distance_meters`           | NUMERIC       | `distance`            | Distancia del transporte en metros                                                                             |
+| `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                         |
+| `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                     |
+| `location_latitude`         | DECIMAL       | `location.latitude`   | Presente sólo para `STATIONARY`                                                                                |
+| `location_longitude`        | DECIMAL       | `location.longitude`  | Presente sólo para `STATIONARY`                                                                                |
+| `location_accuracy`         | NUMERIC       | `location.accuracy`   | Precisión estacionaria (mts)                                                                                   |
+| `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                |
+| `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.) |
 
 
 ---
@@ -465,8 +464,7 @@ Los motivos de actualización extraídos del arreglo `criteria[]`.
 Itera los eventos activos `events[]` actuales del contexto.  
 Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (contiene `transportMode`, `occupantRole`, locations y demás). Única diferencia: Clave Foránea a `UserContextHeader`.
 
-> **⚠️ Nota de Normalización y Almacenamiento:** Aunque el objeto nativo extraído `events[]` contiene un voluminoso array de `waypoints` (coordenadas en milisegundos del trayecto), este campo fue **omitido intencionalmente** del esquema `UserContextEventDetail`. Para evitar duplicidad extrema de Megabytes en JSON, dichos recorridos se almacenan de manera única en la tabla pivote **`Trip`**.
-
+> **⚠️ Nota de Normalización y Almacenamiento:** Aunque el objeto nativo extraído `events[]` contiene un voluminoso array de `waypoints` (coordenadas en milisegundos del trayecto), este campo fue **omitido intencionalmente** del esquema `UserContextEventDetail`. Para evitar duplicidad extrema de Megabytes en JSON, dichos recorridos se almacenan de manera única en la tabla pivote `**Trip**`.
 
 #### 3.3.4. `UserContextActiveSegmentDetail`
 
@@ -521,27 +519,27 @@ Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes 
 
 Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`).
 
-> **⚠️ Nota de Normalización (Omisión de Waypoints):** A pesar de que el objeto nativo extraído `transportEvent` contiene en sus entrañas un array pesado de `waypoints` (tracking geoespacial a milisegundos), esta propiedad fue **purgada intencionalmente** del mapeo DDL de `DrivingInsightsTrip`. Para eficientizar el almacenamiento y evitar gigabytes de coordenadas duplicadas, el guardado de `waypoints_json` de todos los viajes se delega de forma exclusiva y consolidada a la tabla canónica central **`Trip`**.
+> **⚠️ Nota de Normalización (Omisión de Waypoints):** A pesar de que el objeto nativo extraído `transportEvent` contiene en sus entrañas un array pesado de `waypoints` (tracking geoespacial a milisegundos), esta propiedad fue **purgada intencionalmente** del mapeo DDL de `DrivingInsightsTrip`. Para eficientizar el almacenamiento y evitar gigabytes de coordenadas duplicadas, el guardado de `waypoints_json` de todos los viajes se delega de forma exclusiva y consolidada a la tabla canónica central `**Trip**`.
 
 
-| Campo                      | Tipo      | Mapeo Sentiance                       | Notas                                          |
-| -------------------------- | --------- | ------------------------------------- | ---------------------------------------------- |
-| `driving_insights_trip_id` | BIGINT PK | -                                     | -                                              |
-| `source_event_id`          | BIGINT FK | -                                     | -                                              |
-| `trip_id`                  | BIGINT FK | -                                     | FK de la tabla canon `Trip`                    |
-| `sentiance_user_id`        | VARCHAR   | -                                     | Obtenido de JWT                                |
-| `transport_event_id`       | VARCHAR   | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto |
-| `smooth_score`             | NUMERIC   | `safetyScores.smoothScore`            | (0 a 1)                                        |
-| `focus_score`              | NUMERIC   | `safetyScores.focusScore`             | (0 a 1)                                        |
-| `legal_score`              | NUMERIC   | `safetyScores.legalScore`             | (0 a 1)                                        |
-| `call_while_moving_score`  | NUMERIC   | `safetyScores.callWhileMovingScore`   | (0 a 1)                                        |
-| `overall_score`            | NUMERIC   | `safetyScores.overallScore`           | (0 a 1)                                        |
-| `harsh_braking_score`      | NUMERIC   | `safetyScores.harshBrakingScore`      | (0 a 1)                                        |
-| `harsh_turning_score`      | NUMERIC   | `safetyScores.harshTurningScore`      | (0 a 1)                                        |
-| `harsh_acceleration_score` | NUMERIC   | `safetyScores.harshAccelerationScore` | (0 a 1)                                        |
-| `distance_meters`          | NUMERIC   | `transportEvent.distance`             | Distancia extraída en metros                   |
-| `occupant_role`            | VARCHAR   | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
-| `transport_tags_json`      | NVARCHAR(MAX)      | `transportEvent.transportTags`        | Serializado dict key-value                     |
+| Campo                      | Tipo          | Mapeo Sentiance                       | Notas                                                     |
+| -------------------------- | ------------- | ------------------------------------- | --------------------------------------------------------- |
+| `driving_insights_trip_id` | BIGINT PK     | -                                     | -                                                         |
+| `source_event_id`          | BIGINT FK     | -                                     | -                                                         |
+| `trip_id`                  | BIGINT FK     | -                                     | FK de la tabla canon `Trip`                               |
+| `sentiance_user_id`        | VARCHAR       | -                                     | Obtenido de JWT                                           |
+| `transport_event_id`       | VARCHAR       | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto            |
+| `smooth_score`             | NUMERIC       | `safetyScores.smoothScore`            | (0 a 1)                                                   |
+| `focus_score`              | NUMERIC       | `safetyScores.focusScore`             | (0 a 1)                                                   |
+| `legal_score`              | NUMERIC       | `safetyScores.legalScore`             | (0 a 1)                                                   |
+| `call_while_moving_score`  | NUMERIC       | `safetyScores.callWhileMovingScore`   | (0 a 1)                                                   |
+| `overall_score`            | NUMERIC       | `safetyScores.overallScore`           | (0 a 1)                                                   |
+| `harsh_braking_score`      | NUMERIC       | `safetyScores.harshBrakingScore`      | (0 a 1)                                                   |
+| `harsh_turning_score`      | NUMERIC       | `safetyScores.harshTurningScore`      | (0 a 1)                                                   |
+| `harsh_acceleration_score` | NUMERIC       | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
+| `distance_meters`          | NUMERIC       | `transportEvent.distance`             | Distancia extraída en metros                              |
+| `occupant_role`            | VARCHAR       | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
+| `transport_tags_json`      | NVARCHAR(MAX) | `transportEvent.transportTags`        | Serializado dict key-value                                |
 
 
 #### 3.4.2. `DrivingInsightsHarshEvent`
@@ -556,24 +554,23 @@ Deriva de `getHarshDrivingEvents()`.
 | `magnitude`            | NUMERIC         | `magnitude`                                  |
 | `confidence`           | NUMERIC         | `confidence`                                 |
 | `harsh_type`           | VARCHAR         | `type` (*"ACCELERATION", "BRAKING", "TURN"*) |
-| `waypoints_json`       | NVARCHAR(MAX)            | `waypoints[]` stringificado                  |
+| `waypoints_json`       | NVARCHAR(MAX)   | `waypoints[]` stringificado                  |
 
 
 #### 3.4.3. `DrivingInsightsCallEvent`
 
 Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEvents()`.
 
-> **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como **`DrivingInsightsCallEvent`** por mera consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: **`CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent`**.
+> **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como `**DrivingInsightsCallEvent**` por mera consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: `**CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent**`.
 
 
-
-| Campo                    | Tipo            | Mapeo Sentiance                                 | Objeto Origen               |
-| ------------------------ | --------------- | ----------------------------------------------- | --------------------------- |
-| `start_time` / `epoch`   | DATETIME/BIGINT | `startTime` / `startTimeEpoch`                  | En ambos                    |
-| `end_time` / `epoch`     | DATETIME/BIGINT | `endTime` / `endTimeEpoch`                      | En ambos                    |
-| `min_travelled_speed_mps` | NUMERIC         | `minTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
-| `max_travelled_speed_mps` | NUMERIC         | `maxTravelledSpeedInMps`                        | Exclusivo de **CallEvent**  |
-| `waypoints_json`         | NVARCHAR(MAX)            | `waypoints[]` stringificado                     | En ambos                    |
+| Campo                     | Tipo            | Mapeo Sentiance                | Objeto Origen              |
+| ------------------------- | --------------- | ------------------------------ | -------------------------- |
+| `start_time` / `epoch`    | DATETIME/BIGINT | `startTime` / `startTimeEpoch` | En ambos                   |
+| `end_time` / `epoch`      | DATETIME/BIGINT | `endTime` / `endTimeEpoch`     | En ambos                   |
+| `min_travelled_speed_mps` | NUMERIC         | `minTravelledSpeedInMps`       | Exclusivo de **CallEvent** |
+| `max_travelled_speed_mps` | NUMERIC         | `maxTravelledSpeedInMps`       | Exclusivo de **CallEvent** |
+| `waypoints_json`          | NVARCHAR(MAX)   | `waypoints[]` stringificado    | En ambos                   |
 
 
 #### 3.4.4. `DrivingInsightsSpeedingEvent` / `DrivingInsightsWrongWayDrivingEvent`
@@ -591,18 +588,18 @@ Provisto a través de `addVehicleCrashEventListener`.
 *Ref SDK: `react-native/crash-detection/definitions*`
 
 
-| Campo                                           | Tipo      | Mapeo Sentiance (`CrashEvent`)                                                  |
-| ----------------------------------------------- | --------- | ------------------------------------------------------------------------------- |
-| `vehicle_crash_event_id`                        | BIGINT PK | -                                                                               |
-| `crash_time_epoch`                              | BIGINT    | `time`                                                                          |
-| `latitude`, `longitude`, `accuracy`, `altitude` | DECIMAL   | Mapeado individual desde el objeto interno `location` al registrarse el impacto |
-| `magnitude`                                     | NUMERIC   | `magnitude`                                                                     |
-| `speed_at_impact`                               | NUMERIC   | `speedAtImpact`                                                                 |
-| `delta_v`                                       | NUMERIC   | `deltaV` (cambio de velocidad en km/h o mph)                                    |
-| `confidence`                                    | NUMERIC   | `confidence`                                                                    |
-| `severity`                                      | VARCHAR   | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
-| `detector_mode`                                 | VARCHAR   | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
-| `preceding_locations_json`                      | NVARCHAR(MAX)      | Stringificado del JSON Array `precedingLocations`                               |
+| Campo                                           | Tipo          | Mapeo Sentiance (`CrashEvent`)                                                  |
+| ----------------------------------------------- | ------------- | ------------------------------------------------------------------------------- |
+| `vehicle_crash_event_id`                        | BIGINT PK     | -                                                                               |
+| `crash_time_epoch`                              | BIGINT        | `time`                                                                          |
+| `latitude`, `longitude`, `accuracy`, `altitude` | DECIMAL       | Mapeado individual desde el objeto interno `location` al registrarse el impacto |
+| `magnitude`                                     | NUMERIC       | `magnitude`                                                                     |
+| `speed_at_impact`                               | NUMERIC       | `speedAtImpact`                                                                 |
+| `delta_v`                                       | NUMERIC       | `deltaV` (cambio de velocidad en km/h o mph)                                    |
+| `confidence`                                    | NUMERIC       | `confidence`                                                                    |
+| `severity`                                      | VARCHAR       | `severity` (*"LOW", "MEDIUM", "HIGH"*)                                          |
+| `detector_mode`                                 | VARCHAR       | `detectorMode` (*"CAR", "TWO_WHEELER"*)                                         |
+| `preceding_locations_json`                      | NVARCHAR(MAX) | Stringificado del JSON Array `precedingLocations`                               |
 
 
 #### 3.5.2. `SdkStatusHistory`
@@ -611,41 +608,44 @@ Estado general de recolección en los dispositivos a través del listener de sta
 
 > **⚠️ Nota de Captura Parcial (Muestreo Intencional):** La interfaz original TypeScript `SdkStatus` expone numeramente docenas de propiedades y banderas técnicas (tales como `userExists`, `backgroundRefreshStatus`, `isRemoteEnabled`, `isBatteryOptimizationEnabled`, `isAirplaneModeEnabled`, etc.). El modelo de base de datos optó por registrar de forma controlada estrictamente un subset de sus atributos, priorizando aquellos vinculados al cuote de tracking y localización ("is_location_available", "location_permission", etc., que componen la tabla relacional) para así mitigar la saturación de ruido técnico y maximizar el rendimiento DB. Por ende, la abstracción tabular en `SdkStatusHistory` se trata de un filtrado parcial e intencional, y no de un Mapeo Estructural 1:1 directo de todos los flag del SDK Status original.
 
-| Campo | Tipo | Mapeo Sentiance y Detalles |
-| :--- | :--- | :--- |
-| `sdk_status_history_id` | BIGINT PK | Identificador único autoincremental de la tabla. |
-| `source_event_id` | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`. |
-| `sentiance_user_id` | VARCHAR | Identificador del usuario emisor del evento. |
-| `captured_at` | DATETIME | Instante de captura local / persistencia del status. |
-| `start_status` | VARCHAR | Extraído de `startStatus` (Estado general del arranque). |
-| `detection_status` | VARCHAR | Extraído de `detectionStatus` (Porción operativa del SDK). |
-| `location_permission` | VARCHAR | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
-| `precise_location_granted`| BIT | Extraído de `isPreciseLocationAuthorizationGranted`. |
-| `quota_status_wifi` | VARCHAR | Extraído de `wifiQuotaStatus`. |
-| `quota_status_mobile` | VARCHAR | Extraído de `mobileQuotaStatus`. |
-| `quota_status_disk` | VARCHAR | Extraído de `diskQuotaStatus`. |
-| `is_location_available` | BIT | Extraído de `isLocationAvailable`. |
-| `can_detect` | BIT | Extraído de `canDetect`. |
+
+| Campo                      | Tipo      | Mapeo Sentiance y Detalles                                                |
+| -------------------------- | --------- | ------------------------------------------------------------------------- |
+| `sdk_status_history_id`    | BIGINT PK | Identificador único autoincremental de la tabla.                          |
+| `source_event_id`          | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`.                     |
+| `sentiance_user_id`        | VARCHAR   | Identificador del usuario emisor del evento.                              |
+| `captured_at`              | DATETIME  | Instante de captura local / persistencia del status.                      |
+| `start_status`             | VARCHAR   | Extraído de `startStatus` (Estado general del arranque).                  |
+| `detection_status`         | VARCHAR   | Extraído de `detectionStatus` (Porción operativa del SDK).                |
+| `location_permission`      | VARCHAR   | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
+| `precise_location_granted` | BIT       | Extraído de `isPreciseLocationAuthorizationGranted`.                      |
+| `quota_status_wifi`        | VARCHAR   | Extraído de `wifiQuotaStatus`.                                            |
+| `quota_status_mobile`      | VARCHAR   | Extraído de `mobileQuotaStatus`.                                          |
+| `quota_status_disk`        | VARCHAR   | Extraído de `diskQuotaStatus`.                                            |
+| `is_location_available`    | BIT       | Extraído de `isLocationAvailable`.                                        |
+| `can_detect`               | BIT       | Extraído de `canDetect`.                                                  |
+
 
 #### 3.5.3. `UserActivityHistory`
 
 Recopilación de contextos gruesos emitidos por el listener de User Activity. Mapeado del payload nativo `UserActivity`.
 
-| Campo | Tipo | Mapeo Sentiance y Lógica |
-| :--- | :--- | :--- |
-| `user_activity_history_id` | BIGINT PK | Identificador único autoincremental de la tabla. |
-| `source_event_id` | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`. |
-| `sentiance_user_id` | VARCHAR | Identificador del usuario emisor de la actividad. |
-| `captured_at` | DATETIME | Instante de persistencia de la actividad. |
-| `activity_type` | VARCHAR | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). |
-| `trip_type` | VARCHAR | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje. |
-| `stationary_latitude` / `longitude` | DECIMAL | Extraído de `stationaryInfo.location.latitude`/`longitude`. **⚠️ Permite NULL:** Incluso si la actividad es "STATIONARY", la interfaz nativa los expone como opcionales (`?`); pueden llegar sin coordenadas si el celular pierde señal de red/GPS. |
-| `payload_json` | NVARCHAR(MAX) | Copia raw del JSON emitido por si varía en actualizaciones futuras. |
+
+| Campo                               | Tipo          | Mapeo Sentiance y Lógica                                                                                                                                                                                                                            |
+| ----------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_activity_history_id`          | BIGINT PK     | Identificador único autoincremental de la tabla.                                                                                                                                                                                                    |
+| `source_event_id`                   | BIGINT FK     | FK referenciando a la tabla maestra `SdkSourceEvent`.                                                                                                                                                                                               |
+| `sentiance_user_id`                 | VARCHAR       | Identificador del usuario emisor de la actividad.                                                                                                                                                                                                   |
+| `captured_at`                       | DATETIME      | Instante de persistencia de la actividad.                                                                                                                                                                                                           |
+| `activity_type`                     | VARCHAR       | Extraído de `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*).                                                                                                                                                            |
+| `trip_type`                         | VARCHAR       | Extraído de `tripInfo.type`. Solo presente si la actividad principal es viaje.                                                                                                                                                                      |
+| `stationary_latitude` / `longitude` | DECIMAL       | Extraído de `stationaryInfo.location.latitude`/`longitude`. **⚠️ Permite NULL:** Incluso si la actividad es "STATIONARY", la interfaz nativa los expone como opcionales (`?`); pueden llegar sin coordenadas si el celular pierde señal de red/GPS. |
+| `payload_json`                      | NVARCHAR(MAX) | Copia raw del JSON emitido por si varía en actualizaciones futuras.                                                                                                                                                                                 |
+
 
 #### 3.5.4. `TechnicalEventHistory`
 
 Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin depender del volcado Offload (Payload sujeto a implementación de logger).
-
 
 ---
 
@@ -656,20 +656,20 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 **Importantísimo**: No es directamente poblada por un listener JSON Sentiance unitario, sino un integrador de viajes (Transports).
 
 
-| Campo                          | Tipo              | Mapeo Sentiance y Lógica de Construcción                                                                                                                            |
-| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `trip_id`                      | BIGINT PK         | ID autoincremental de la base de datos (Primary Key Interna).                                                                                                                                                                                                                       |
-| `canonical_transport_event_id` | VARCHAR UNIQUE    | **¿De dónde sale?** Se extrae textualmente de `transportEvent.id` (DrivingInsights) o de `event.id` (Timeline).<br>**Lógica de Consolidación (Upsert):** Requiere imperativamente un **UNIQUE CONSTRAINT** u **UNIQUE INDEX** activo en la base de datos sobre este campo. Esto es fundamental para habilitar instrucciones anti-duplicados como `MERGE` en T-SQL de manera atómica transaccional y evitar colisiones cuando múltiples webhooks/listeners insertan datos simultáneamente para el mismo viaje. |
-| `first_seen_from`              | VARCHAR           | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (Indica qué listener reportó el viaje primero y causó el INSERT original).                                                                                                                                   |
-| `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*).                                                                                   |
-| `start_time` / `epoch`         | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.                                                                                                                         |
-| `end_time` / `epoch`           | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                                                                        |
-| `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                     |
-| `distance_meters`              | NUMERIC           | Extraído de `distance`                                                                                                                                              |
-| `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                            |
-| `is_provisional`               | BIT           | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan. |
-| `transport_tags_json`          | NVARCHAR(MAX)              | Recuperado del objeto libre `transportTags`.                                                                                                                        |
-| `waypoints_json`               | NVARCHAR(MAX)              | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                  |
+| Campo                          | Tipo              | Mapeo Sentiance y Lógica de Construcción                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------ | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `trip_id`                      | BIGINT PK         | ID autoincremental de la base de datos (Primary Key Interna).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `canonical_transport_event_id` | VARCHAR UNIQUE    | **¿De dónde sale?** Se extrae textualmente de `transportEvent.id` (DrivingInsights) o de `event.id` (Timeline). **Lógica de Consolidación (Upsert):** Requiere imperativamente un **UNIQUE CONSTRAINT** u **UNIQUE INDEX** activo en la base de datos sobre este campo. Esto es fundamental para habilitar instrucciones anti-duplicados como `MERGE` en T-SQL de manera atómica transaccional y evitar colisiones cuando múltiples webhooks/listeners insertan datos simultáneamente para el mismo viaje. |
+| `first_seen_from`              | VARCHAR           | *"TIMELINE"*, *"USER_CONTEXT"*, o *"DRIVING_INSIGHTS"* (Indica qué listener reportó el viaje primero y causó el INSERT original).                                                                                                                                                                                                                                                                                                                                                                          |
+| `transport_mode`               | VARCHAR           | Extraído de `transportMode` (Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*).                                                                                                                                                                                                                                                                                                                                                                    |
+| `start_time` / `epoch`         | DATETIME / BIGINT | Extraído de `startTime` / `startTimeEpoch`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `end_time` / `epoch`           | DATETIME / BIGINT | Extraído de `endTime` / `endTimeEpoch` al cerrarse el viaje.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `duration_in_seconds`          | NUMERIC           | Extraído de `durationInSeconds`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `distance_meters`              | NUMERIC           | Extraído de `distance`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `occupant_role`                | VARCHAR           | Extraído de `occupantRole` (Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"*). Fundamental para inferir autoría de faltas en "DrivingInsights".                                                                                                                                                                                                                                                                                                                                                   |
+| `is_provisional`               | BIT               | Mapeado desde `isProvisional`. **Vital**: Los eventos finales y provisionales usan IDs (`canonical_transport_event_id`) completamente distintos que nunca se pisan.                                                                                                                                                                                                                                                                                                                                        |
+| `transport_tags_json`          | NVARCHAR(MAX)     | Recuperado del objeto libre `transportTags`.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `waypoints_json`               | NVARCHAR(MAX)     | Extraído del array de objetos `waypoints[]` y guardado como texto.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 
 > **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:  
@@ -678,10 +678,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 > - Una vez que el usuario se vuelve a quedar estacionario, Sentiance consolida todo el movimiento previo, procesa los scores y emite los eventos **Finales** (`isProvisional = false`). Los eventos finales tienen **IDs completamente nuevos** y Sentiance no provee links/claves foráneas apuntando a sus eventos "borrador" preliminares.
 > - *↳ **Resultado en Base de Datos**: El backend **no actualiza ni reemplaza (UPDATE)** los records provisionales. Simplemente ingresa la nueva fila definitiva enviada por el evento final. Para análisis de scores de viaje limpio, reporting, o consumo en la UI usuaria final, la base de datos se debe filtrar buscando excluyentemente `WHERE is_provisional = 0` para aislar el output definitivo del viaje, descartando los borradores en tiempo real.*
 
-<br>
-
 > [!NOTE]
-> **Nota Técnica de Implementación: Deduplicación vs Desvinculación de Viajes**
+> **Nota Técnica de Implementación: Deduplicación vs Desvinculación de Viajes**  
 > Es imperativo para el equipo de Backend (ETL) distinguir mecánicamente entre dos flujos totalmente diferentes al procesar identificadores (`canonical_transport_event_id`):
 > 1. **Deduplicación de Evento Final (Uso de UPDATE / MERGE):** Cuando un "Viaje Final" concluye, múltiples módulos nativos de Sentiance (`UserContext`, `DrivingInsights`, `Timeline`) se disparan concurrentemente hacia la nube. Todos emiten de manera redundante el **mismo ID de viaje Final**. El backend debe usar `MERGE` en T-SQL para que el webhook que llegue primero realice el `INSERT` original, y los webhooks subsecuentes (que traen el mismo ID) realicen un `UPDATE`, enriqueciendo la fila única (ej. anexándole `waypoints` y Safety Scores).
 > 2. **Desvinculación absoluta del Provisorio (Uso exclusivo de INSERT):** Los eventos en vivo emitidos en tiempo real (donde `isProvisional = true`) usan un ID propio que **no guarda relación alguna u originaria** con el ID del evento Final. El `MERGE` del webhook final nunca va a "coincidir" ni pisar al borrador. Cada evento provisorio que expulse la App simplemente realiza un `INSERT` pasivo (se acumulan muertos), y cuando se despacha el Viaje Final definitivo meses o minutos después, se somete a un `INSERT` independiente en otra fila con un GUID completamente nuevo.
@@ -694,20 +692,16 @@ Debido a que una plataforma telemática conectada a múltiples dispositivos móv
 
 Por el diseño establecido, recomendamos enfáticamente crear los siguientes índices sobre las tablas de alto impacto (`SentianceEventos`, `TimelineEventHistory`, `UserActivityHistory` y `Trip`):
 
-1. **Índice sobre `sentiance_user_id`** (Alta Cardinalidad):  
-   Casi cualquier pantalla principal del sistema (ej: "Consultar viajes del usuario X") o el filtrado por conductor usa esta columna. Al crear un index (ej: `idx_user_context_sentiance_user_id`) se evitan búsquedas Full-Table Scan que demorarían minutos.
-
-2. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):  
-   Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
-
+1. **Índice sobre `sentiance_user_id**` (Alta Cardinalidad):
+  Casi cualquier pantalla principal del sistema (ej: "Consultar viajes del usuario X") o el filtrado por conductor usa esta columna. Al crear un index (ej: `idx_user_context_sentiance_user_id`) se evitan búsquedas Full-Table Scan que demorarían minutos.
+2. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):
+  Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
 3. **Índice Filtrado por `is_provisional`:**
-   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
-
-4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:  
-   Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent` o `DrivingInsightsTrip`). Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre `Trip` y la tabla satélite dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
-
-5. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:  
-   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única (`UNIQUE INDEX / CONSTRAINT`). Sin ella, el mecanismo atómico de `UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas.
+  Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
+4. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
+  Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent` o `DrivingInsightsTrip`). Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre `Trip` y la tabla satélite dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
+5. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
+  En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única (`UNIQUE INDEX / CONSTRAINT`). Sin ella, el mecanismo atómico de `UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas.
 
 ---
 
