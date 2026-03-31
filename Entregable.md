@@ -636,6 +636,21 @@ Deriva de `getWrongWayDrivingEvents()`.
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
+#### 3.4.6. `DrivingInsightsPhoneEvent`
+
+Deriva de `getPhoneUsageEvents()`. Representa los momentos en que el conductor interactúa con el teléfono móvil durante el trayecto.
+
+| Campo                      | Tipo          | Mapeo Sentiance  | Notas                                                               |
+| -------------------------- | ------------- | ---------------- | ------------------------------------------------------------------- |
+| `phone_event_id`           | BIGINT PK     | Auto             | Identificador único del evento de distracción.                      |
+| `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
+| `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
+| `start_time`               | DATETIME      | `startTime`      | Inicio del uso del teléfono.                                        |
+| `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
+| `end_time`                 | DATETIME      | `endTime`        | Fin del uso del teléfono.                                           |
+| `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
+| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
+
 ---
 
 ### 3.5. Excepciones Vehiculares y Estado
