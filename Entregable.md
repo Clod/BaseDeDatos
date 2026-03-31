@@ -602,10 +602,36 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `waypoints_json`             | NVARCHAR(MAX) | `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.                            |
 
 
-#### 3.4.4. `DrivingInsightsSpeedingEvent` / `DrivingInsightsWrongWayDrivingEvent`
+#### 3.4.4. `DrivingInsightsSpeedingEvent`
 
-Análogos derivados de `getSpeedingEvents()` y `getWrongWayDrivingEvents()`.  
-Mapeo idéntico de base (`startTime`, `endTime`, `waypoints`).
+Deriva de `getSpeedingEvents()`.
+
+| Campo                      | Tipo          | Mapeo Sentiance | Notas                                                                                        |
+| -------------------------- | ------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `speeding_event_id`        | BIGINT PK     | Auto            | Identificador único del evento de exceso de velocidad.                                       |
+| `source_event_id`          | BIGINT FK     | FK Raíz         | FK referenciando a `SdkSourceEvent(source_event_id)`.                                        |
+| `driving_insights_trip_id` | BIGINT FK     | FK Padre        | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.                          |
+| `start_time`               | DATETIME      | `startTime`     | Inicio del exceso de velocidad.                                                              |
+| `start_time_epoch`         | BIGINT        | `startTimeEpoch`| Tiempo Unix de inicio.                                                                       |
+| `end_time`                 | DATETIME      | `endTime`       | Fin del exceso de velocidad.                                                                 |
+| `end_time_epoch`           | BIGINT        | `endTimeEpoch`  | Tiempo Unix de fin.                                                                          |
+| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`   | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.                            |
+
+
+#### 3.4.5. `DrivingInsightsWrongWayDrivingEvent`
+
+Deriva de `getWrongWayDrivingEvents()`.
+
+| Campo                      | Tipo          | Mapeo Sentiance | Notas                                                                                        |
+| -------------------------- | ------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `wrong_way_event_id`       | BIGINT PK     | Auto            | Identificador único del evento de conducción en contramano.                                  |
+| `source_event_id`          | BIGINT FK     | FK Raíz         | FK referenciando a `SdkSourceEvent(source_event_id)`.                                        |
+| `driving_insights_trip_id` | BIGINT FK     | FK Padre        | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.                          |
+| `start_time`               | DATETIME      | `startTime`     | Inicio de la conducción en contramano.                                                       |
+| `start_time_epoch`         | BIGINT        | `startTimeEpoch`| Tiempo Unix de inicio.                                                                       |
+| `end_time`                 | DATETIME      | `endTime`       | Fin de la conducción en contramano.                                                          |
+| `end_time_epoch`           | BIGINT        | `endTimeEpoch`  | Tiempo Unix de fin.                                                                          |
+| `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`   | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.                            |
 
 ---
 
