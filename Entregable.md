@@ -669,15 +669,21 @@ Estado general de recolección en los dispositivos a través del listener de sta
 > **⚠️ Nota de Captura Parcial (Muestreo Intencional):** La interfaz original TypeScript `SdkStatus` expone numeramente docenas de propiedades y banderas técnicas (tales como `userExists`, `backgroundRefreshStatus`, `isRemoteEnabled`, `isBatteryOptimizationEnabled`, `isAirplaneModeEnabled`, etc.). El modelo de base de datos optó por registrar de forma controlada estrictamente un subset de sus atributos, priorizando aquellos vinculados al cuote de tracking y localización ("is_location_available", "location_permission", etc., que componen la tabla relacional) para así mitigar la saturación de ruido técnico y maximizar el rendimiento DB. Por ende, la abstracción tabular en `SdkStatusHistory` se trata de un filtrado parcial e intencional, y no de un Mapeo Estructural 1:1 directo de todos los flag del SDK Status original.
 
 
-| Campo                      | Tipo      | Mapeo Sentiance y Detalles                                                |
-| -------------------------- | --------- | ------------------------------------------------------------------------- |
-| `sdk_status_history_id`    | BIGINT PK | Identificador único autoincremental de la tabla.                          |
-| `source_event_id`          | BIGINT FK | FK referenciando a la tabla maestra `SdkSourceEvent`.                     |
-| `sentiance_user_id`        | VARCHAR   | Identificador del usuario emisor del evento.                              |
-| `captured_at`              | DATETIME  | Instante de captura local / persistencia del status.                      |
-| `start_status`             | VARCHAR   | Extraído de `startStatus` (Estado general del arranque).                  |
-| `detection_status`         | VARCHAR   | Extraído de `detectionStatus` (Porción operativa del SDK).                |
-| `location_permission`      | VARCHAR   | Extraído de `locationPermission` (Si los permisos OS están garantizados). |
+| Campo                      | Tipo      | Mapeo Sentiance y Detalles                                                | Notas                                                                    |
+| -------------------------- | --------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `sdk_status_history_id`    | BIGINT PK | Auto                                                                      | -                                                                        |
+| `source_event_id`          | BIGINT FK | FK referenciando a `SdkSourceEvent(source_event_id)`.                     | -                                                                        |
+| `sentiance_user_id`        | VARCHAR   | Identificador del usuario.                                                | -                                                                        |
+| `start_status`             | VARCHAR   | `startStatus`                                                             | Estado de arranque del SDK.                                              |
+| `detection_status`         | VARCHAR   | `detectionStatus`                                                         | Estado operativo de detección.                                           |
+| `location_permission`      | VARCHAR   | `locationPermission`                                                      | Permisos del sistema operativo.                                          |
+| `precise_location_granted` | BIT       | `isPreciseLocationGranted`                                                | Si se tiene precisión GPS total.                                         |
+| `quota_status_wifi`        | VARCHAR   | `quotaStatusWiFi`                                                         | Estado de cuota en WiFi.                                                 |
+| `quota_status_mobile`      | VARCHAR   | `quotaStatusMobile`                                                       | Estado de cuota en datos móviles.                                        |
+| `quota_status_disk`        | VARCHAR   | `quotaStatusDisk`                                                         | Estado de cuota en disco.                                                |
+| `is_location_available`    | BIT       | `isLocationAvailable`                                                     | Si la ubicación está encendida.                                          |
+| `can_detect`               | BIT       | `canDetect`                                                               | Si el SDK puede recolectar datos.                                        |
+| `captured_at`              | DATETIME  | Instante de persistencia del status.                                      | -                                                                        |
 | `precise_location_granted` | BIT       | Extraído de `isPreciseLocationAuthorizationGranted`.                      |
 | `quota_status_wifi`        | VARCHAR   | Extraído de `wifiQuotaStatus`.                                            |
 | `quota_status_mobile`      | VARCHAR   | Extraído de `mobileQuotaStatus`.                                          |
