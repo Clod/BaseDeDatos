@@ -835,6 +835,133 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 
 ---
 
+## 3.8. Restricciones de Integridad Referencial (FK / Constraints)
+
+### 3.8.1. Política `ON DELETE` / `ON UPDATE` en Claves Foráneas 🔴 CRÍTICO
+
+Ninguna FK del esquema define actualmente acciones referenciales. Si se purga un registro de `SdkSourceEvent` o de `SentianceEventos`, todas las filas hija quedan **huérfanas** sin que el motor lo detecte ni lo impida.
+
+**Regla general adoptada:**
+
+| Relación | Acción recomendada | Justificación |
+|---|---|---|
+| Tablas satélite → `SdkSourceEvent` | `ON DELETE CASCADE` | Son datos derivados sin valor propio si el evento padre desaparece |
+| `SdkSourceEvent` → `SentianceEventos` | `ON DELETE SET NULL` | Permite purgar la tabla raw sin romper el grafo de normalización |
+
+**DDL para cada FK afectada:**
+
+```sql
+-- SdkSourceEvent → SentianceEventos (purga segura de tabla raw)
+ALTER TABLE SdkSourceEvent
+  ADD CONSTRAINT fk_sdk_source_sentiance
+  FOREIGN KEY (id) REFERENCES SentianceEventos(id)
+  ON DELETE SET NULL ON UPDATE NO ACTION;
+
+-- Tablas satélite → SdkSourceEvent (cascade sobre datos derivados)
+ALTER TABLE TimelineEventHistory
+  ADD CONSTRAINT fk_tl_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE UserContextHeader
+  ADD CONSTRAINT fk_uch_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsTripData
+  ADD CONSTRAINT fk_di_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsHarshEvent
+  ADD CONSTRAINT fk_harsh_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsPhoneEvent
+  ADD CONSTRAINT fk_phone_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE VehicleCrashEvent
+  ADD CONSTRAINT fk_crash_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE SdkStatusHistory
+  ADD CONSTRAINT fk_sdk_status_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE UserActivityHistory
+  ADD CONSTRAINT fk_activity_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE TechnicalEventHistory
+  ADD CONSTRAINT fk_tech_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+```
+
+> **Nota sobre `SentianceEventos`:** La purga periódica de esta tabla raw debe ejecutarse **sólo después** de verificar `is_processed = 1` en todas las filas del batch. El `SET NULL` en `SdkSourceEvent.id` garantiza que la cadena normalizada permanece intacta.
+
+---
+
+### 3.8.2. `CHECK` Constraints en Columnas Enum Cerrado 🟡 ALTO
+
+Sin restricciones `CHECK`, un valor no contemplado (ej. `transport_mode = 'AIRPLANE'`) entraría a la base de datos silenciosamente, corrompiendo los análisis de movilidad. Se deben declarar explícitamente en cada columna de enum cerrado:
+
+```sql
+-- TimelineEventHistory
+ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_event_type
+  CHECK (event_type IN ('UNKNOWN','STATIONARY','OFF_THE_GRID','IN_TRANSPORT'));
+
+ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_transport_mode
+  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE') OR transport_mode IS NULL);
+
+ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_occupant_role
+  CHECK (occupant_role IN ('DRIVER','PASSENGER','UNAVAILABLE') OR occupant_role IS NULL);
+
+ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_venue_significance
+  CHECK (venue_significance IN ('UNKNOWN','HOME','WORK','POINT_OF_INTEREST') OR venue_significance IS NULL);
+
+-- Trip
+ALTER TABLE Trip ADD CONSTRAINT chk_trip_transport_mode
+  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE'));
+
+ALTER TABLE Trip ADD CONSTRAINT chk_trip_occupant_role
+  CHECK (occupant_role IN ('DRIVER','PASSENGER','UNAVAILABLE') OR occupant_role IS NULL);
+
+ALTER TABLE Trip ADD CONSTRAINT chk_trip_first_seen_from
+  CHECK (first_seen_from IN ('TIMELINE','CONTEXT','DRIVING_INSIGHTS'));
+
+-- DrivingInsightsHarshEvent
+ALTER TABLE DrivingInsightsHarshEvent ADD CONSTRAINT chk_harsh_type
+  CHECK (harsh_type IN ('ACCELERATION','BRAKING','TURN'));
+
+-- VehicleCrashEvent
+ALTER TABLE VehicleCrashEvent ADD CONSTRAINT chk_crash_severity
+  CHECK (severity IN ('LOW','MEDIUM','HIGH'));
+
+ALTER TABLE VehicleCrashEvent ADD CONSTRAINT chk_crash_detector_mode
+  CHECK (detector_mode IN ('CAR','TWO_WHEELER') OR detector_mode IS NULL);
+
+-- UserContextActiveSegmentDetail
+ALTER TABLE UserContextActiveSegmentDetail ADD CONSTRAINT chk_seg_category
+  CHECK (category IN ('LEISURE','MOBILITY','WORK_LIFE'));
+
+-- UserContextUpdateCriteria
+ALTER TABLE UserContextUpdateCriteria ADD CONSTRAINT chk_criteria_code
+  CHECK (criteria_code IN ('CURRENT_EVENT','ACTIVE_SEGMENTS','VISITED_VENUES'));
+
+-- SentianceEventos
+ALTER TABLE SentianceEventos ADD CONSTRAINT chk_tipo
+  CHECK (tipo IN ('UserContextUpdate','TimelineUpdate','DrivingInsightsReady','CrashEvent'));
+```
+
+---
+
 ## 4. Pipeline de Ingestión ETL (Estructuras JSON)
 
 ### 4.1. Lógica de Transformación y Mapeo (ETL)
