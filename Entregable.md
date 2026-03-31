@@ -819,6 +819,8 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
   Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent`, `DrivingInsightsHarshEvent`, etc.) y sobre `source_event_id` en todas las tablas de historial. Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre la tabla maestra `Trip(trip_id)` y las tablas satélites de eventos dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
 7. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única. Sin ella, el mecanismo atómico de `MERGE`/`UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas al momento de recibir los resúmenes del final del viaje. Ejemplo: `CREATE UNIQUE INDEX idx_canonical_trip ON Trip(canonical_transport_event_id)`.
+8. **Índice Único Compuesto en `UserContextActiveSegmentDetail`:**
+  La deduplicación por `UPSERT` en esta tabla se basa en el par `(sentiance_user_id, segment_id)`. Sin un índice único compuesto sobre estas dos columnas, el motor no puede garantizar la unicidad del registro ni ejecutar el `MERGE` de forma atómica y segura. Ejemplo: `CREATE UNIQUE INDEX idx_user_segment_dedup ON UserContextActiveSegmentDetail(sentiance_user_id, segment_id)`.
 
 ---
 
