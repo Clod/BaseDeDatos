@@ -63,8 +63,8 @@ erDiagram
 		numeric distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
-		decimal location_latitude
-		decimal location_longitude
+		decimal(10, 8) location_latitude
+		decimal(11, 8) location_longitude
 		numeric location_accuracy
 		varchar venue_significance
 		varchar venue_type
@@ -77,8 +77,8 @@ erDiagram
 		varchar sentiance_user_id
 		varchar context_source_type
 		varchar semantic_time
-		decimal last_known_latitude
-		decimal last_known_longitude
+		decimal(10, 8) last_known_latitude
+		decimal(11, 8) last_known_longitude
 		numeric last_known_accuracy
 		datetime created_at
 	}
@@ -101,8 +101,8 @@ erDiagram
 		numeric distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
-		decimal location_latitude
-		decimal location_longitude
+		decimal(10, 8) location_latitude
+		decimal(11, 8) location_longitude
 		numeric location_accuracy
 		varchar venue_significance
 		varchar venue_type
@@ -136,8 +136,8 @@ erDiagram
 		bigint user_context_payload_id FK 
 		varchar significance
 		varchar venue_type
-		decimal latitude
-		decimal longitude
+		decimal(10, 8) latitude
+		decimal(11, 8) longitude
 		numeric accuracy
 	}
 
@@ -146,8 +146,8 @@ erDiagram
 		bigint user_context_payload_id FK 
 		varchar significance
 		varchar venue_type
-		decimal latitude
-		decimal longitude
+		decimal(10, 8) latitude
+		decimal(11, 8) longitude
 		numeric accuracy
 	}
 
@@ -242,8 +242,8 @@ erDiagram
 		bigint source_event_id FK 
 		varchar sentiance_user_id
 		bigint crash_time_epoch
-		decimal latitude
-		decimal longitude
+		decimal(10, 8) latitude
+		decimal(11, 8) longitude
 		numeric accuracy
 		numeric altitude
 		numeric magnitude
@@ -277,8 +277,8 @@ erDiagram
 		varchar sentiance_user_id
 		varchar activity_type
 		varchar trip_type
-		decimal stationary_latitude
-		decimal stationary_longitude
+		decimal(10, 8) stationary_latitude
+		decimal(11, 8) stationary_longitude
 		nvarchar(max) payload_json
 		datetime captured_at
 	}
@@ -418,8 +418,8 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `distance_meters`           | NUMERIC       | `distance`            | Distancia del transporte en metros                                                                                                                                      |
 | `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
 | `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
-| `location_latitude`         | DECIMAL       | `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
-| `location_longitude`        | DECIMAL       | `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
+| `location_latitude`         | DECIMAL(10, 8)| `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
+| `location_longitude`        | DECIMAL(11, 8)| `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_accuracy`         | NUMERIC       | `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
 | `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                                                                         |
 | `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.)                                                          |
@@ -456,8 +456,8 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 | `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                                                                                                                             |
 | `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`                                                                                                         |
 | `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
-| `last_known_latitude`     | DECIMAL   | `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
-| `last_known_longitude`    | DECIMAL   | `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
+| `last_known_latitude`     | DECIMAL(10, 8)| `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
+| `last_known_longitude`    | DECIMAL(11, 8)| `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
 | `last_known_accuracy`     | NUMERIC   | `lastKnownLocation.accuracy`  | Precisión                                                                                                                                |
 
 
@@ -522,8 +522,8 @@ Lugares frecuentes estables `home` y `work` del `UserContext`.
 | `user_context_payload_id`       | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
 | `significance`                  | VARCHAR   | `significance` (*"HOME" / "WORK"*)                               |
 | `venue_type`                    | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)                               |
-| `latitude`                      | DECIMAL   | `location.latitude`                                              |
-| `longitude`                     | DECIMAL   | `location.longitude`                                             |
+| `latitude`                      | DECIMAL(10, 8)| `location.latitude`                                              |
+| `longitude`                     | DECIMAL(11, 8)| `location.longitude`                                             |
 | `accuracy`                      | NUMERIC   | `location.accuracy`                                              |
 
 
@@ -667,8 +667,8 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `source_event_id`          | BIGINT FK     | FK Raíz                                           | FK referenciando a `SdkSourceEvent(source_event_id)`. |
 | `sentiance_user_id`        | VARCHAR       | -                                                 | ID del usuario de Sentiance.                          |
 | `crash_time_epoch`         | BIGINT        | `time`                                            | Tiempo Unix del impacto.                              |
-| `latitude`                 | DECIMAL       | `location.latitude`                               | Coordenada Y del impacto.                             |
-| `longitude`                | DECIMAL       | `location.longitude`                              | Coordenada X del impacto.                             |
+| `latitude`                 | DECIMAL(10, 8)| `location.latitude`                               | Coordenada Y del impacto.                             |
+| `longitude`                | DECIMAL(11, 8)| `location.longitude`                              | Coordenada X del impacto.                             |
 | `accuracy`                 | NUMERIC       | `location.accuracy`                               | Precisión del GPS al momento del impacto.             |
 | `altitude`                 | NUMERIC       | `location.altitude`                               | Altitud al momento del impacto.                       |
 | `magnitude`                | NUMERIC       | `magnitude`                                       | Magnitud del choque.                                  |
@@ -722,8 +722,8 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | `sentiance_user_id`        | VARCHAR       | Identificador del usuario.                                                   | -     |
 | `activity_type`            | VARCHAR       | `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). | -     |
 | `trip_type`                | VARCHAR       | `tripInfo.type`. Solo si la actividad es de tipo viaje.                      | -     |
-| `stationary_latitude`      | DECIMAL       | `stationaryInfo.location.latitude`. **⚠️ Permite NULL** si no hay señal.     | -     |
-| `stationary_longitude`     | DECIMAL       | `stationaryInfo.location.longitude`. **⚠️ Permite NULL** si no hay señal.    | -     |
+| `stationary_latitude`      | DECIMAL(10, 8)| `stationaryInfo.location.latitude`. **⚠️ Permite NULL** si no hay señal.     | -     |
+| `stationary_longitude`     | DECIMAL(11, 8)| `stationaryInfo.location.longitude`. **⚠️ Permite NULL** si no hay señal.    | -     |
 | `payload_json`             | NVARCHAR(MAX) | Copia raw del JSON `UserActivity`.                                           | -     |
 | `captured_at`              | DATETIME      | Instante de persistencia de la actividad.                                    | -     |
 
