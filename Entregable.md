@@ -514,7 +514,7 @@ Lugares frecuentes estables `home` y `work` del `UserContext`.
 
 ### 3.4. Dominio de Hábitos Conductuales de Manejo (Driving Insights)
 
-Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes finalizados. Deben incluir a través de la app todas las llamadas auxiliares (`getHarshDrivingEvents`, `getCallEvents` etc.) encoladas en el JSON enviado al backend.  
+Vienen del listener `addDrivingInsightsReadyListener`, gatillado en transportes finalizados. Deben incluir a través de la app todas las llamadas auxiliares (`getHarshDrivingEvents`, `getCallWhileMovingEvents` etc.) encoladas en el JSON enviado al backend.  
 *Ref SDK: `react-native/driving-insights/definitions*`
 
 #### 3.4.1. `DrivingInsightsTrip`
@@ -559,9 +559,9 @@ Deriva de `getHarshDrivingEvents()`.
 | `waypoints_json`       | NVARCHAR(MAX)            | `waypoints[]` stringificado                  |
 
 
-#### 3.4.3. `DrivingInsightsPhoneEvent` y `DrivingInsightsCallEvent`
+#### 3.4.3. `DrivingInsightsCallEvent`
 
-Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallEvents()`.
+Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEvents()`.
 
 > **💡 Nota de Nomenclatura (Frontend vs Backend):** Oficialmente, en el contrato y documentación TypeScript de Sentiance, los objetos de llamadas mientras se maneja están empaquetados bajo la interfaz `CallWhileMovingEvent`. En esta Base de Datos se denominó explícitamente a la tabla como **`DrivingInsightsCallEvent`** por mera consistencia de diseño para estandarizar todos los "insights" vehiculares. Por lo tanto: **`CallWhileMovingEvent` ≡ `DrivingInsightsCallEvent`**.
 
@@ -609,7 +609,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 
 Estado general de recolección en los dispositivos a través del listener de status updates. Mapeado desde el payload nativo `SdkStatus`.
 
-> **⚠️ Nota de Captura Parcial (Muestreo Intencional):** La interfaz original TypeScript `SdkStatus` expone casi 18 banderas técnicas (como `isRemoteEnabled`, `isBatteryOptimizationEnabled`, `isAirplaneModeEnabled`, etc.). El modelo de base de datos optó por registrar de forma controlada solo métricas nucleares vinculadas al cuote de tracking y localización, para frenar la saturación con banderas del OS (ruido de telemetría). Esta abstracción es parcial e intencional, por ende no se debe asumir que el esquema SQL será 1:1 con toda la extensión del SDK.
+> **⚠️ Nota de Captura Parcial (Muestreo Intencional):** La interfaz original TypeScript `SdkStatus` expone numeramente docenas de propiedades y banderas técnicas (tales como `userExists`, `backgroundRefreshStatus`, `isRemoteEnabled`, `isBatteryOptimizationEnabled`, `isAirplaneModeEnabled`, etc.). El modelo de base de datos optó por registrar de forma controlada estrictamente un subset de sus atributos, priorizando aquellos vinculados al cuote de tracking y localización ("is_location_available", "is_gps_present", etc., que componen la tabla relacional) para así mitigar la saturación de ruido técnico y maximizar el rendimiento DB. Por ende, la abstracción tabular en `SdkStatusHistory` se trata de un filtrado parcial e intencional, y no de un Mapeo Estructural 1:1 directo de todos los flag del SDK Status original.
 
 | Campo | Tipo | Mapeo Sentiance y Detalles |
 | :--- | :--- | :--- |
