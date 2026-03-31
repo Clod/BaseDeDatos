@@ -1085,3 +1085,61 @@ sequenceDiagram
         deactivate ETL
     end
 ```
+### 4.7. Anexo de Definiciones: User Context (Comportamiento y Segmentos)
+
+Adicionalmente a las métricas de manejo, el SDK de Sentiance emite información sobre el contexto de vida del usuario (segmentos, estilos de vida y tipos de lugares). A continuación se detallan las interfaces de estos objetos:
+
+```typescript
+declare module "@sentiance-react-native/user-context" {
+  export type SegmentCategory = "LEISURE" | "MOBILITY" | "WORK_LIFE";
+  
+  export type SegmentSubcategory =
+    | "COMMUTE" | "DRIVING" | "ENTERTAINMENT" | "FAMILY" | "HOME"
+    | "SHOPPING" | "SOCIAL" | "TRANSPORT" | "TRAVEL" | "WELLBEING"
+    | "WINING_AND_DINING" | "WORK";
+
+  export type SegmentType =
+    | "AGGRESSIVE_DRIVER" | "ANTICIPATIVE_DRIVER" | "BAR_GOER" | "CITY_DRIVER"
+    | "CITY_HOME" | "CITY_WORKER" | "CULTURE_BUFF" | "DIE_HARD_DRIVER"
+    | "DISTRACTED_DRIVER" | "DOG_WALKER" | "EARLY_BIRD" | "EASY_COMMUTER"
+    | "EFFICIENT_DRIVER" | "FOODIE" | "FREQUENT_FLYER" | "FULLTIME_WORKER"
+    | "GREEN_COMMUTER" | "HEALTHY_BIKER" | "HEALTHY_WALKER" | "HEAVY_COMMUTER"
+    | "HOME_BOUND" | "HOMEBODY" | "HOMEWORKER" | "ILLEGAL_DRIVER"
+    | "LATE_WORKER" | "LEGAL_DRIVER" | "LONG_COMMUTER" | "MOBILITY"
+    | "MOTORWAY_DRIVER" | "MUSIC_LOVER" | "NATURE_LOVER" | "NIGHT_OWL"
+    | "NIGHTWORKER" | "NORMAL_COMMUTER" | "PARTTIME_WORKER" | "PET_OWNER"
+    | "PUBLIC_TRANSPORTS_USER" | "RECENTLY_CHANGED_JOB" | "RECENTLY_MOVED_HOME"
+    | "RESTO_LOVER" | "RURAL_HOME" | "RURAL_WORKER" | "SHOPAHOLIC"
+    | "SHORT_COMMUTER" | "SLEEP_DEPRIVED" | "SOCIAL_ACTIVITY"
+    | "SPORTIVE" | "STUDENT" | "TOWN_HOME" | "TOWN_WORKER"
+    | "UBER_PARENT" | "WORK_LIFE_BALANCE" | "WORK_TRAVELLER" | "WORKAHOLIC";
+
+  export type VenueType =
+    | "UNKNOWN" | "DRINK_DAY" | "DRINK_EVENING" | "EDUCATION_INDEPENDENT"
+    | "EDUCATION_PARENTS" | "HEALTH" | "INDUSTRIAL" | "LEISURE_BEACH"
+    | "LEISURE_DAY" | "LEISURE_EVENING" | "LEISURE_MUSEUM" | "LEISURE_NATURE"
+    | "LEISURE_PARK" | "OFFICE" | "RELIGION" | "RESIDENTIAL" | "RESTO_MID"
+    | "RESTO_SHORT" | "SHOP_LONG" | "SHOP_SHORT" | "SPORT" | "SPORT_ATTEND"
+    | "TRAVEL_BUS" | "TRAVEL_CONFERENCE" | "TRAVEL_FILL" | "TRAVEL_HOTEL"
+    | "TRAVEL_LONG" | "TRAVEL_SHORT";
+
+  export interface UserContext {
+    events: Event[];
+    activeSegments: Segment[];
+    lastKnownLocation: GeoLocation | null;
+    home: Venue | null;
+    work: Venue | null;
+  }
+
+  export interface Segment {
+    category: SegmentCategory;
+    subcategory: SegmentSubcategory;
+    type: SegmentType;
+    id: number;
+    startTime: string;
+    startTimeEpoch: number;
+    endTime: string | null;
+    endTimeEpoch: number | null;
+  }
+}
+```
