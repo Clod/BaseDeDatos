@@ -818,7 +818,7 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
 6. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
   Siempre construir explícitamente índices sobre las FK `trip_id` en las subtablas dependientes (como `DrivingInsightsPhoneEvent`, `DrivingInsightsHarshEvent`, etc.) y sobre `source_event_id` en todas las tablas de historial. Si se requiere investigar frenadas bruscas durante un bloque de viaje particular, la Join entre la tabla maestra `Trip(trip_id)` y las tablas satélites de eventos dependerá de que el motor SQL encuentre rápidamente dicha sub-lista de FKs.
 7. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
-  En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única (`UNIQUE INDEX / CONSTRAINT`). Sin ella, el mecanismo atómico de `UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas.
+  En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única. Sin ella, el mecanismo atómico de `MERGE`/`UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas al momento de recibir los resúmenes del final del viaje. Ejemplo: `CREATE UNIQUE INDEX idx_canonical_trip ON Trip(canonical_transport_event_id)`.
 
 ---
 
