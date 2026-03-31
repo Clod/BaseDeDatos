@@ -57,15 +57,15 @@ erDiagram
 		bigint last_update_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		numeric duration_in_seconds
+		numeric(10, 0) duration_in_seconds
 		bit is_provisional
 		varchar transport_mode
-		numeric distance_meters
+		numeric(12, 2) distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
-		numeric location_accuracy
+		numeric(12, 2) location_accuracy
 		varchar venue_significance
 		varchar venue_type
 		datetime2(3) created_at
@@ -79,7 +79,7 @@ erDiagram
 		varchar semantic_time
 		decimal(10, 8) last_known_latitude
 		decimal(11, 8) last_known_longitude
-		numeric last_known_accuracy
+		numeric(12, 2) last_known_accuracy
 		datetime2(3) created_at
 	}
 
@@ -95,15 +95,15 @@ erDiagram
 		bigint last_update_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		numeric duration_in_seconds
+		numeric(10, 0) duration_in_seconds
 		bit is_provisional
 		varchar transport_mode
-		numeric distance_meters
+		numeric(12, 2) distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
-		numeric location_accuracy
+		numeric(12, 2) location_accuracy
 		varchar venue_significance
 		varchar venue_type
 		datetime2(3) created_at
@@ -128,7 +128,7 @@ erDiagram
 		bigint user_context_segment_attribute_id PK 
 		bigint user_context_segment_history_id FK 
 		varchar attribute_name
-		numeric attribute_value
+		numeric(18, 4) attribute_value
 	}
 
 	UserHomeHistory {
@@ -138,7 +138,7 @@ erDiagram
 		varchar venue_type
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
-		numeric accuracy
+		numeric(12, 2) accuracy
 	}
 
 	UserWorkHistory {
@@ -148,7 +148,7 @@ erDiagram
 		varchar venue_type
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
-		numeric accuracy
+		numeric(12, 2) accuracy
 	}
 
 	UserContextUpdateCriteria {
@@ -163,15 +163,15 @@ erDiagram
 		bigint trip_id FK 
 		varchar sentiance_user_id
 		varchar transport_event_id
-		numeric smooth_score
-		numeric focus_score
-		numeric legal_score
-		numeric call_while_moving_score
-		numeric overall_score
-		numeric harsh_braking_score
-		numeric harsh_turning_score
-		numeric harsh_acceleration_score
-		numeric distance_meters
+		numeric(4, 3) smooth_score
+		numeric(4, 3) focus_score
+		numeric(4, 3) legal_score
+		numeric(4, 3) call_while_moving_score
+		numeric(4, 3) overall_score
+		numeric(4, 3) harsh_braking_score
+		numeric(4, 3) harsh_turning_score
+		numeric(4, 3) harsh_acceleration_score
+		numeric(12, 2) distance_meters
 		varchar occupant_role
 		nvarchar(max) transport_tags_json
 		datetime2(3) created_at
@@ -185,8 +185,8 @@ erDiagram
 		bigint start_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		numeric magnitude
-		numeric confidence
+		numeric(6, 3) magnitude
+		numeric(4, 3) confidence
 		varchar harsh_type
 		nvarchar(max) waypoints_json
 	}
@@ -210,8 +210,8 @@ erDiagram
 		bigint start_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		numeric min_travelled_speed_mps
-		numeric max_travelled_speed_mps
+		numeric(7, 2) min_travelled_speed_mps
+		numeric(7, 2) max_travelled_speed_mps
 		nvarchar(max) waypoints_json
 	}
 
@@ -244,12 +244,12 @@ erDiagram
 		bigint crash_time_epoch
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
-		numeric accuracy
-		numeric altitude
-		numeric magnitude
-		numeric speed_at_impact
-		numeric delta_v
-		numeric confidence
+		numeric(12, 2) accuracy
+		numeric(10, 2) altitude
+		numeric(6, 3) magnitude
+		numeric(7, 2) speed_at_impact
+		numeric(7, 2) delta_v
+		numeric(4, 3) confidence
 		varchar severity
 		varchar detector_mode
 		nvarchar(max) preceding_locations_json
@@ -305,8 +305,8 @@ erDiagram
 		bigint last_update_time_epoch
 		datetime2(3) end_time
 		bigint end_time_epoch
-		numeric duration_in_seconds
-		numeric distance_meters
+		numeric(10, 0) duration_in_seconds
+		numeric(12, 2) distance_meters
 		varchar occupant_role
 		bit is_provisional
 		nvarchar(max) transport_tags_json
@@ -412,15 +412,15 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `last_update_time_epoch`    | BIGINT        | `lastUpdateTimeEpoch` | UTC milisegundos                                                                                                                                                        |
 | `end_time`                  | DATETIME2(3)  | `endTime`             | ISO 8601 string                                                                                                                                                         |
 | `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                                                                                        |
-| `duration_in_seconds`       | NUMERIC       | `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
+| `duration_in_seconds`       | NUMERIC(10, 0)| `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
 | `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                                                                                     |
 | `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
-| `distance_meters`           | NUMERIC       | `distance`            | Distancia del transporte en metros                                                                                                                                      |
+| `distance_meters`           | NUMERIC(12, 2)| `distance`            | Distancia del transporte en metros                                                                                                                                      |
 | `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
 | `transport_tags_json`       | NVARCHAR(MAX) | `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
 | `location_latitude`         | DECIMAL(10, 8)| `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_longitude`        | DECIMAL(11, 8)| `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
-| `location_accuracy`         | NUMERIC       | `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
+| `location_accuracy`         | NUMERIC(12, 2)| `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
 | `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                                                                         |
 | `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.)                                                          |
 
@@ -458,7 +458,7 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 | `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
 | `last_known_latitude`     | DECIMAL(10, 8)| `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
 | `last_known_longitude`    | DECIMAL(11, 8)| `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
-| `last_known_accuracy`     | NUMERIC   | `lastKnownLocation.accuracy`  | Precisión                                                                                                                                |
+| `last_known_accuracy`     | NUMERIC(12, 2)| `lastKnownLocation.accuracy`  | Precisión                                                                                                                                |
 
 
 #### 3.3.2. `UserContextUpdateCriteria`
@@ -507,8 +507,8 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 | --------------------------------- | --------- | -------------------------------------------------------------------------------- |
 | `user_context_segment_attr_id`    | BIGINT PK | Auto                                                                             |
 | `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextSegmentHistory(user_context_segment_history_id)`. |
-| `attribute_name`                  | VARCHAR   | `name` (Nombre del atributo)                                                     |
-| `attribute_value`                 | NUMERIC   | `value` (Valor del atributo)                                                     |
+| `attribute_name`                  | VARCHAR   | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)           |
+| `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                     |
 
 
 #### 3.3.6. `UserHomeHistory` y `UserWorkHistory`
@@ -524,7 +524,7 @@ Lugares frecuentes estables `home` y `work` del `UserContext`.
 | `venue_type`                    | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)                               |
 | `latitude`                      | DECIMAL(10, 8)| `location.latitude`                                              |
 | `longitude`                     | DECIMAL(11, 8)| `location.longitude`                                             |
-| `accuracy`                      | NUMERIC   | `location.accuracy`                                              |
+| `accuracy`                      | NUMERIC(12, 2)| `location.accuracy`                                              |
 
 
 ---
@@ -548,15 +548,15 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `trip_id`                  | BIGINT FK     | -                                     | FK referenciando a la tabla canónica `Trip(trip_id)`.     |
 | `sentiance_user_id`        | VARCHAR       | -                                     | Sentiance Id                                              |
 | `transport_event_id`       | VARCHAR       | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto            |
-| `smooth_score`             | NUMERIC       | `safetyScores.smoothScore`            | (0 a 1)                                                   |
-| `focus_score`              | NUMERIC       | `safetyScores.focusScore`             | (0 a 1)                                                   |
-| `legal_score`              | NUMERIC       | `safetyScores.legalScore`             | (0 a 1)                                                   |
-| `call_while_moving_score`  | NUMERIC       | `safetyScores.callWhileMovingScore`   | (0 a 1)                                                   |
-| `overall_score`            | NUMERIC       | `safetyScores.overallScore`           | (0 a 1)                                                   |
-| `harsh_braking_score`      | NUMERIC       | `safetyScores.harshBrakingScore`      | (0 a 1)                                                   |
-| `harsh_turning_score`      | NUMERIC       | `safetyScores.harshTurningScore`      | (0 a 1)                                                   |
-| `harsh_acceleration_score` | NUMERIC       | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
-| `distance_meters`          | NUMERIC       | `transportEvent.distance`             | Distancia extraída en metros                              |
+| `smooth_score`             | NUMERIC(4, 3) | `safetyScores.smoothScore`            | (0 a 1)                                                   |
+| `focus_score`              | NUMERIC(4, 3) | `safetyScores.focusScore`             | (0 a 1)                                                   |
+| `legal_score`              | NUMERIC(4, 3) | `safetyScores.legalScore`             | (0 a 1)                                                   |
+| `call_while_moving_score`  | NUMERIC(4, 3) | `safetyScores.callWhileMovingScore`   | (0 a 1)                                                   |
+| `overall_score`            | NUMERIC(4, 3) | `safetyScores.overallScore`           | (0 a 1)                                                   |
+| `harsh_braking_score`      | NUMERIC(4, 3) | `safetyScores.harshBrakingScore`      | (0 a 1)                                                   |
+| `harsh_turning_score`      | NUMERIC(4, 3) | `safetyScores.harshTurningScore`      | (0 a 1)                                                   |
+| `harsh_acceleration_score` | NUMERIC(4, 3) | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
+| `distance_meters`          | NUMERIC(12, 2)| `transportEvent.distance`             | Distancia extraída en metros                              |
 | `occupant_role`            | VARCHAR       | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
 | `transport_tags_json`      | NVARCHAR(MAX) | `transportEvent.transportTags`        | Serializado dict key-value                                |
 
@@ -575,8 +575,8 @@ Deriva de `getHarshDrivingEvents()`.
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`                             | Tiempo Unix de inicio.                                                     |
 | `end_time`                 | DATETIME2(3)  | `endTime`                                    | Fin del evento.                                                            |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`                               | Tiempo Unix de fin.                                                        |
-| `magnitude`                | NUMERIC       | `magnitude`                                  | Fuerza G máxima detectada.                                                 |
-| `confidence`               | NUMERIC       | `confidence`                                 | Nivel de confianza (0-1).                                                  |
+| `magnitude`                | NUMERIC(6, 3) | `magnitude`                                  | Fuerza G máxima detectada.                                                 |
+| `confidence`               | NUMERIC(4, 3) | `confidence`                                 | Nivel de confianza (0-1).                                                  |
 | `harsh_type`               | VARCHAR       | `type` (*"ACCELERATION", "BRAKING", "TURN"*) | Tipo de evento brusco.                                                     |
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`                                | Array completo de puntos del evento (Lat/Long/Alt) en formato JSON string. |
 
@@ -597,8 +597,8 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`       | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`              | Fin de la llamada.                                                  |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                 |
-| `min_travelled_speed_mps`  | NUMERIC       | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
-| `max_travelled_speed_mps`  | NUMERIC       | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
+| `min_travelled_speed_mps`  | NUMERIC(7, 2) | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
+| `max_travelled_speed_mps`  | NUMERIC(7, 2) | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
 | `waypoints_json`           | NVARCHAR(MAX) | `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
@@ -669,12 +669,12 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `crash_time_epoch`         | BIGINT        | `time`                                            | Tiempo Unix del impacto.                              |
 | `latitude`                 | DECIMAL(10, 8)| `location.latitude`                               | Coordenada Y del impacto.                             |
 | `longitude`                | DECIMAL(11, 8)| `location.longitude`                              | Coordenada X del impacto.                             |
-| `accuracy`                 | NUMERIC       | `location.accuracy`                               | Precisión del GPS al momento del impacto.             |
-| `altitude`                 | NUMERIC       | `location.altitude`                               | Altitud al momento del impacto.                       |
-| `magnitude`                | NUMERIC       | `magnitude`                                       | Magnitud del choque.                                  |
-| `speed_at_impact`          | NUMERIC       | `speedAtImpact`                                   | Velocidad al momento del impacto.                     |
-| `delta_v`                  | NUMERIC       | `deltaV`                                          | Cambio de velocidad inducido por el impacto.          |
-| `confidence`               | NUMERIC       | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
+| `accuracy`                 | NUMERIC(12, 2)| `location.accuracy`                               | Precisión del GPS al momento del impacto.             |
+| `altitude`                 | NUMERIC(10, 2)| `location.altitude`                               | Altitud al momento del impacto.                       |
+| `magnitude`                | NUMERIC(6, 3) | `magnitude`                                       | Magnitud del choque.                                  |
+| `speed_at_impact`          | NUMERIC(7, 2) | `speedAtImpact`                                   | Velocidad al momento del impacto.                     |
+| `delta_v`                  | NUMERIC(7, 2) | `deltaV`                                          | Cambio de velocidad inducido por el impacto.          |
+| `confidence`               | NUMERIC(4, 3) | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
 | `severity`                 | VARCHAR       | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
 | `detector_mode`            | VARCHAR       | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
 | `preceding_locations_json` | NVARCHAR(MAX) | Stringificado del JSON Array `precedingLocations` |                                                       |
@@ -766,8 +766,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `last_update_time_epoch`       | BIGINT        | `lastUpdateTimeEpoch` | Tiempo Unix de la última actualización.                                       |
 | `end_time`                     | DATETIME2(3)  | `endTime`             | Fin global del viaje (si ha finalizado).                                      |
 | `end_time_epoch`               | BIGINT        | `endTimeEpoch`        | Tiempo Unix de fin.                                                           |
-| `duration_in_seconds`          | NUMERIC       | `durationInSeconds`   | Duración total calculada en segundos.                                         |
-| `distance_meters`              | NUMERIC       | `distanceInMeters`    | Distancia total recorrida en metros.                                          |
+| `duration_in_seconds`          | NUMERIC(10, 0)| `durationInSeconds`   | Duración total calculada en segundos.                                         |
+| `distance_meters`              | NUMERIC(12, 2)| `distanceInMeters`    | Distancia total recorrida en metros.                                          |
 | `occupant_role`                | VARCHAR       | `occupantRole`        | Rol del ocupante (*"DRIVER"*, *"PASSENGER"*).                                 |
 | `is_provisional`               | BIT           | `isProvisional`       | Flag para distinguir borradores de viajes finales definitivos.                |
 | `transport_tags_json`          | NVARCHAR(MAX) | `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
