@@ -809,8 +809,10 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
   Filtros por usuario en el pipeline ETL lo necesitan de forma crítica. Ejemplo: `CREATE INDEX idx_sentianceid ON SentianceEventos(sentianceid)`.
 2. **Índice sobre `sentiance_user_id`** (Alta Cardinalidad):
   Casi cualquier pantalla principal del sistema (ej: "Consultar viajes del usuario X") o el filtrado por conductor usa esta columna. Al crear un index (ej: `idx_user_context_sentiance_user_id`) se evitan búsquedas Full-Table Scan que demorarían minutos.
-3. **Índice sobre Timestamp (`start_time`, `start_time_epoch` o `captured_at`)** (Rangos Continuos):
-  Crítico para análisis de flotas ("Viajes creados este mes") o para depuración de payloads antiguos. La combinación de un índice compuesto multicolumna `(sentiance_user_id, start_time_epoch)` cubrirá el 99% de las consultas analíticas del Dashboard.
+3. **Índice Compuesto `(sentiance_user_id, start_time_epoch)`** (Cobertura Analítica):
+  Cubre la inmensa mayoría de las consultas analíticas del negocio ("viajes de este usuario en este rango de fechas"). Debe crearse en las dos tablas de alta frecuencia:
+  - `CREATE INDEX idx_user_time ON Trip(sentiance_user_id, start_time_epoch)`
+  - `CREATE INDEX idx_user_time_tl ON TimelineEventHistory(sentiance_user_id, start_time_epoch)`
 4. **Índice sobre `source_time` en `SdkSourceEvent`:**
   Las queries analíticas por rango de tiempo lo usan intensivamente. Ejemplo: `CREATE INDEX idx_source_time ON SdkSourceEvent(source_time)`.
 5. **Índice Filtrado por `is_provisional`:**
