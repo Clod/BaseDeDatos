@@ -25,32 +25,32 @@ erDiagram
 	direction TB
 	SentianceEventos {
 		bigint id PK 
-		varchar sentianceid
+		varchar(64) sentianceid
 		nvarchar(max) json
-		varchar tipo
+		varchar(32) tipo
 		datetime2(3) created_at
 		bit is_processed
 		bit procesado
-		varchar app_version
+		varchar(32) app_version
 	}
 
 	SdkSourceEvent {
 		bigint source_event_id PK 
 		bigint id FK 
-		varchar record_type
-		varchar sentiance_user_id
+		varchar(32) record_type
+		varchar(64) sentiance_user_id
 		datetime2(3) source_time
-		varchar source_event_ref
-		varchar payload_hash
+		varchar(64) source_event_ref
+		varchar(64) payload_hash
 		datetime2(3) created_at
 	}
 
 	TimelineEventHistory {
 		bigint timeline_event_history_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
-		varchar event_id
-		varchar event_type
+		varchar(64) sentiance_user_id
+		varchar(64) event_id
+		varchar(32) event_type
 		datetime2(3) start_time
 		bigint start_time_epoch
 		datetime2(3) last_update_time
@@ -59,24 +59,24 @@ erDiagram
 		bigint end_time_epoch
 		numeric(10, 0) duration_in_seconds
 		bit is_provisional
-		varchar transport_mode
+		varchar(32) transport_mode
 		numeric(12, 2) distance_meters
-		varchar occupant_role
+		varchar(32) occupant_role
 		varbinary(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
 		numeric(12, 2) location_accuracy
-		varchar venue_significance
-		varchar venue_type
+		varchar(32) venue_significance
+		varchar(32) venue_type
 		datetime2(3) created_at
 	}
 
 	UserContextHeader {
 		bigint user_context_payload_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
-		varchar context_source_type
-		varchar semantic_time
+		varchar(64) sentiance_user_id
+		varchar(32) context_source_type
+		varchar(32) semantic_time
 		decimal(10, 8) last_known_latitude
 		decimal(11, 8) last_known_longitude
 		numeric(12, 2) last_known_accuracy
@@ -86,9 +86,9 @@ erDiagram
 	UserContextEventDetail {
 		bigint user_context_event_history_id PK 
 		bigint user_context_payload_id FK 
-		varchar sentiance_user_id
-		varchar event_id
-		varchar event_type
+		varchar(64) sentiance_user_id
+		varchar(64) event_id
+		varchar(32) event_type
 		datetime2(3) start_time
 		bigint start_time_epoch
 		datetime2(3) last_update_time
@@ -97,26 +97,26 @@ erDiagram
 		bigint end_time_epoch
 		numeric(10, 0) duration_in_seconds
 		bit is_provisional
-		varchar transport_mode
+		varchar(32) transport_mode
 		numeric(12, 2) distance_meters
-		varchar occupant_role
+		varchar(32) occupant_role
 		varbinary(max) transport_tags_json
 		decimal(10, 8) location_latitude
 		decimal(11, 8) location_longitude
 		numeric(12, 2) location_accuracy
-		varchar venue_significance
-		varchar venue_type
+		varchar(32) venue_significance
+		varchar(32) venue_type
 		datetime2(3) created_at
 	}
 
 	UserContextActiveSegmentDetail {
 		bigint user_context_segment_history_id PK 
 		bigint user_context_payload_id FK 
-		varchar sentiance_user_id
-		varchar segment_id
-		varchar category
-		varchar subcategory
-		varchar segment_type
+		varchar(64) sentiance_user_id
+		varchar(64) segment_id
+		varchar(32) category
+		varchar(32) subcategory
+		varchar(32) segment_type
 		datetime2(3) start_time
 		bigint start_time_epoch
 		datetime2(3) end_time
@@ -127,15 +127,15 @@ erDiagram
 	UserContextSegmentAttribute {
 		bigint user_context_segment_attribute_id PK 
 		bigint user_context_segment_history_id FK 
-		varchar attribute_name
+		varchar(64) attribute_name
 		numeric(18, 4) attribute_value
 	}
 
 	UserHomeHistory {
 		bigint user_home_history_id PK 
 		bigint user_context_payload_id FK 
-		varchar significance
-		varchar venue_type
+		varchar(32) significance
+		varchar(32) venue_type
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
 		numeric(12, 2) accuracy
@@ -144,8 +144,8 @@ erDiagram
 	UserWorkHistory {
 		bigint user_work_history_id PK 
 		bigint user_context_payload_id FK 
-		varchar significance
-		varchar venue_type
+		varchar(32) significance
+		varchar(32) venue_type
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
 		numeric(12, 2) accuracy
@@ -154,15 +154,15 @@ erDiagram
 	UserContextUpdateCriteria {
 		bigint user_context_update_criteria_id PK 
 		bigint user_context_payload_id FK 
-		varchar criteria_code
+		varchar(32) criteria_code
 	}
 
 	DrivingInsightsTrip {
 		bigint driving_insights_trip_id PK 
 		bigint source_event_id FK 
 		bigint trip_id FK 
-		varchar sentiance_user_id
-		varchar transport_event_id
+		varchar(64) sentiance_user_id
+		varchar(64) transport_event_id
 		numeric(4, 3) smooth_score
 		numeric(4, 3) focus_score
 		numeric(4, 3) legal_score
@@ -172,7 +172,7 @@ erDiagram
 		numeric(4, 3) harsh_turning_score
 		numeric(4, 3) harsh_acceleration_score
 		numeric(12, 2) distance_meters
-		varchar occupant_role
+		varchar(32) occupant_role
 		varbinary(max) transport_tags_json
 		datetime2(3) created_at
 	}
@@ -187,7 +187,7 @@ erDiagram
 		bigint end_time_epoch
 		numeric(6, 3) magnitude
 		numeric(4, 3) confidence
-		varchar harsh_type
+		varchar(32) harsh_type
 		varbinary(max) waypoints_json
 	}
 
@@ -240,7 +240,7 @@ erDiagram
 	VehicleCrashEvent {
 		bigint vehicle_crash_event_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
+		varchar(64) sentiance_user_id
 		bigint crash_time_epoch
 		decimal(10, 8) latitude
 		decimal(11, 8) longitude
@@ -250,22 +250,22 @@ erDiagram
 		numeric(7, 2) speed_at_impact
 		numeric(7, 2) delta_v
 		numeric(4, 3) confidence
-		varchar severity
-		varchar detector_mode
+		varchar(32) severity
+		varchar(32) detector_mode
 		varbinary(max) preceding_locations_json
 	}
 
 	SdkStatusHistory {
 		bigint sdk_status_history_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
-		varchar start_status
-		varchar detection_status
-		varchar location_permission
+		varchar(64) sentiance_user_id
+		varchar(32) start_status
+		varchar(32) detection_status
+		varchar(32) location_permission
 		bit precise_location_granted
-		varchar quota_status_wifi
-		varchar quota_status_mobile
-		varchar quota_status_disk
+		varchar(32) quota_status_wifi
+		varchar(32) quota_status_mobile
+		varchar(32) quota_status_disk
 		bit is_location_available
 		bit can_detect
 		datetime2(3) captured_at
@@ -274,9 +274,9 @@ erDiagram
 	UserActivityHistory {
 		bigint user_activity_history_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
-		varchar activity_type
-		varchar trip_type
+		varchar(64) sentiance_user_id
+		varchar(32) activity_type
+		varchar(32) trip_type
 		decimal(10, 8) stationary_latitude
 		decimal(11, 8) stationary_longitude
 		nvarchar(max) payload_json
@@ -286,8 +286,8 @@ erDiagram
 	TechnicalEventHistory {
 		bigint technical_event_history_id PK 
 		bigint source_event_id FK 
-		varchar sentiance_user_id
-		varchar technical_event_type
+		varchar(64) sentiance_user_id
+		varchar(32) technical_event_type
 		nvarchar(max) message
 		nvarchar(max) payload_json
 		datetime2(3) captured_at
@@ -295,10 +295,10 @@ erDiagram
 
 	Trip {
 		bigint trip_id PK 
-		varchar sentiance_user_id
-		varchar canonical_transport_event_id
-		varchar first_seen_from
-		varchar transport_mode
+		varchar(64) sentiance_user_id
+		varchar(64) canonical_transport_event_id
+		varchar(32) first_seen_from
+		varchar(32) transport_mode
 		datetime2(3) start_time
 		bigint start_time_epoch
 		datetime2(3) last_update_time
@@ -307,7 +307,7 @@ erDiagram
 		bigint end_time_epoch
 		numeric(10, 0) duration_in_seconds
 		numeric(12, 2) distance_meters
-		varchar occupant_role
+		varchar(32) occupant_role
 		bit is_provisional
 		varbinary(max) transport_tags_json
 		varbinary(max) waypoints_json
@@ -370,13 +370,13 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | Campo          | Tipo          | Mapeo Sentiance                                                                                                                                                              |
 | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`           | BIGINT (PK)   | Auto-Generado Interno (IDENTITY 1,1)                                                                                                                                         |
-| `sentianceid`  | VARCHAR       | Identificador del usuario.                                                                                                                                                   |
+| `sentianceid`  | VARCHAR(64)   | Identificador del usuario.                                                                                                                                                   |
 | `json`         | NVARCHAR(MAX) | **Payload exacto emitido desde la app React Native**.                                                                                                                        |
-| `tipo`         | VARCHAR       | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`)                                                                           |
+| `tipo`         | VARCHAR(32)   | Tipo de Listener (Ej. `UserContextUpdate`, `TimelineUpdate`, `DrivingInsightsReady`, `CrashEvent`)                                                                           |
 | `created_at`   | DATETIME2(3)  | Marca de tiempo asignada por el servidor backend de forma local al instante de recepcionar el webhook HTTP (ej. `GETDATE()`)                                                 |
 | `is_processed` | BIT           | Flag nativo de control de este pipeline ETL (Extract -> Transform -> Load): seteado a `1` una vez el JSON fue parseado y distribuido exitosamente a las tablas normalizadas. |
 | `procesado`    | BIT           | **⚠️ LEGACY / EXTERNO:** Flag preexistente manipulado por rutinas ajenas a esta integración. No tiene relación alguna con este pipeline documental. **Ignorar**.             |
-| `app_version`  | VARCHAR       | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                                                                                                        |
+| `app_version`  | VARCHAR(32)   | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                                                                                                        |
 
 
 #### 3.1.2. `SdkSourceEvent`
@@ -388,11 +388,11 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | ------------------- | --------- | --------------------------------------------------------------------- |
 | `source_event_id`   | BIGINT PK | Clave única autogenerada                                              |
 | `id`                | BIGINT FK | Referencia al `id` de `SentianceEventos`                              |
-| `record_type`       | VARCHAR   | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
-| `sentiance_user_id` | VARCHAR   | `user_id`                                                             |
+| `record_type`       | VARCHAR(32) | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
+| `sentiance_user_id` | VARCHAR(64) | `user_id`                                                             |
 | `source_time`       | DATETIME2(3)| Obtenido de los epoch del evento principal en el JSON                 |
-| `source_event_ref`  | VARCHAR   | ID de referencia directa (`event.id` o `transportEvent.id`)           |
-| `payload_hash`      | VARCHAR   | Hash MD5/SHA para determinar unicidad de JSONs procesados             |
+| `source_event_ref`  | VARCHAR(64) | ID de referencia directa (`event.id` o `transportEvent.id`)           |
+| `payload_hash`      | VARCHAR(64) | Hash MD5/SHA para determinar unicidad de JSONs procesados             |
 | `created_at`        | DATETIME2(3)| Tiempo Interno de normalización                                       |
 
 
@@ -412,9 +412,9 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | --------------------------- | ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                                                                             |
 | `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                                                                             |
-| `sentiance_user_id`         | VARCHAR       | N/A                   | ID Sentiance                                                                                                                                                            |
-| `event_id`                  | VARCHAR       | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla `**Trip**`. |
-| `event_type`                | VARCHAR       | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                                                                                |
+| `sentiance_user_id`         | VARCHAR(64)   | `user_id`             | -                                                                                                                                                                       |
+| `event_id`                  | VARCHAR(64)   | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla `**Trip**`. |
+| `event_type`                | VARCHAR(32)   | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                                                                                |
 | `start_time`                | DATETIME2(3)  | `startTime`           | ISO 8601 string                                                                                                                                                         |
 | `start_time_epoch`          | BIGINT        | `startTimeEpoch`      | UTC milisegundos                                                                                                                                                        |
 | `last_update_time`          | DATETIME2(3)  | `lastUpdateTime`      | ISO 8601 string                                                                                                                                                         |
@@ -423,15 +423,15 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                                                                                        |
 | `duration_in_seconds`       | NUMERIC(10, 0)| `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
 | `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                                                                                     |
-| `transport_mode`            | VARCHAR       | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
+| `transport_mode`            | VARCHAR(32)   | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
 | `distance_meters`           | NUMERIC(12, 2)| `distance`            | Distancia del transporte en metros                                                                                                                                      |
-| `occupant_role`             | VARCHAR       | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
+| `occupant_role`             | VARCHAR(32)   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
 | `transport_tags_json`       | VARBINARY(MAX)| `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
 | `location_latitude`         | DECIMAL(10, 8)| `location.latitude`   | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_longitude`        | DECIMAL(11, 8)| `location.longitude`  | Presente sólo para `STATIONARY`                                                                                                                                         |
 | `location_accuracy`         | NUMERIC(12, 2)| `location.accuracy`   | Precisión estacionaria (mts)                                                                                                                                            |
-| `venue_significance`        | VARCHAR       | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                                                                         |
-| `venue_type`                | VARCHAR       | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.)                                                          |
+| `venue_significance`        | VARCHAR(32)   | `venue.significance`  | Enum estricto: *"UNKNOWN", "HOME", "WORK", "POINT_OF_INTEREST"*                                                                                                         |
+| `venue_type`                | VARCHAR(32)   | `venue.type`          | Enum extenso con docenas de categorías (incluye *"UNKNOWN"*, *"SHOP_LONG"*, *"OFFICE"*, *"RESIDENTIAL"*, etc.)                                                          |
 
 
 ---
@@ -462,9 +462,9 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 | ------------------------- | --------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_context_payload_id` | BIGINT PK | N/A                           | Identificador único e incremental para cada registro de contexto recibido, sirviendo como raíz para las tablas de criterios y segmentos. |
 | `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                                                                                                                        |
-| `sentiance_user_id`       | VARCHAR   | N/A                           | ID Sentiance                                                                                                                             |
-| `context_source_type`     | VARCHAR   | N/A                           | Ejemplo: `USER_CONTEXT_LISTENER`                                                                                                         |
-| `semantic_time`           | VARCHAR   | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
+| `sentiance_user_id`       | VARCHAR(64) | N/A                           | ID Sentiance                                                                                                                             |
+| `first_seen_from`         | VARCHAR(32) | N/A                           | Meta-origen: *"TIMELINE"* o *"USER_CONTEXT_LISTENER"*                                                                                    |
+| `semantic_time`           | VARCHAR(32) | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
 | `last_known_latitude`     | DECIMAL(10, 8)| `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
 | `last_known_longitude`    | DECIMAL(11, 8)| `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
 | `last_known_accuracy`     | NUMERIC(12, 2)| `lastKnownLocation.accuracy`  | Precisión                                                                                                                                |
@@ -479,7 +479,7 @@ Los motivos de actualización extraídos del arreglo `criteria[]`.
 | --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                                                                                                                                                                                                                                          |
 | `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`.                                                                                                                                                                                                                                              |
-| `criteria_code`                   | VARCHAR   | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*. |
+| `criteria_code`                   | VARCHAR(32) | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*. |
 
 
 #### 3.3.3. `UserContextEventDetail`
@@ -498,11 +498,11 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 | --------------------------------- | ----------------- | ---------------------------------------------------------------- |
 | `user_context_segment_history_id` | BIGINT PK         | ID Interno                                                       |
 | `user_context_payload_id`         | BIGINT FK         | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
-| `sentiance_user_id`               | VARCHAR           | ID Sentiance                                                     |
-| `segment_id`                      | VARCHAR           | `id` (Identificador del Segmento)                                |
-| `category`                        | VARCHAR           | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)                |
-| `subcategory`                     | VARCHAR           | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)              |
-| `segment_type`                    | VARCHAR           | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*)            |
+| `sentiance_user_id`               | VARCHAR(64)       | ID Sentiance                                                     |
+| `segment_id`                      | VARCHAR(64)       | `id` (Identificador del Segmento)                                |
+| `category`                        | VARCHAR(32)       | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)                |
+| `subcategory`                     | VARCHAR(32)       | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)              |
+| `segment_type`                    | VARCHAR(32)       | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*)            |
 | `start_time` / `start_time_epoch` | DATETIME2(3) / BIGINT | `startTime` / `startTimeEpoch`                                   |
 | `end_time` / `end_time_epoch`     | DATETIME2(3) / BIGINT | `endTime` / `endTimeEpoch`                                       |
 
@@ -516,7 +516,7 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 | --------------------------------- | --------- | -------------------------------------------------------------------------------- |
 | `user_context_segment_attr_id`    | BIGINT PK | Auto                                                                             |
 | `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextSegmentHistory(user_context_segment_history_id)`. |
-| `attribute_name`                  | VARCHAR   | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)           |
+| `attribute_name`                  | VARCHAR(64) | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)           |
 | `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                     |
 
 
@@ -529,8 +529,8 @@ Lugares frecuentes estables `home` y `work` del `UserContext`.
 | ------------------------------- | --------- | ---------------------------------------------------------------- |
 | `user_home_history_id` (o work) | BIGINT PK | Auto                                                             |
 | `user_context_payload_id`       | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
-| `significance`                  | VARCHAR   | `significance` (*"HOME" / "WORK"*)                               |
-| `venue_type`                    | VARCHAR   | `type` (*"RESIDENTIAL", "OFFICE"*)                               |
+| `significance`                  | VARCHAR(32) | `significance` (*"HOME" / "WORK"*)                               |
+| `venue_type`                    | VARCHAR(32) | `type` (*"RESIDENTIAL", "OFFICE"*)                               |
 | `latitude`                      | DECIMAL(10, 8)| `location.latitude`                                              |
 | `longitude`                     | DECIMAL(11, 8)| `location.longitude`                                             |
 | `accuracy`                      | NUMERIC(12, 2)| `location.accuracy`                                              |
@@ -555,8 +555,8 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `driving_insights_trip_id` | BIGINT PK     | -                                     | -                                                         |
 | `source_event_id`          | BIGINT FK     | -                                     | FK referenciando a `SdkSourceEvent(source_event_id)`.     |
 | `trip_id`                  | BIGINT FK     | -                                     | FK referenciando a la tabla canónica `Trip(trip_id)`.     |
-| `sentiance_user_id`        | VARCHAR       | -                                     | Sentiance Id                                              |
-| `transport_event_id`       | VARCHAR       | `transportEvent.id`                   | La ID original de Trip del Timeline / Contexto            |
+| `sentiance_user_id`        | VARCHAR(64)   | -                                     | Sentiance Id                                              |
+| `canonical_transport_event_id` | VARCHAR(64)   | `transportEvent.id`                   | **Clave de Unicidad**: ID oficial del viaje proporcionada por la Timeline. |
 | `smooth_score`             | NUMERIC(4, 3) | `safetyScores.smoothScore`            | (0 a 1)                                                   |
 | `focus_score`              | NUMERIC(4, 3) | `safetyScores.focusScore`             | (0 a 1)                                                   |
 | `legal_score`              | NUMERIC(4, 3) | `safetyScores.legalScore`             | (0 a 1)                                                   |
@@ -566,7 +566,7 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_turning_score`      | NUMERIC(4, 3) | `safetyScores.harshTurningScore`      | (0 a 1)                                                   |
 | `harsh_acceleration_score` | NUMERIC(4, 3) | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
 | `distance_meters`          | NUMERIC(12, 2)| `transportEvent.distance`             | Distancia extraída en metros                              |
-| `occupant_role`            | VARCHAR       | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
+| `occupant_role`            | VARCHAR(32)   | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
 | `transport_tags_json`      | VARBINARY(MAX)| `transportEvent.transportTags`        | Serializado dict key-value                                |
 
 
@@ -586,7 +586,7 @@ Deriva de `getHarshDrivingEvents()`.
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`                               | Tiempo Unix de fin.                                                        |
 | `magnitude`                | NUMERIC(6, 3) | `magnitude`                                  | Fuerza G máxima detectada.                                                 |
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                 | Nivel de confianza (0-1).                                                  |
-| `harsh_type`               | VARCHAR       | `type` (*"ACCELERATION", "BRAKING", "TURN"*) | Tipo de evento brusco.                                                     |
+| `harsh_type`               | VARCHAR(32)   | `type` (*"ACCELERATION", "BRAKING", "TURN"*) | Tipo de evento brusco.                                                     |
 | `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`                                | Array completo de puntos del evento (Lat/Long/Alt) en formato JSON string. |
 
 
@@ -674,7 +674,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | -------------------------- | ------------- | ------------------------------------------------- | ----------------------------------------------------- |
 | `vehicle_crash_event_id`   | BIGINT PK     | Auto                                              | Identificador único del evento de choque.             |
 | `source_event_id`          | BIGINT FK     | FK Raíz                                           | FK referenciando a `SdkSourceEvent(source_event_id)`. |
-| `sentiance_user_id`        | VARCHAR       | -                                                 | ID del usuario de Sentiance.                          |
+| `sentiance_user_id`        | VARCHAR(64)   | -                                                 | ID del usuario de Sentiance.                          |
 | `crash_time_epoch`         | BIGINT        | `time`                                            | Tiempo Unix del impacto.                              |
 | `latitude`                 | DECIMAL(10, 8)| `location.latitude`                               | Coordenada Y del impacto.                             |
 | `longitude`                | DECIMAL(11, 8)| `location.longitude`                              | Coordenada X del impacto.                             |
@@ -684,8 +684,8 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `speed_at_impact`          | NUMERIC(7, 2) | `speedAtImpact`                                   | Velocidad al momento del impacto.                     |
 | `delta_v`                  | NUMERIC(7, 2) | `deltaV`                                          | Cambio de velocidad inducido por el impacto.          |
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
-| `severity`                 | VARCHAR       | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
-| `detector_mode`            | VARCHAR       | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
+| `severity`                 | VARCHAR(32)   | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
+| `detector_mode`            | VARCHAR(32)   | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
 | `preceding_locations_json` | VARBINARY(MAX)| Stringificado del JSON Array `precedingLocations` |                                                       |
 
 
@@ -700,21 +700,21 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | -------------------------- | --------- | ----------------------------------------------------- | --------------------------------- |
 | `sdk_status_history_id`    | BIGINT PK | Auto                                                  | -                                 |
 | `source_event_id`          | BIGINT FK | FK referenciando a `SdkSourceEvent(source_event_id)`. | -                                 |
-| `sentiance_user_id`        | VARCHAR   | Identificador del usuario.                            | -                                 |
-| `start_status`             | VARCHAR   | `startStatus`                                         | Estado de arranque del SDK.       |
-| `detection_status`         | VARCHAR   | `detectionStatus`                                     | Estado operativo de detección.    |
-| `location_permission`      | VARCHAR   | `locationPermission`                                  | Permisos del sistema operativo.   |
+| `sentiance_user_id`        | VARCHAR(64) | Identificador del usuario.                            | -                                 |
+| `start_status`             | VARCHAR(32) | `startStatus`                                         | Estado de arranque del SDK.       |
+| `detection_status`         | VARCHAR(32) | `detectionStatus`                                     | Estado operativo de detección.    |
+| `location_permission`      | VARCHAR(32) | `locationPermission`                                  | Permisos del sistema operativo.   |
 | `precise_location_granted` | BIT       | `isPreciseLocationGranted`                            | Si se tiene precisión GPS total.  |
-| `quota_status_wifi`        | VARCHAR   | `quotaStatusWiFi`                                     | Estado de cuota en WiFi.          |
-| `quota_status_mobile`      | VARCHAR   | `quotaStatusMobile`                                   | Estado de cuota en datos móviles. |
-| `quota_status_disk`        | VARCHAR   | `quotaStatusDisk`                                     | Estado de cuota en disco.         |
+| `quota_status_wifi`        | VARCHAR(32) | `quotaStatusWiFi`                                     | Estado de cuota en WiFi.          |
+| `quota_status_mobile`      | VARCHAR(32) | `quotaStatusMobile`                                   | Estado de cuota en datos móviles. |
+| `quota_status_disk`        | VARCHAR(32) | `quotaStatusDisk`                                     | Estado de cuota en disco.         |
 | `is_location_available`    | BIT       | `isLocationAvailable`                                 | Si la ubicación está encendida.   |
 | `can_detect`               | BIT       | `canDetect`                                           | Si el SDK puede recolectar datos. |
 | `captured_at`              | DATETIME2(3)| Instante de persistencia del status.                  | -                                 |
 | `precise_location_granted` | BIT       | Extraído de `isPreciseLocationAuthorizationGranted`.  |                                   |
-| `quota_status_wifi`        | VARCHAR   | Extraído de `wifiQuotaStatus`.                        |                                   |
-| `quota_status_mobile`      | VARCHAR   | Extraído de `mobileQuotaStatus`.                      |                                   |
-| `quota_status_disk`        | VARCHAR   | Extraído de `diskQuotaStatus`.                        |                                   |
+| `quota_status_wifi`        | VARCHAR(32) | Extraído de `wifiQuotaStatus`.                        |                                   |
+| `quota_status_mobile`      | VARCHAR(32) | Extraído de `mobileQuotaStatus`.                      |                                   |
+| `quota_status_disk`        | VARCHAR(32) | Extraído de `diskQuotaStatus`.                        |                                   |
 | `is_location_available`    | BIT       | Extraído de `isLocationAvailable`.                    |                                   |
 | `can_detect`               | BIT       | Extraído de `canDetect`.                              |                                   |
 
@@ -728,9 +728,9 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | -------------------------- | ------------- | ---------------------------------------------------------------------------- | ----- |
 | `user_activity_history_id` | BIGINT PK     | Auto                                                                         | -     |
 | `source_event_id`          | BIGINT FK     | FK referenciando a `SdkSourceEvent(source_event_id)`.                        | -     |
-| `sentiance_user_id`        | VARCHAR       | Identificador del usuario.                                                   | -     |
-| `activity_type`            | VARCHAR       | `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). | -     |
-| `trip_type`                | VARCHAR       | `tripInfo.type`. Solo si la actividad es de tipo viaje.                      | -     |
+| `sentiance_user_id`        | VARCHAR(64)   | Identificador del usuario.                                                   | -     |
+| `activity_type`            | VARCHAR(32)   | `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). | -     |
+| `trip_type`                | VARCHAR(32)   | `tripInfo.type`. Solo si la actividad es de tipo viaje.                      | -     |
 | `stationary_latitude`      | DECIMAL(10, 8)| `stationaryInfo.location.latitude`. **⚠️ Permite NULL** si no hay señal.     | -     |
 | `stationary_longitude`     | DECIMAL(11, 8)| `stationaryInfo.location.longitude`. **⚠️ Permite NULL** si no hay señal.    | -     |
 | `payload_json`             | NVARCHAR(MAX) | Copia raw del JSON `UserActivity`.                                           | -     |
@@ -746,8 +746,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | ---------------------------- | ------------- | ----------------------------------------------------------------- | ----- |
 | `technical_event_history_id` | BIGINT PK     | Auto                                                              | -     |
 | `source_event_id`            | BIGINT FK     | FK referenciando a `SdkSourceEvent(source_event_id)`.             | -     |
-| `sentiance_user_id`          | VARCHAR       | Identificador del usuario.                                        | -     |
-| `technical_event_type`       | VARCHAR       | Tipo de evento técnico (ej: *"ERROR"*, *"WARNING"*, *"SDK_LOG"*). | -     |
+| `sentiance_user_id`          | VARCHAR(64)   | Identificador del usuario.                                        | -     |
+| `technical_event_type`       | VARCHAR(32)   | Tipo de evento técnico (ej: *"ERROR"*, *"WARNING"*, *"SDK_LOG"*). | -     |
 | `message`                    | NVARCHAR(MAX) | Descripción textual del evento o error.                           | -     |
 | `payload_json`               | NVARCHAR(MAX) | Contenido crudo del log técnico para análisis profundo.           | -     |
 | `captured_at`                | DATETIME2(3)  | Instante de persistencia del evento.                              | -     |
@@ -765,10 +765,10 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | Campo                          | Tipo          | Mapeo Sentiance       | Notas                                                                         |
 | ------------------------------ | ------------- | --------------------- | ----------------------------------------------------------------------------- |
 | `trip_id`                      | BIGINT PK     | Auto                  | Identificador único del viaje (consolidado).                                  |
-| `sentiance_user_id`            | VARCHAR       | -                     | ID del usuario de Sentiance.                                                  |
-| `canonical_transport_event_id` | VARCHAR       | `id` (del transporte) | ID original de Sentiance para de-duplicación global.                          |
-| `first_seen_from`              | VARCHAR       | -                     | Origen del primer registro (*"TIMELINE"*, *"CONTEXT"*, *"DRIVING_INSIGHTS"*). |
-| `transport_mode`               | VARCHAR       | `transportMode`       | Modo de transporte (CAR, BUS, WALKING, etc.).                                 |
+| `sentiance_user_id`            | VARCHAR(64)   | -                     | ID del usuario de Sentiance.                                                  |
+| `canonical_transport_event_id` | VARCHAR(64)   | `id` (del transporte) | ID original de Sentiance para de-duplicación global.                          |
+| `first_seen_from`              | VARCHAR(32)   | -                     | Origen del primer registro (*"TIMELINE"*, *"CONTEXT"*, *"DRIVING_INSIGHTS"*). |
+| `transport_mode`               | VARCHAR(32)   | `transportMode`       | Modo de transporte (CAR, BUS, WALKING, etc.).                                 |
 | `start_time`                   | DATETIME2(3)  | `startTime`           | Inicio global del viaje.                                                      |
 | `start_time_epoch`             | BIGINT        | `startTimeEpoch`      | Tiempo Unix de inicio.                                                        |
 | `last_update_time`             | DATETIME2(3)  | `lastUpdateTime`      | Fecha de la última actualización reportada por el SDK.                        |
@@ -777,7 +777,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `end_time_epoch`               | BIGINT        | `endTimeEpoch`        | Tiempo Unix de fin.                                                           |
 | `duration_in_seconds`          | NUMERIC(10, 0)| `durationInSeconds`   | Duración total calculada en segundos.                                         |
 | `distance_meters`              | NUMERIC(12, 2)| `distanceInMeters`    | Distancia total recorrida en metros.                                          |
-| `occupant_role`                | VARCHAR       | `occupantRole`        | Rol del ocupante (*"DRIVER"*, *"PASSENGER"*).                                 |
+| `occupant_role`                | VARCHAR(32)   | `occupantRole`        | Rol del ocupante (*"DRIVER"*, *"PASSENGER"*).                                 |
 | `is_provisional`               | BIT           | `isProvisional`       | Flag para distinguir borradores de viajes finales definitivos.                |
 | `transport_tags_json`          | VARBINARY(MAX)| `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
 | `waypoints_json`               | VARBINARY(MAX)| `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
