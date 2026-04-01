@@ -1040,6 +1040,83 @@ EXEC sys.sp_set_session_context @key = N'current_user_id', @value = @user_id;
 - Los usuarios de solo lectura de BI (ej. conectados vía QuickSight o un Lambda ETL) deben tener el `SESSION_CONTEXT` seteado en cada conexión de pool.
 - La política **no aplica** al usuario `sysadmin` ni al propietario de la DB, lo cual es correcto para el pipeline ETL interno.
 
+## 3.10. Observaciones de Diseño y Riesgos Operativos
+
+### 3.10.1. Política de Purga de `SentianceEventos` — Sin Scheduling Definido ⚠️
+
+La documentación menciona "purga periódica" de la tabla raw pero no especifica scheduling ni criterio de retención concreto. A ~1 Hz de frecuencia de eventos por usuario activo, esta tabla puede acumular decenas de millones de filas en semanas.
+
+**Política de retención recomendada:**
+
+| Criterio | Valor |
+|---|---|
+| Condición de elegibilidad | `is_processed = 1` |
+| Ventana de retención mínima | 7 días (para debugging post-proceso) |
+| Purga máxima | 30 días desde `created_at` |
+| Mecanismo | SQL Server Agent Job (RDS soporta SQL Agent en la edición Standard/Enterprise) |
+
+```sql
+-- Job de purga — ejecutar diariamente en horario de baja carga
+DELETE FROM SentianceEventos
+WHERE is_processed = 1
+  AND created_at < DATEADD(DAY, -30, GETDATE());
+```
+
+> **Nota AWS RDS:** El SQL Server Agent está disponible en RDS for SQL Server (edición Standard y Enterprise). En Multi-AZ, el Job Agent solo corre en la instancia primaria; los failovers no cancelan jobs en curso sino que los reanudan al reconectar.
+
+---
+
+### 3.10.2. Compresión de `SentianceEventos.json` — Crecimiento Agresivo ⚠️
+
+El campo `json` se almacena como `NVARCHAR(MAX)` sin compresión. Payloads típicos de UserContext o Timeline rondan los 2–8 KB. A escala de flota, el crecimiento de esta tabla puede ser de **varios GB por día**.
+
+**Opciones recomendadas (no excluyentes):**
+
+1. **PAGE Compression a nivel de tabla** — transparente, sin cambios en el pipeline:
+```sql
+ALTER TABLE SentianceEventos REBUILD WITH (DATA_COMPRESSION = PAGE);
+```
+Reducción típica: **40–60%** en columnas de texto repetitivo como JSON. Compatible con RDS for SQL Server.
+
+2. **Compresión en la capa de aplicación antes del INSERT** — mayor ahorro, requiere cambio en el ETL:
+```sql
+-- El backend comprime el JSON (GZIP/Deflate) y almacena en VARBINARY(MAX)
+-- Antes de migrar, evaluar si el campo json necesita ser consultable directamente
+-- Si solo se lee para reprocesar, VARBINARY(MAX) comprimido es óptimo
+ALTER TABLE SentianceEventos ALTER COLUMN json VARBINARY(MAX);
+```
+
+> **Recomendación práctica:** Aplicar PAGE compression como primera medida inmediata (sin cambios de código) y evaluar migración a `VARBINARY(MAX)` al momento de la próxima ventana de mantenimiento.
+
+---
+
+### 3.10.3. Solapamiento entre `UserContextEventDetail` y `TimelineEventHistory` ⚠️
+
+Ambas tablas almacenan eventos temporales del usuario (tipo, modo de transporte, duración, coordenadas) provinientes de fuentes distintas (`UserContextUpdate` vs. `TimelineUpdate`). Esto es intencional arquitectónicamente —el contexto del usuario puede incluir el evento actual que aún no está en el timeline definitivo— pero genera filas **casi idénticas** para el mismo período.
+
+**Riesgos identificados:**
+
+| Riesgo | Impacto |
+|---|---|
+| Consultas analíticas que unen ambas sin filtro | Doble conteo de eventos → métricas incorrectas |
+| Crecimiento de almacenamiento innecesario | ~2x filas para el mismo evento cuando llega por ambos listeners |
+| Confusión en el equipo de BI | Sin documentación explícita de la diferencia semántica |
+
+**Mitigaciones recomendadas:**
+1. Documentar explícitamente en los dashboards de BI que `TimelineEventHistory` es la **fuente de verdad analítica** y `UserContextEventDetail` es solo para contexto en tiempo real.
+2. Agregar una vista que desduplique ambas tablas por `(sentiance_user_id, event_id)` para uso analítico:
+```sql
+CREATE VIEW vw_eventos_unificados AS
+SELECT event_id, sentiance_user_id, event_type, start_time, end_time,
+       transport_mode, duration_in_seconds, 'TIMELINE' AS fuente
+FROM TimelineEventHistory
+UNION
+SELECT event_id, sentiance_user_id, event_type, start_time, end_time,
+       transport_mode, duration_in_seconds, 'CONTEXT' AS fuente
+FROM UserContextEventDetail
+WHERE event_id NOT IN (SELECT event_id FROM TimelineEventHistory);
+```
+
 ---
 
 ## 4. Pipeline de Ingestión ETL (Estructuras JSON)
