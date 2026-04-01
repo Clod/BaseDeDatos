@@ -24,295 +24,295 @@ La información ingresa al backend mediante **eventos recibidos a través de los
 erDiagram
 	direction TB
 	SentianceEventos {
-		bigint id PK 
-		varchar(64) sentianceid
-		nvarchar(max) json
-		varchar(32) tipo
-		datetime2(3) created_at
+		bigint id PK
+		varchar_64 sentianceid
+		nvarchar_max json
+		varchar_32 tipo
+		datetime2_3 created_at
 		bit is_processed
 		bit procesado
-		varchar(32) app_version
+		varchar_32 app_version
 	}
 
 	SdkSourceEvent {
-		bigint source_event_id PK 
-		bigint id FK 
-		varchar(32) record_type
-		varchar(64) sentiance_user_id
-		datetime2(3) source_time
-		varchar(64) source_event_ref
-		varchar(64) payload_hash
-		datetime2(3) created_at
+		bigint source_event_id PK
+		bigint id FK
+		varchar_32 record_type
+		varchar_64 sentiance_user_id
+		datetime2_3 source_time
+		varchar_64 source_event_ref
+		varchar_64 payload_hash
+		datetime2_3 created_at
 	}
 
 	TimelineEventHistory {
-		bigint timeline_event_history_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
-		varchar(64) event_id
-		varchar(32) event_type
-		datetime2(3) start_time
+		bigint timeline_event_history_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
+		varchar_64 event_id
+		varchar_32 event_type
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) last_update_time
+		datetime2_3 last_update_time
 		bigint last_update_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric(10, 0) duration_in_seconds
+		numeric_10_0 duration_in_seconds
 		bit is_provisional
-		varchar(32) transport_mode
-		numeric(12, 2) distance_meters
-		varchar(32) occupant_role
-		varbinary(max) transport_tags_json
-		decimal(10, 8) location_latitude
-		decimal(11, 8) location_longitude
-		numeric(12, 2) location_accuracy
-		varchar(32) venue_significance
-		varchar(32) venue_type
-		datetime2(3) created_at
+		varchar_32 transport_mode
+		numeric_12_2 distance_meters
+		varchar_32 occupant_role
+		varbinary_max transport_tags_json
+		decimal_10_8 location_latitude
+		decimal_11_8 location_longitude
+		numeric_12_2 location_accuracy
+		varchar_32 venue_significance
+		varchar_32 venue_type
+		datetime2_3 created_at
 	}
 
 	UserContextHeader {
-		bigint user_context_payload_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
-		varchar(32) context_source_type
-		varchar(32) semantic_time
-		decimal(10, 8) last_known_latitude
-		decimal(11, 8) last_known_longitude
-		numeric(12, 2) last_known_accuracy
-		datetime2(3) created_at
+		bigint user_context_payload_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
+		varchar_32 context_source_type
+		varchar_32 semantic_time
+		decimal_10_8 last_known_latitude
+		decimal_11_8 last_known_longitude
+		numeric_12_2 last_known_accuracy
+		datetime2_3 created_at
 	}
 
 	UserContextEventDetail {
-		bigint user_context_event_history_id PK 
-		bigint user_context_payload_id FK 
-		varchar(64) sentiance_user_id
-		varchar(64) event_id
-		varchar(32) event_type
-		datetime2(3) start_time
+		bigint user_context_event_history_id PK
+		bigint user_context_payload_id FK
+		varchar_64 sentiance_user_id
+		varchar_64 event_id
+		varchar_32 event_type
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) last_update_time
+		datetime2_3 last_update_time
 		bigint last_update_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric(10, 0) duration_in_seconds
+		numeric_10_0 duration_in_seconds
 		bit is_provisional
-		varchar(32) transport_mode
-		numeric(12, 2) distance_meters
-		varchar(32) occupant_role
-		varbinary(max) transport_tags_json
-		decimal(10, 8) location_latitude
-		decimal(11, 8) location_longitude
-		numeric(12, 2) location_accuracy
-		varchar(32) venue_significance
-		varchar(32) venue_type
-		datetime2(3) created_at
+		varchar_32 transport_mode
+		numeric_12_2 distance_meters
+		varchar_32 occupant_role
+		varbinary_max transport_tags_json
+		decimal_10_8 location_latitude
+		decimal_11_8 location_longitude
+		numeric_12_2 location_accuracy
+		varchar_32 venue_significance
+		varchar_32 venue_type
+		datetime2_3 created_at
 	}
 
 	UserContextActiveSegmentDetail {
-		bigint user_context_segment_history_id PK 
-		bigint user_context_payload_id FK 
-		varchar(64) sentiance_user_id
-		varchar(64) segment_id
-		varchar(32) category
-		varchar(32) subcategory
-		varchar(32) segment_type
-		datetime2(3) start_time
+		bigint user_context_segment_history_id PK
+		bigint user_context_payload_id FK
+		varchar_64 sentiance_user_id
+		varchar_64 segment_id
+		varchar_32 category
+		varchar_32 subcategory
+		varchar_32 segment_type
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		datetime2(3) created_at
+		datetime2_3 created_at
 	}
 
 	UserContextSegmentAttribute {
-		bigint user_context_segment_attr_id PK 
-		bigint user_context_segment_history_id FK 
-		varchar(64) attribute_name
-		numeric(18, 4) attribute_value
+		bigint user_context_segment_attr_id PK
+		bigint user_context_segment_history_id FK
+		varchar_64 attribute_name
+		numeric_18_4 attribute_value
 	}
 
 	UserHomeHistory {
-		bigint user_home_history_id PK 
-		bigint user_context_payload_id FK 
-		varchar(32) significance
-		varchar(32) venue_type
-		decimal(10, 8) latitude
-		decimal(11, 8) longitude
-		numeric(12, 2) accuracy
+		bigint user_home_history_id PK
+		bigint user_context_payload_id FK
+		varchar_32 significance
+		varchar_32 venue_type
+		decimal_10_8 latitude
+		decimal_11_8 longitude
+		numeric_12_2 accuracy
 	}
 
 	UserWorkHistory {
-		bigint user_work_history_id PK 
-		bigint user_context_payload_id FK 
-		varchar(32) significance
-		varchar(32) venue_type
-		decimal(10, 8) latitude
-		decimal(11, 8) longitude
-		numeric(12, 2) accuracy
+		bigint user_work_history_id PK
+		bigint user_context_payload_id FK
+		varchar_32 significance
+		varchar_32 venue_type
+		decimal_10_8 latitude
+		decimal_11_8 longitude
+		numeric_12_2 accuracy
 	}
 
 	UserContextUpdateCriteria {
-		bigint user_context_update_criteria_id PK 
-		bigint user_context_payload_id FK 
-		varchar(32) criteria_code
+		bigint user_context_update_criteria_id PK
+		bigint user_context_payload_id FK
+		varchar_32 criteria_code
 	}
 
 	DrivingInsightsTrip {
-		bigint driving_insights_trip_id PK 
-		bigint source_event_id FK 
-		bigint trip_id FK 
-		varchar(64) sentiance_user_id
-		varchar(64) canonical_transport_event_id
-		numeric(4, 3) smooth_score
-		numeric(4, 3) focus_score
-		numeric(4, 3) legal_score
-		numeric(4, 3) call_while_moving_score
-		numeric(4, 3) overall_score
-		numeric(4, 3) harsh_braking_score
-		numeric(4, 3) harsh_turning_score
-		numeric(4, 3) harsh_acceleration_score
-		numeric(12, 2) distance_meters
-		varchar(32) occupant_role
-		varbinary(max) transport_tags_json
-		datetime2(3) created_at
+		bigint driving_insights_trip_id PK
+		bigint source_event_id FK
+		bigint trip_id FK
+		varchar_64 sentiance_user_id
+		varchar_64 canonical_transport_event_id
+		numeric_4_3 smooth_score
+		numeric_4_3 focus_score
+		numeric_4_3 legal_score
+		numeric_4_3 call_while_moving_score
+		numeric_4_3 overall_score
+		numeric_4_3 harsh_braking_score
+		numeric_4_3 harsh_turning_score
+		numeric_4_3 harsh_acceleration_score
+		numeric_12_2 distance_meters
+		varchar_32 occupant_role
+		varbinary_max transport_tags_json
+		datetime2_3 created_at
 	}
 
 	DrivingInsightsHarshEvent {
-		bigint harsh_event_id PK 
-		bigint source_event_id FK 
-		bigint driving_insights_trip_id FK 
-		datetime2(3) start_time
+		bigint harsh_event_id PK
+		bigint source_event_id FK
+		bigint driving_insights_trip_id FK
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric(6, 3) magnitude
-		numeric(4, 3) confidence
-		varchar(32) harsh_type
-		varbinary(max) waypoints_json
+		numeric_6_3 magnitude
+		numeric_4_3 confidence
+		varchar_32 harsh_type
+		varbinary_max waypoints_json
 	}
 
 	DrivingInsightsPhoneEvent {
-		bigint phone_event_id PK 
-		bigint source_event_id FK 
-		bigint driving_insights_trip_id FK 
-		datetime2(3) start_time
+		bigint phone_event_id PK
+		bigint source_event_id FK
+		bigint driving_insights_trip_id FK
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		varbinary(max) waypoints_json
+		varbinary_max waypoints_json
 	}
 
 	DrivingInsightsCallEvent {
-		bigint call_event_id PK 
-		bigint source_event_id FK 
-		bigint driving_insights_trip_id FK 
-		datetime2(3) start_time
+		bigint call_event_id PK
+		bigint source_event_id FK
+		bigint driving_insights_trip_id FK
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric(7, 2) min_travelled_speed_mps
-		numeric(7, 2) max_travelled_speed_mps
-		varbinary(max) waypoints_json
+		numeric_7_2 min_travelled_speed_mps
+		numeric_7_2 max_travelled_speed_mps
+		varbinary_max waypoints_json
 	}
 
 	DrivingInsightsSpeedingEvent {
-		bigint speeding_event_id PK 
-		bigint source_event_id FK 
-		bigint driving_insights_trip_id FK 
-		datetime2(3) start_time
+		bigint speeding_event_id PK
+		bigint source_event_id FK
+		bigint driving_insights_trip_id FK
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		varbinary(max) waypoints_json
+		varbinary_max waypoints_json
 	}
 
 	DrivingInsightsWrongWayDrivingEvent {
-		bigint wrong_way_event_id PK 
-		bigint source_event_id FK 
-		bigint driving_insights_trip_id FK 
-		datetime2(3) start_time
+		bigint wrong_way_event_id PK
+		bigint source_event_id FK
+		bigint driving_insights_trip_id FK
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		varbinary(max) waypoints_json
+		varbinary_max waypoints_json
 	}
 
 	VehicleCrashEvent {
-		bigint vehicle_crash_event_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
+		bigint vehicle_crash_event_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
 		bigint crash_time_epoch
-		decimal(10, 8) latitude
-		decimal(11, 8) longitude
-		numeric(12, 2) accuracy
-		numeric(10, 2) altitude
-		numeric(6, 3) magnitude
-		numeric(7, 2) speed_at_impact
-		numeric(7, 2) delta_v
-		numeric(4, 3) confidence
-		varchar(32) severity
-		varchar(32) detector_mode
-		varbinary(max) preceding_locations_json
+		decimal_10_8 latitude
+		decimal_11_8 longitude
+		numeric_12_2 accuracy
+		numeric_10_2 altitude
+		numeric_6_3 magnitude
+		numeric_7_2 speed_at_impact
+		numeric_7_2 delta_v
+		numeric_4_3 confidence
+		varchar_32 severity
+		varchar_32 detector_mode
+		varbinary_max preceding_locations_json
 	}
 
 	SdkStatusHistory {
-		bigint sdk_status_history_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
-		varchar(32) start_status
-		varchar(32) detection_status
-		varchar(32) location_permission
+		bigint sdk_status_history_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
+		varchar_32 start_status
+		varchar_32 detection_status
+		varchar_32 location_permission
 		bit precise_location_granted
-		varchar(32) quota_status_wifi
-		varchar(32) quota_status_mobile
-		varchar(32) quota_status_disk
+		varchar_32 quota_status_wifi
+		varchar_32 quota_status_mobile
+		varchar_32 quota_status_disk
 		bit is_location_available
 		bit can_detect
-		datetime2(3) captured_at
+		datetime2_3 captured_at
 	}
 
 	UserActivityHistory {
-		bigint user_activity_history_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
-		varchar(32) activity_type
-		varchar(32) trip_type
-		decimal(10, 8) stationary_latitude
-		decimal(11, 8) stationary_longitude
-		nvarchar(max) payload_json
-		datetime2(3) captured_at
+		bigint user_activity_history_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
+		varchar_32 activity_type
+		varchar_32 trip_type
+		decimal_10_8 stationary_latitude
+		decimal_11_8 stationary_longitude
+		nvarchar_max payload_json
+		datetime2_3 captured_at
 	}
 
 	TechnicalEventHistory {
-		bigint technical_event_history_id PK 
-		bigint source_event_id FK 
-		varchar(64) sentiance_user_id
-		varchar(32) technical_event_type
-		nvarchar(max) message
-		nvarchar(max) payload_json
-		datetime2(3) captured_at
+		bigint technical_event_history_id PK
+		bigint source_event_id FK
+		varchar_64 sentiance_user_id
+		varchar_32 technical_event_type
+		nvarchar_max message
+		nvarchar_max payload_json
+		datetime2_3 captured_at
 	}
 
 	Trip {
-		bigint trip_id PK 
-		varchar(64) sentiance_user_id
-		varchar(64) canonical_transport_event_id
-		varchar(32) first_seen_from
-		varchar(32) transport_mode
-		datetime2(3) start_time
+		bigint trip_id PK
+		varchar_64 sentiance_user_id
+		varchar_64 canonical_transport_event_id
+		varchar_32 first_seen_from
+		varchar_32 transport_mode
+		datetime2_3 start_time
 		bigint start_time_epoch
-		datetime2(3) last_update_time
+		datetime2_3 last_update_time
 		bigint last_update_time_epoch
-		datetime2(3) end_time
+		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric(10, 0) duration_in_seconds
-		numeric(12, 2) distance_meters
-		varchar(32) occupant_role
+		numeric_10_0 duration_in_seconds
+		numeric_12_2 distance_meters
+		varchar_32 occupant_role
 		bit is_provisional
-		varbinary(max) transport_tags_json
-		varbinary(max) waypoints_json
-		datetime2(3) created_at
-		datetime2(3) updated_at
+		varbinary_max transport_tags_json
+		varbinary_max waypoints_json
+		datetime2_3 created_at
+		datetime2_3 updated_at
 	}
 
 	SentianceEventos||--o|SdkSourceEvent:"deriva en"
