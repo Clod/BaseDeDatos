@@ -125,7 +125,7 @@ erDiagram
 	}
 
 	UserContextSegmentAttribute {
-		bigint user_context_segment_attribute_id PK 
+		bigint user_context_segment_attr_id PK 
 		bigint user_context_segment_history_id FK 
 		varchar(64) attribute_name
 		numeric(18, 4) attribute_value
@@ -514,7 +514,7 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 
 | Campo                             | Tipo      | Mapeo Sentiance                                                                               |
 | --------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `user_context_segment_attr_id`    | BIGINT PK | Auto. **Nota:** El ER diagram usa `user_context_segment_attribute_id`; el nombre canónico acordado es `user_context_segment_attr_id` (abreviado, coherente con snake_case del resto del esquema). |
+| `user_context_segment_attr_id`    | BIGINT PK     | Auto                                                                                         |
 | `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextActiveSegmentDetail(user_context_segment_history_id)`.        |
 | `attribute_name`                  | VARCHAR(64) | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)                                     |
 | `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                               |

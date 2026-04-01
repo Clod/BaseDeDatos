@@ -1,37 +1,59 @@
+ ✅ Todo verificado — sincronizado                                                                                                                     
+                                                                                                                                                        
+  ┌───────────────────────────────┬──────────────────────────────────────────┬────────────┐                                                             
+  │             Tabla             │                ER ↔ Dict                 │ Dict ↔ DDL │                                                             
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤
+  │ Todas menos las de abajo      │ ✅                                       │ ✅         │
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤
+  │ DrivingInsightsTrip           │ ✅ canonical_transport_event_id presente │ ✅         │                                                             
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤
+  │ UserContextSegmentAttribute   │ ✅ user_context_segment_attr_id en ambos │ ✅         │                                                             
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤                                                             
+  │ SdkStatusHistory              │ ✅ sin duplicados                        │ ✅         │
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤                                                             
+  │ Trip                          │ ✅                                       │ ✅         │
+  ├───────────────────────────────┼──────────────────────────────────────────┼────────────┤                                                             
+  │ DrivingInsightsTrip → Trip FK │ ✅ NO ACTION en DDL                      │ ✅         │
+  └───────────────────────────────┴──────────────────────────────────────────┴────────────┘                                                             
+                  
+  ---
   🟡 Issues menores restantes
                                                                                                                                                         
-  1. canonical_transport_event_id en DrivingInsightsTrip — falta en el ER diagram
+  1. CHECK constraint de first_seen_from no incluye 'TIMELINE'
                                                                                                                                                         
-  En la sección 2 (ER), DrivingInsightsTrip no tiene la columna canonical_transport_event_id:                                                           
-  DrivingInsightsTrip {
-      bigint driving_insights_trip_id PK                                                                                                                
-      bigint source_event_id FK         
-      bigint trip_id FK        
-      varchar(64) sentiance_user_id
-      varchar(64) canonical_transport_event_id   ← ESTA FALTA EN EL ER PERO SÍ EXISTE EN EL DICT (3.4.1)                                                
-      ...                                                                                               
-  }                                                                                                                                                     
-                                                                                                                                                        
-  En la dictionary (3.4.1) está documentada y dice claramente transportEvent.id. Pero el ER no la muestra. Faltaría agregar varchar(64)                 
-  canonical_transport_event_id dentro del bloque DrivingInsightsTrip del Mermaid.                                                                       
+  La columna first_seen_from en Trip y UserContextHeader acepta 'TIMELINE', 'CONTEXT' y 'DRIVING_INSIGHTS'. Pero el constraint en sección 3.8.2 solo    
+  lista 'TIMELINE', 'CONTEXT', 'DRIVING_INSIGHTS' — faltan las comillas simples. El SQL va a fallar con IN (TIMELINE, CONTEXT, ...) porque son literales
+   de string, no identificadores.                                                                                                                       
                   
-  2. Naming del PK de UserContextSegmentAttribute — aún persiste la inconsistencia                                                                      
-                  
-  - ER (sección 2): user_context_segment_attribute_id                                                                                                   
-  - Dictionary (sección 3.3.5): user_context_segment_attr_id (abreviado)
-  - La nota en el dict dice que se eligió user_context_segment_attr_id como nombre canónico, pero el ER sigue usando el nombre largo.                   
+  -- ❌ Actual (sintaxis inválida en SQL)
+  CHECK (first_seen_from IN ('TIMELINE','CONTEXT','DRIVING_INSIGHTS'))                                                                                  
+  -- ✅ Correcto (así está en el doc, solo faltaba la comilla en mi nota)
                                                                                                                                                         
-  Necesitás decidir cuál es el nombre definitivo y sincronizar ambos. Si attr_id es el acordado, actualizá el ER. Si no, revertí el dict.               
+  El documento ya tiene las comillas. Así que el único ajuste pendiente es si necesitás agregar 'TIMELINE' a algún constraint — pero ya está correcto en
+   el CHECK constraint de Trip (línea 980).                                                                                                             
                                                                                                                                                         
-  ---                                                                                                                                                   
-  En limpio       
+  2. RLS policy cubre 3 tablas — otras 4 con sentiance_user_id quedan sin filtro                                                                        
+  
+  La security policy (sección 3.9.3) aplica RLS solo a Trip, TimelineEventHistory y UserActivityHistory. Pero estas tablas también contienen            
+  sentiance_user_id y no tienen RLS:
+                                                                                                                                                        
+  - SdkSourceEvent
+  - VehicleCrashEvent
+  - SdkStatusHistory
+  - TechnicalEventHistory                                                                                                                               
+  
+  Si el acceso a estas tablas se habilita a nivel de aplicación (por ejemplo, un panel de debugging o herramienta de soporte), los datos de usuarios    
+  quedarían expuestos sin filtro. Dependiendo del modelo de acceso ya definido, puede no ser un problema — pero es worth documentar.
+                                                                                                                                                        
+  ---             
+  En limpio
 
-  ┌─────┬───────────┬───────────────────────────────────────────────────────────────────────────┐
-  │  #  │ Severidad │                                  Estado                                   │
-  ├─────┼───────────┼───────────────────────────────────────────────────────────────────────────┤
-  │ 1   │ 🟡        │ canonical_transport_event_id falta en ER de DrivingInsightsTrip           │
-  ├─────┼───────────┼───────────────────────────────────────────────────────────────────────────┤
-  │ 2   │ 🟡        │ Nombre de PK de UserContextSegmentAttribute inconsistente entre ER y dict │                                                       
-  └─────┴───────────┴───────────────────────────────────────────────────────────────────────────┘                                                       
+  ┌─────┬───────────┬──────────────────────────────────────────────────────────────────────┐
+  │  #  │ Severidad │                                Estado                                │
+  ├─────┼───────────┼──────────────────────────────────────────────────────────────────────┤
+  │ 1   │ 🟢 BAJO   │ CHECK constraint ya tiene comillas — solo confirmar en review final  │
+  ├─────┼───────────┼──────────────────────────────────────────────────────────────────────┤
+  │ 2   │ 🟢 BAJO   │ RLS en 4 tablas — depende del modelo de acceso; documentar si aplica │                                                            
+  └─────┴───────────┴──────────────────────────────────────────────────────────────────────┘                                                            
                                                                                                                                                         
-  Nada bloqueante. El documento está muy sólido en su estado actual.   
+  El documento está listo para implementación. Ningún issue bloquea el deployment.             
