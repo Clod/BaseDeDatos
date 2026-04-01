@@ -162,7 +162,7 @@ erDiagram
 		bigint source_event_id FK 
 		bigint trip_id FK 
 		varchar(64) sentiance_user_id
-		varchar(64) transport_event_id
+		varchar(64) canonical_transport_event_id
 		numeric(4, 3) smooth_score
 		numeric(4, 3) focus_score
 		numeric(4, 3) legal_score
@@ -512,12 +512,12 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegments[]`.
 
 
-| Campo                             | Tipo      | Mapeo Sentiance                                                                  |
-| --------------------------------- | --------- | -------------------------------------------------------------------------------- |
-| `user_context_segment_attr_id`    | BIGINT PK | Auto                                                                             |
-| `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextSegmentHistory(user_context_segment_history_id)`. |
-| `attribute_name`                  | VARCHAR(64) | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)           |
-| `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                     |
+| Campo                             | Tipo      | Mapeo Sentiance                                                                               |
+| --------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
+| `user_context_segment_attr_id`    | BIGINT PK | Auto. **Nota:** El ER diagram usa `user_context_segment_attribute_id`; el nombre canónico acordado es `user_context_segment_attr_id` (abreviado, coherente con snake_case del resto del esquema). |
+| `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextActiveSegmentDetail(user_context_segment_history_id)`.        |
+| `attribute_name`                  | VARCHAR(64) | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)                                     |
+| `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                               |
 
 
 #### 3.3.6. `UserHomeHistory` y `UserWorkHistory`
@@ -711,12 +711,6 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | `is_location_available`    | BIT       | `isLocationAvailable`                                 | Si la ubicación está encendida.   |
 | `can_detect`               | BIT       | `canDetect`                                           | Si el SDK puede recolectar datos. |
 | `captured_at`              | DATETIME2(3)| Instante de persistencia del status.                  | -                                 |
-| `precise_location_granted` | BIT       | Extraído de `isPreciseLocationAuthorizationGranted`.  |                                   |
-| `quota_status_wifi`        | VARCHAR(32) | Extraído de `wifiQuotaStatus`.                        |                                   |
-| `quota_status_mobile`      | VARCHAR(32) | Extraído de `mobileQuotaStatus`.                      |                                   |
-| `quota_status_disk`        | VARCHAR(32) | Extraído de `diskQuotaStatus`.                        |                                   |
-| `is_location_available`    | BIT       | Extraído de `isLocationAvailable`.                    |                                   |
-| `can_detect`               | BIT       | Extraído de `canDetect`.                              |                                   |
 
 
 #### 3.5.3. `UserActivityHistory`
@@ -821,7 +815,7 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
   La FK `source_event_id` no tiene índice explícito en ninguna de las tablas hija, lo que penaliza los JOINs de auditoría (ej: "dado este evento raw, ¿qué registros derivados generó?"). Deben crearse en cada tabla dependiente:
   - `CREATE INDEX idx_src_tl    ON TimelineEventHistory(source_event_id)`
   - `CREATE INDEX idx_src_uch   ON UserContextHeader(source_event_id)`
-  - `CREATE INDEX idx_src_di    ON DrivingInsightsTripData(source_event_id)`
+  - `CREATE INDEX idx_src_di    ON DrivingInsightsTrip(source_event_id)`
   - `CREATE INDEX idx_src_harsh ON DrivingInsightsHarshEvent(source_event_id)`
   - `CREATE INDEX idx_src_phone ON DrivingInsightsPhoneEvent(source_event_id)`
   - `CREATE INDEX idx_src_crash ON VehicleCrashEvent(source_event_id)`
@@ -846,18 +840,26 @@ Ninguna FK del esquema define actualmente acciones referenciales. Si se purga un
 | Relación | Acción recomendada | Justificación |
 |---|---|---|
 | Tablas satélite → `SdkSourceEvent` | `ON DELETE CASCADE` | Son datos derivados sin valor propio si el evento padre desaparece |
-| `SdkSourceEvent` → `SentianceEventos` | `ON DELETE SET NULL` | Permite purgar la tabla raw sin romper el grafo de normalización |
+| `SdkSourceEvent` → `SentianceEventos` | `ON DELETE NO ACTION` | Previene borrado accidental del raw con lineage activo; la purga debe ser manual y controlada |
+| `DrivingInsightsTrip` → `Trip` | `ON DELETE NO ACTION` | Un viaje canónico no debe poder borrarse mientras existan insights asociados |
 
-**DDL para cada FK afectada:**
+> **⚠️ Corrección frente al borrador anterior:** La política original docúmentaba `ON DELETE SET NULL` para `SdkSourceEvent → SentianceEventos`. Esto es peligroso: dejara `SdkSourceEvent` con `id = NULL`, rompiendo la trazabilidad al raw. La política correcta es `NO ACTION` — la purga de `SentianceEventos` debe hacerse de forma controlada **solo sobre filas cuyo `id` ya no esté referenciado** en `SdkSourceEvent`.
+
+**DDL completo para todas las FKs afectadas:**
 
 ```sql
--- SdkSourceEvent → SentianceEventos (purga segura de tabla raw)
+-- ================================================================
+-- 1. SdkSourceEvent → SentianceEventos
+--    NO ACTION: la purga del raw debe ser manual y controlada
+-- ================================================================
 ALTER TABLE SdkSourceEvent
   ADD CONSTRAINT fk_sdk_source_sentiance
   FOREIGN KEY (id) REFERENCES SentianceEventos(id)
-  ON DELETE SET NULL ON UPDATE NO ACTION;
+  ON DELETE NO ACTION ON UPDATE NO ACTION;
 
--- Tablas satélite → SdkSourceEvent (cascade sobre datos derivados)
+-- ================================================================
+-- 2. Tablas satélite → SdkSourceEvent (CASCADE: datos derivados)
+-- ================================================================
 ALTER TABLE TimelineEventHistory
   ADD CONSTRAINT fk_tl_source
   FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
@@ -868,7 +870,18 @@ ALTER TABLE UserContextHeader
   FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
-ALTER TABLE DrivingInsightsTripData
+ALTER TABLE UserContextEventDetail
+  ADD CONSTRAINT fk_uce_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE UserContextActiveSegmentDetail
+  ADD CONSTRAINT fk_ucas_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- NOTA: nombre real de la tabla es DrivingInsightsTrip (no DrivingInsightsTripData)
+ALTER TABLE DrivingInsightsTrip
   ADD CONSTRAINT fk_di_source
   FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
@@ -880,6 +893,21 @@ ALTER TABLE DrivingInsightsHarshEvent
 
 ALTER TABLE DrivingInsightsPhoneEvent
   ADD CONSTRAINT fk_phone_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsCallEvent
+  ADD CONSTRAINT fk_call_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsSpeedingEvent
+  ADD CONSTRAINT fk_speeding_source
+  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE DrivingInsightsWrongWayDrivingEvent
+  ADD CONSTRAINT fk_wrongway_source
   FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
@@ -902,9 +930,24 @@ ALTER TABLE TechnicalEventHistory
   ADD CONSTRAINT fk_tech_source
   FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- ================================================================
+-- 3. DrivingInsightsTrip → Trip
+--    NO ACTION: no se puede borrar un Trip que tiene DrivingInsights
+-- ================================================================
+ALTER TABLE DrivingInsightsTrip
+  ADD CONSTRAINT fk_di_trip
+  FOREIGN KEY (trip_id) REFERENCES Trip(trip_id)
+  ON DELETE NO ACTION ON UPDATE NO ACTION;
 ```
 
-> **Nota sobre `SentianceEventos`:** La purga periódica de esta tabla raw debe ejecutarse **sólo después** de verificar `is_processed = 1` en todas las filas del batch. El `SET NULL` en `SdkSourceEvent.id` garantiza que la cadena normalizada permanece intacta.
+> **Purga segura de `SentianceEventos`:** Dado que la FK es `NO ACTION`, el job de purga debe filtrar solo filas cuyo `id` ya no aparezca en `SdkSourceEvent`:
+> ```sql
+> DELETE FROM SentianceEventos
+> WHERE is_processed = 1
+>   AND created_at < DATEADD(DAY, -30, GETDATE())
+>   AND id NOT IN (SELECT id FROM SdkSourceEvent WHERE id IS NOT NULL);
+> ```
 
 ---
 
