@@ -394,6 +394,7 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 > | `DrivingInsightsHarshEvents` | 15 | 2026-04-01 |
 > | `DrivingInsightsSpeedingEvents` | 9 | 2026-04-01 |
 > | `DrivingInsightsCallEvents` | 2 | 2026-03-04 |
+> | `DrivingInsightsWrongWayDrivingEvents` | 0 | 2026-03-04 |
 >
 > **Nota de nomenclatura:** Los valores reales difieren de los ejemplos documentados en el campo. Equivalencias confirmadas: `DrivingInsights` ≡ `DrivingInsightsReady`, `TimelineEvents` ≡ `TimelineUpdate`, `VehicleCrash` ≡ `CrashEvent`, `SDKStatus` ≡ `SdkStatus`.
 > Los tipos `requestUserContext` y `DebugLog` se ingresan en la tabla raw pero **no tienen tabla DDL propia** en el pipeline actual y son ignorados por el ETL.
