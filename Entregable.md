@@ -1442,6 +1442,110 @@ export interface Event {
 }
 ```
 
+#### 4.7.2. Driving Insights (`@sentiance-react-native/driving-insights`)
+
+Estructura de datos emitida cuando se completa el procesamiento de un viaje motorizado no provisional. Incluye el `TransportEvent`, los `SafetyScores` y los sub-eventos derivados (maniobras bruscas, uso de telefono, exceso de velocidad, etc.).
+
+```typescript
+export type TransportMode = "UNKNOWN" | "BICYCLE" | "WALKING" | "RUNNING" | "TRAM" | "TRAIN" | "CAR" | "BUS" | "MOTORCYCLE";
+export type OccupantRole = "DRIVER" | "PASSENGER" | "UNAVAILABLE";
+export type TransportTags = { [key: string]: string };
+export type HarshDrivingEventType = "ACCELERATION" | "BRAKING" | "TURN";
+
+export interface Waypoint {
+  latitude: number;
+  longitude: number;
+  accuracy: number;           // en metros
+  timestamp: number;          // UTC epoch en ms
+  speedInMps?: number;        // en m/s
+  speedLimitInMps?: number;   // en m/s; undefined si isSpeedLimitInfoSet=false
+  hasUnlimitedSpeedLimit: boolean;
+  isSpeedLimitInfoSet: boolean;
+  isSynthetic: boolean;
+}
+
+/** Evento de transporte asociado. Identico al Event de EventTimeline con type=IN_TRANSPORT. */
+export interface TransportEvent {
+  id: string;
+  startTime: string;
+  startTimeEpoch: number;         // en ms
+  lastUpdateTime: string;
+  lastUpdateTimeEpoch: number;    // en ms
+  endTime: string | null;
+  endTimeEpoch: number | null;    // en ms
+  durationInSeconds: number | null;
+  type: string;                   // siempre "IN_TRANSPORT" para DrivingInsights
+  transportMode: TransportMode | null;
+  waypoints: Waypoint[];
+  distance?: number;              // en metros
+  transportTags: TransportTags;
+  occupantRole: OccupantRole;
+  isProvisional: boolean;
+}
+
+/**
+ * Puntajes de conduccion segura. Rango [0,1], donde 1 es el puntaje perfecto.
+ * Opcionales: pueden no calcularse segun el tipo de transporte.
+ */
+export interface SafetyScores {
+  smoothScore?: number;             // conduccion suave
+  focusScore?: number;              // conduccion enfocada
+  legalScore?: number;              // conduccion legal
+  callWhileMovingScore?: number;    // sin llamadas en movimiento
+  overallScore?: number;            // puntaje general
+  harshBrakingScore?: number;       // frenadas bruscas
+  harshTurningScore?: number;       // giros bruscos
+  harshAccelerationScore?: number;  // aceleraciones bruscas
+  wrongWayDrivingScore?: number;    // conduccion en sentido contrario
+  attentionScore?: number;          // atencion al volante
+}
+
+export interface DrivingInsights {
+  transportEvent: TransportEvent;
+  safetyScores: SafetyScores;
+}
+
+/** Base comun para todos los sub-eventos de manejo. */
+export interface DrivingEvent {
+  startTime: string;
+  startTimeEpoch: number;         // en ms
+  endTime: string;
+  endTimeEpoch: number;           // en ms
+  waypoints: Waypoint[];
+}
+
+/** Maniobra brusca: aceleracion, frenado o giro. */
+export interface HarshDrivingEvent extends DrivingEvent {
+  magnitude: number;
+  confidence: number;
+  type: HarshDrivingEventType;
+}
+
+/** Uso del telefono durante un transporte. */
+export interface PhoneUsageEvent extends DrivingEvent {
+  callState: "NO_CALL" | "CALL_IN_PROGRESS" | "UNAVAILABLE";
+}
+
+/** Llamada en movimiento (version actualizada). Reemplaza a CallWhileMovingEvent. */
+export type CallEvent = DrivingEvent & {
+  maxTraveledSpeedInMps: number | null;   // velocidad maxima en m/s
+  minTraveledSpeedInMps: number | null;   // velocidad minima en m/s
+  handsFreeState: "HANDS_FREE" | "HANDHELD" | "UNAVAILABLE";
+};
+
+/** @deprecated Usar CallEvent en su lugar. */
+export interface CallWhileMovingEvent extends DrivingEvent {
+  maxTravelledSpeedInMps?: number;
+  minTravelledSpeedInMps?: number;
+}
+
+/** Periodo de exceso de velocidad. Hereda todos los campos de DrivingEvent. */
+export interface SpeedingEvent extends DrivingEvent {}
+
+/** Segmento de conduccion en sentido contrario. Hereda todos los campos de DrivingEvent. */
+export interface WrongWayDrivingEvent extends DrivingEvent {}
+```
+
 ---
 
 ## 5. Anexo II: Flujo de Datos y Consolidación (Sequence Diagram)
