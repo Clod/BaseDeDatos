@@ -396,8 +396,77 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 > | `DrivingInsightsCallEvents` | 2 | 2026-03-04 |
 > | `DrivingInsightsWrongWayDrivingEvents` | 0 | 2026-03-04 |
 >
-> **Nota de nomenclatura:** Los valores reales difieren de los ejemplos documentados en el campo. Equivalencias confirmadas: `DrivingInsights` ≡ `DrivingInsightsReady`, `TimelineEvents` ≡ `TimelineUpdate`, `VehicleCrash` ≡ `CrashEvent`, `SDKStatus` ≡ `SdkStatus`.
-> Los tipos `requestUserContext` y `DebugLog` se ingresan en la tabla raw pero **no tienen tabla DDL propia** en el pipeline actual y son ignorados por el ETL.
+> **📝 Notas de nomenclatura y análisis de tipos observados:**
+>
+> **1. Equivalencias de nombres (producción vs. documentación):**
+> Los valores reales de `tipo` en producción difieren de los ejemplos documentados en el campo. Equivalencias confirmadas:
+>
+> | Valor en producción | Nombre en documentación SDK |
+> | --- | --- |
+> | `DrivingInsights` | `DrivingInsightsReady` |
+> | `TimelineEvents` | `TimelineUpdate` |
+> | `VehicleCrash` | `CrashEvent` |
+> | `SDKStatus` | `SdkStatus` |
+>
+> **2. Análisis de `requestUserContext` vs. `UserContextUpdate`:**
+>
+> Son **dos mecanismos paralelos e independientes** que producen el mismo tipo de dato (`UserContext`) pero por rutas distintas:
+>
+> | Característica | `requestUserContext` | `UserContextUpdate` |
+> | --- | --- | --- |
+> | **Origen** | Llamada **manual** de la app (`SentianceUserContext.requestUserContext()`) | Listener **automático** del SDK (`addUserContextUpdateListener`) |
+> | **Disparo** | A demanda, cuando la app necesita el contexto actual | Automático ante cambios de contexto (nuevo evento, segmento activo, venue visitado) |
+> | **Estructura JSON raíz** | `UserContext` plano (sin wrapper) | `UserContextUpdate` con wrapper |
+> | **Campo `criteria`** | ❌ Ausente | ✅ Presente (`"CURRENT_EVENT"`, `"ACTIVE_SEGMENTS"`, `"VISITED_VENUES"`) |
+> | **Registros (60 días)** | **5.518** | **1.765** |
+> | **Procesado por el ETL** | ❌ Ignorado actualmente | ✅ Mapeado a tablas de dominio |
+>
+> **Estructura JSON comparada** (confirmada por muestras reales de la base de datos):
+>
+> ```json
+> // requestUserContext → UserContext PLANO (sin criteria ni wrapper)
+> {
+>   "semanticTime": "LUNCH",
+>   "lastKnownLocation": { "accuracy": 10, "longitude": -58.336, "latitude": -34.753 },
+>   "activeSegments": [ { "startTime": "...", "attributes": [...] } ],
+>   "events": [...], "home": {...}, "work": {...}
+> }
+>
+> // UserContextUpdate → WRAPPEA UserContext + agrega criteria
+> {
+>   "criteria": ["VISITED_VENUES"],
+>   "userContext": {
+>     "lastKnownLocation": { "accuracy": 3, "longitude": -58.454, "latitude": -34.561 },
+>     "activeSegments": [...],
+>     "events": [...], "home": {...}, "work": {...}
+>   }
+> }
+> ```
+>
+> **⚠️ Implicación para el ETL:** Los **5.518 registros** `requestUserContext` contienen datos de `UserContext` exactamente del mismo tipo que el campo `userContext` dentro de `UserContextUpdate`. Representan **un 75% adicional** sobre el volumen actual de `UserContextUpdate` procesados, actualmente ignorado.
+>
+> **Detalle de la "adaptación mínima" necesaria para procesarlos:**
+>
+> El ETL actual para `UserContextUpdate` hace (conceptualmente):
+> ```
+> payload = parse_json(SentianceEventos.json)
+> user_context = payload["userContext"]    ← accede al campo wrapper
+> criteria     = payload["criteria"]       ← extrae el criterio de cambio
+> → inserta en tablas de dominio usando user_context
+> ```
+> Para `requestUserContext`, la adaptación sería:
+> ```
+> payload = parse_json(SentianceEventos.json)
+> user_context = payload                   ← el JSON raíz ES el UserContext directamente
+> criteria     = ["MANUAL_REQUEST"]        ← valor sintético (criterio no existe en el payload)
+> → inserta en las MISMAS tablas de dominio con la MISMA lógica
+> ```
+> Es decir, los cambios concretos serían **tres**:
+> 1. **Condición de tipo**: agregar `tipo = 'requestUserContext'` al `WHERE` de selección de registros a procesar (actualmente solo procesa `tipo = 'UserContextUpdate'`).
+> 2. **Ruta de extracción del JSON**: en lugar de `json["userContext"]`, leer `json` directamente como el objeto `UserContext`.
+> 3. **Campo `criteria`**: asignar un valor fijo sintético (p. ej. `"MANUAL_REQUEST"`) ya que el payload no provee este campo. Alternativamente, almacenar `NULL` si la columna lo permite.
+>
+> **3. `DebugLog`:** Logs internos de diagnóstico del SDK. Sin estructura de datos útil para el pipeline. Se descarta intencionalmente.
 
 
 #### 3.1.2. `SdkSourceEvent`
