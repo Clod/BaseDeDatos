@@ -1546,6 +1546,133 @@ export interface SpeedingEvent extends DrivingEvent {}
 export interface WrongWayDrivingEvent extends DrivingEvent {}
 ```
 
+#### 4.7.3. User Context (`@sentiance-react-native/user-context`)
+
+Estructura de datos emitida por el listener de UserContext. El objeto raiz `UserContextUpdate` contiene el contexto completo del usuario y los criterios que dispararon la actualizacion.
+
+```typescript
+export type UserContextUpdateCriteria = "CURRENT_EVENT" | "ACTIVE_SEGMENTS" | "VISITED_VENUES";
+export type SegmentCategory = "LEISURE" | "MOBILITY" | "WORK_LIFE";
+export type SegmentSubcategory =
+  | "COMMUTE" | "DRIVING" | "ENTERTAINMENT" | "FAMILY" | "HOME"
+  | "SHOPPING" | "SOCIAL" | "TRANSPORT" | "TRAVEL" | "WELLBEING"
+  | "WINING_AND_DINING" | "WORK";
+export type SegmentType =
+  | "AGGRESSIVE_DRIVER" | "ANTICIPATIVE_DRIVER" | "BAR_GOER" | "CITY_DRIVER"
+  | "CITY_HOME" | "CITY_WORKER" | "CULTURE_BUFF" | "DIE_HARD_DRIVER"
+  | "DISTRACTED_DRIVER" | "DOG_WALKER" | "EARLY_BIRD" | "EASY_COMMUTER"
+  | "EFFICIENT_DRIVER" | "FOODIE" | "FREQUENT_FLYER" | "FULLTIME_WORKER"
+  | "GREEN_COMMUTER" | "HEALTHY_BIKER" | "HEALTHY_WALKER" | "HEAVY_COMMUTER"
+  | "HOME_BOUND" | "HOMEBODY" | "HOMEWORKER" | "ILLEGAL_DRIVER"
+  | "LATE_WORKER" | "LEGAL_DRIVER" | "LONG_COMMUTER" | "MOBILITY"
+  | "MOBILITY__HIGH" | "MOBILITY__LIMITED" | "MOBILITY__MODERATE"
+  | "MOTORWAY_DRIVER" | "MUSIC_LOVER" | "NATURE_LOVER" | "NIGHT_OWL"
+  | "NIGHTWORKER" | "NORMAL_COMMUTER" | "PARTTIME_WORKER" | "PET_OWNER"
+  | "PHYSICAL_ACTIVITY__HIGH" | "PHYSICAL_ACTIVITY__LIMITED" | "PHYSICAL_ACTIVITY__MODERATE"
+  | "PUBLIC_TRANSPORTS_COMMUTER" | "PUBLIC_TRANSPORTS_USER"
+  | "RECENTLY_CHANGED_JOB" | "RECENTLY_MOVED_HOME" | "RESTO_LOVER"
+  | "RURAL_HOME" | "RURAL_WORKER" | "SHOPAHOLIC" | "SHORT_COMMUTER"
+  | "SLEEP_DEPRIVED" | "SOCIAL_ACTIVITY"
+  | "SOCIAL_ACTIVITY__HIGH" | "SOCIAL_ACTIVITY__LIMITED" | "SOCIAL_ACTIVITY__MODERATE"
+  | "SPORTIVE" | "STUDENT" | "TOWN_HOME" | "TOWN_WORKER"
+  | "UBER_PARENT" | "WORK_LIFE_BALANCE" | "WORK_TRAVELLER" | "WORKAHOLIC";
+export type TransportMode = "UNKNOWN" | "BICYCLE" | "WALKING" | "RUNNING" | "TRAM" | "TRAIN" | "CAR" | "BUS" | "MOTORCYCLE";
+export type OccupantRole = "DRIVER" | "PASSENGER" | "UNAVAILABLE";
+export type TransportTags = { [key: string]: string };
+export type VenueSignificance = "UNKNOWN" | "HOME" | "WORK" | "POINT_OF_INTEREST";
+export type VenueType =
+  | "UNKNOWN" | "DRINK_DAY" | "DRINK_EVENING" | "EDUCATION_INDEPENDENT" | "EDUCATION_PARENTS"
+  | "HEALTH" | "INDUSTRIAL" | "LEISURE_BEACH" | "LEISURE_DAY" | "LEISURE_EVENING"
+  | "LEISURE_MUSEUM" | "LEISURE_NATURE" | "LEISURE_PARK" | "OFFICE" | "RELIGION"
+  | "RESIDENTIAL" | "RESTO_MID" | "RESTO_SHORT" | "SHOP_LONG" | "SHOP_SHORT"
+  | "SPORT" | "SPORT_ATTEND" | "TRAVEL_BUS" | "TRAVEL_CONFERENCE" | "TRAVEL_FILL"
+  | "TRAVEL_HOTEL" | "TRAVEL_LONG" | "TRAVEL_SHORT";
+
+/** Tiempo semantico dentro del dia basado en la actividad detectada por el SDK. */
+export type SemanticTime =
+  | "UNKNOWN" | "MORNING" | "LATE_MORNING" | "LUNCH"
+  | "AFTERNOON" | "EARLY_EVENING" | "EVENING" | "NIGHT";
+
+export interface GeoLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}
+
+export interface Venue {
+  location: GeoLocation | null;
+  significance: VenueSignificance;
+  type: VenueType;
+}
+
+export interface Waypoint {
+  latitude: number;
+  longitude: number;
+  accuracy: number;           // en metros
+  timestamp: number;          // UTC epoch en ms
+  speedInMps?: number;        // en m/s
+  speedLimitInMps?: number;   // en m/s; undefined si isSpeedLimitInfoSet=false
+  hasUnlimitedSpeedLimit: boolean;
+  isSpeedLimitInfoSet: boolean;
+  isSynthetic: boolean;
+}
+
+export interface SegmentAttribute {
+  name: string;
+  value: number;
+}
+
+export interface Segment {
+  category: SegmentCategory;
+  subcategory: SegmentSubcategory;
+  type: SegmentType;
+  id: number;
+  startTime: string;
+  startTimeEpoch: number;         // en ms
+  endTime: string | null;
+  endTimeEpoch: number | null;    // en ms
+  attributes: SegmentAttribute[];
+}
+
+/** Evento incluido en el UserContext. Misma estructura que Event de EventTimeline. */
+export interface Event {
+  id: string;
+  startTime: string;
+  startTimeEpoch: number;         // en ms
+  lastUpdateTime: string;
+  lastUpdateTimeEpoch: number;    // en ms
+  endTime: string | null;
+  endTimeEpoch: number | null;    // en ms
+  durationInSeconds: number | null;
+  type: string;
+  isProvisional: boolean;
+  // Evento estacionario
+  location: GeoLocation | null;
+  venue: Venue | null;
+  // Evento de transporte
+  transportMode: TransportMode | null;
+  waypoints: Waypoint[];
+  distance?: number;              // en metros
+  transportTags: TransportTags;
+  occupantRole: OccupantRole;
+}
+
+export interface UserContext {
+  events: Event[];
+  activeSegments: Segment[];
+  lastKnownLocation: GeoLocation | null;
+  home: Venue | null;
+  work: Venue | null;
+  semanticTime: SemanticTime;
+}
+
+/** Objeto raiz del listener de UserContext. criteria indica que parte del contexto fue actualizada. */
+export interface UserContextUpdate {
+  readonly criteria: UserContextUpdateCriteria[];
+  readonly userContext: UserContext;
+}
+```
+
 ---
 
 ## 5. Anexo II: Flujo de Datos y Consolidación (Sequence Diagram)
