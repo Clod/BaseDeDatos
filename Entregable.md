@@ -1365,135 +1365,80 @@ Para la implementación del Pipeline de Ingestión, el equipo de Backend debe se
 
 ### 4.7. Anexo de Definiciones TypeScript (Referencia SDK React Native)
 
-A continuación se adjuntan, a modo de complemento, las interfaces oficiales y nativas en *TypeScript* que documenta el módulo `@sentiance-react-native/driving-insights`. Este es el contrato real de datos con el que contarán los programadores del Front-End para generar el JSON Final:
+A continuación se detallan las interfaces y tipos oficiales del SDK de Sentiance para React Native que modelan los datos persistidos en esta base de datos. Son el contrato entre el Front-End y el Pipeline ETL y la fuente de verdad para el mapeo `camelCase → snake_case` de la Sección 4.1.
+
+> **Documentación oficial de referencia:**
+> - [Event Timeline – Definitions](https://docs.sentiance.com/important-topics/sdk/api-reference/react-native/event-timeline/timeline/definitions)
+> - [Driving Insights – Definitions](https://docs.sentiance.com/important-topics/sdk/api-reference/react-native/driving-insights/definitions)
+> - [User Context – Definitions](https://docs.sentiance.com/important-topics/sdk/api-reference/react-native/user-context/definitions)
+
+#### 4.7.1. Event Timeline (`@sentiance-react-native/event-timeline`)
+
+Estructura de datos emitida por el listener de Timeline. Cada `Event` representa un evento detectado para el usuario (transporte, estacionario, fuera de cobertura, etc.).
 
 ```typescript
-export interface DrivingInsights {  
-  transportEvent: TransportEvent;
-  safetyScores: SafetyScores;
-}
-
-export interface SafetyScores {  
-  smoothScore?: number;
-  focusScore?: number;
-  legalScore?: number;
-  callWhileMovingScore?: number;
-  overallScore?: number;
-  harshBrakingScore?: number;
-  harshTurningScore?: number;
-  harshAccelerationScore?: number;
-}
-
-export interface DrivingEvent {  
-  startTime: string;  
-  startTimeEpoch: number; // in milliseconds  
-  endTime: string;  
-  endTimeEpoch: number; // in milliseconds  
-  waypoints: Waypoint[];  
-}
-
-export type HarshDrivingEventType = "ACCELERATION" | "BRAKING" | "TURN";
-
-export interface HarshDrivingEvent extends DrivingEvent {  
-  magnitude: number;  
-  confidence: number;  
-  type: HarshDrivingEventType;  
-}
-
-export interface PhoneUsageEvent extends DrivingEvent {}
-
-export interface CallWhileMovingEvent extends DrivingEvent {  
-  maxTravelledSpeedInMps?: number;  
-  minTravelledSpeedInMps?: number;  
-}
-
-export interface SpeedingEvent extends DrivingEvent {}
-
-// Hereda todos los campos de DrivingEvent sin agregar propiedades estructurales adicionales
-export interface WrongWayDrivingEvent extends DrivingEvent {}
-
-export interface TransportEvent {  
-  id: string;  
-  startTime: string;  
-  startTimeEpoch: number; // in milliseconds  
-  lastUpdateTime: string;  
-  lastUpdateTimeEpoch: number; // in milliseconds  
-  endTime: string | null;  
-  endTimeEpoch: number | null; // in milliseconds  
-  durationInSeconds: number | null;  
-  type: string;  
-  transportMode: TransportMode | null;  
-  waypoints: Waypoint[];  
-  distance?: number; // in meters  
-  transportTags: TransportTags;  
-  occupantRole: OccupantRole;  
-  isProvisional: boolean;  
-}
-
-export type TransportTags = { [key: string]: string };
+export type EventType = "UNKNOWN" | "STATIONARY" | "OFF_THE_GRID" | "IN_TRANSPORT";
 export type TransportMode = "UNKNOWN" | "BICYCLE" | "WALKING" | "RUNNING" | "TRAM" | "TRAIN" | "CAR" | "BUS" | "MOTORCYCLE";
 export type OccupantRole = "DRIVER" | "PASSENGER" | "UNAVAILABLE";
+export type VenueSignificance = "UNKNOWN" | "HOME" | "WORK" | "POINT_OF_INTEREST";
+export type VenueType =
+  | "UNKNOWN" | "DRINK_DAY" | "DRINK_EVENING" | "EDUCATION_INDEPENDENT" | "EDUCATION_PARENTS"
+  | "HEALTH" | "INDUSTRIAL" | "LEISURE_BEACH" | "LEISURE_DAY" | "LEISURE_EVENING"
+  | "LEISURE_MUSEUM" | "LEISURE_NATURE" | "LEISURE_PARK" | "OFFICE" | "RELIGION"
+  | "RESIDENTIAL" | "RESTO_MID" | "RESTO_SHORT" | "SHOP_LONG" | "SHOP_SHORT"
+  | "SPORT" | "SPORT_ATTEND" | "TRAVEL_BUS" | "TRAVEL_CONFERENCE" | "TRAVEL_FILL"
+  | "TRAVEL_HOTEL" | "TRAVEL_LONG" | "TRAVEL_SHORT";
+export type TransportTags = { [key: string]: string };
 
-export interface Waypoint {  
-  latitude: number;  
-  longitude: number;  
-  accuracy: number;   // in meters  
-  timestamp: number;  // UTC epoch time in milliseconds  
-  speedInMps?: number;  // in meters per second  
-  speedLimitInMps?: number;  // in meters per second  
-  hasUnlimitedSpeedLimit: boolean;  
-  isSpeedLimitInfoSet: boolean;  
-  isSynthetic: boolean;  
-}
-
-export interface SdkStatus {
-  startStatus: string;
-  detectionStatus: string;
-  canDetect: boolean;
-  isRemoteEnabled: boolean;
-  isAccelPresent: boolean;
-  isGyroPresent: boolean;
-  isGpsPresent: boolean;
-  wifiQuotaStatus: string;
-  mobileQuotaStatus: string;
-  diskQuotaStatus: string;
-  locationPermission: string;
-  userExists: boolean;
-  isBatterySavingEnabled?: boolean;
-  isActivityRecognitionPermGranted?: boolean;
-  isPreciseLocationAuthorizationGranted: boolean;
-  isBgAccessPermGranted?: boolean; // iOS only
-  locationSetting?: string; // Android only
-  isAirplaneModeEnabled?: boolean; // Android only
-  isLocationAvailable?: boolean;
-  isGooglePlayServicesMissing?: boolean; // Android only
-  isBatteryOptimizationEnabled?: boolean; // Android only
-  isBackgroundProcessingRestricted?: boolean; // Android only
-  isSchedulingExactAlarmsPermitted?: boolean; // Android only
-  backgroundRefreshStatus: string; // iOS only
-}
-
-export interface Location {
-  timestamp?: number; // marked optional to maintain compatibility, but is always present
+export interface GeoLocation {
   latitude: number;
   longitude: number;
-  accuracy?: number;
-  altitude?: number;
-  provider?: string; // Android only
+  accuracy: number;
 }
 
-export interface StationaryInfo {
-  location?: Location;
+export interface Venue {
+  location: GeoLocation | null;
+  significance: VenueSignificance;
+  type: VenueType;
 }
 
-export interface TripInfo {
-  type: "TRIP_TYPE_SDK" | "TRIP_TYPE_EXTERNAL" | "TRIP_TYPE_UNRECOGNIZED" | "ANY";
+export interface Waypoint {
+  latitude: number;
+  longitude: number;
+  accuracy: number;           // en metros
+  timestamp: number;          // UTC epoch en ms
+  speedInMps?: number;        // en m/s
+  speedLimitInMps?: number;   // undefined si isSpeedLimitInfoSet=false; MAX_VALUE si hasUnlimitedSpeedLimit=true
+  hasUnlimitedSpeedLimit: boolean;
+  isSpeedLimitInfoSet: boolean;
+  isSynthetic: boolean;
 }
 
-export interface UserActivity {
-  type: "USER_ACTIVITY_TYPE_TRIP" | "USER_ACTIVITY_TYPE_STATIONARY" | "USER_ACTIVITY_TYPE_UNKNOWN" | "USER_ACTIVITY_TYPE_UNRECOGNIZED";
-  tripInfo?: TripInfo;
-  stationaryInfo?: StationaryInfo;
+/**
+ * Evento detectado: transporte, estacionario o fuera de cobertura.
+ * isProvisional=true indica que puede cambiar al recopilarse mas datos.
+ * Los eventos definitivos tienen IDs unicos no vinculados a los provisionales.
+ */
+export interface Event {
+  id: string;
+  startTime: string;              // ISO 8601
+  startTimeEpoch: number;         // en ms
+  lastUpdateTime: string;         // ISO 8601
+  lastUpdateTimeEpoch: number;    // en ms
+  endTime: string | null;         // null si aun no finalizo
+  endTimeEpoch: number | null;    // null si aun no finalizo
+  durationInSeconds: number | null;
+  type: EventType;
+  isProvisional: boolean;
+  // Evento estacionario
+  location: GeoLocation | null;
+  venue: Venue | null;
+  // Evento de transporte
+  transportMode: TransportMode | null;
+  waypoints: Waypoint[];
+  distance?: number;              // en metros
+  transportTags: TransportTags;
+  occupantRole: OccupantRole;
 }
 ```
 
