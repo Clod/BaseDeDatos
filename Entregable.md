@@ -379,6 +379,26 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 | `app_version`  | VARCHAR(32)   | Custom Backend (versión de la App si se inyecta en headers HTTP/URL).                                                                                                        |
 
 
+> **📊 Valores de `tipo` observados en producción — últimos 60 días** *(consulta ejecutada: 2026-04-04)*
+>
+> | `tipo` | Registros | Último registro |
+> | --- | ---: | --- |
+> | `DrivingInsights` | 7.726 | 2026-04-04 |
+> | `requestUserContext` | 5.518 | 2026-04-04 |
+> | `UserContextUpdate` | 1.765 | 2026-04-04 |
+> | `SDKStatus` | 1.275 | 2026-04-04 |
+> | `VehicleCrash` | 166 | 2026-03-31 |
+> | `DebugLog` | 150 | 2026-03-16 |
+> | `TimelineEvents` | 35 | 2026-02-25 |
+> | `DrivingInsightsPhoneEvents` | 26 | 2026-04-01 |
+> | `DrivingInsightsHarshEvents` | 15 | 2026-04-01 |
+> | `DrivingInsightsSpeedingEvents` | 9 | 2026-04-01 |
+> | `DrivingInsightsCallEvents` | 2 | 2026-03-04 |
+>
+> **Nota de nomenclatura:** Los valores reales difieren de los ejemplos documentados en el campo. Equivalencias confirmadas: `DrivingInsights` ≡ `DrivingInsightsReady`, `TimelineEvents` ≡ `TimelineUpdate`, `VehicleCrash` ≡ `CrashEvent`, `SDKStatus` ≡ `SdkStatus`.
+> Los tipos `requestUserContext` y `DebugLog` se ingresan en la tabla raw pero **no tienen tabla DDL propia** en el pipeline actual y son ignorados por el ETL.
+
+
 #### 3.1.2. `SdkSourceEvent`
 
 Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON originario.
