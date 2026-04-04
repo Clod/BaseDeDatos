@@ -453,18 +453,36 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 > user_context = payload["userContext"]    ← accede al campo wrapper
 > criteria     = payload["criteria"]       ← extrae el criterio de cambio
 > → inserta en tablas de dominio usando user_context
+> → inserta 1 fila en UserContextUpdateCriteria por cada elemento de criteria[]
 > ```
 > Para `requestUserContext`, la adaptación sería:
 > ```
 > payload = parse_json(SentianceEventos.json)
 > user_context = payload                   ← el JSON raíz ES el UserContext directamente
-> criteria     = ["MANUAL_REQUEST"]        ← valor sintético (criterio no existe en el payload)
+> criteria     = ["MANUAL_REQUEST"]        ← valor sintético (no existe en el payload)
 > → inserta en las MISMAS tablas de dominio con la MISMA lógica
+> → inserta 1 fila en UserContextUpdateCriteria con criteria_code = 'MANUAL_REQUEST'
 > ```
-> Es decir, los cambios concretos serían **tres**:
-> 1. **Condición de tipo**: agregar `tipo = 'requestUserContext'` al `WHERE` de selección de registros a procesar (actualmente solo procesa `tipo = 'UserContextUpdate'`).
+> Los **cambios de código** serían tres:
+> 1. **Condición de tipo**: agregar `tipo = 'requestUserContext'` al `WHERE` de selección de registros a procesar.
 > 2. **Ruta de extracción del JSON**: en lugar de `json["userContext"]`, leer `json` directamente como el objeto `UserContext`.
-> 3. **Campo `criteria`**: asignar un valor fijo sintético (p. ej. `"MANUAL_REQUEST"`) ya que el payload no provee este campo. Alternativamente, almacenar `NULL` si la columna lo permite.
+> 3. **Campo `criteria`**: asignar el valor sintético `"MANUAL_REQUEST"` al insertar en `UserContextUpdateCriteria`.
+>
+> Para el punto 3, hay dos alternativas a nivel de diseño:
+>
+> | | **Opción A** *(recomendada)* | **Opción B** |
+> | --- | --- | --- |
+> | **Acción** | Extender el `CHECK` constraint de `UserContextUpdateCriteria` para aceptar `'MANUAL_REQUEST'`. Insertar 1 fila con ese valor. | No insertar filas en `UserContextUpdateCriteria` para las entradas `requestUserContext`. |
+> | **Cambio DDL** | ✅ Sí — `ALTER TABLE` sobre el constraint `chk_criteria_code` | ❌ Ninguno |
+> | **Trazabilidad** | ✅ **Explícita**: cualquier consulta puede distinguir registros manuales de automáticos por el valor de `criteria_code`. | ⚠️ **Implícita**: el origen solo se deduce por ausencia de filas en `UserContextUpdateCriteria`, lo que es frágil y ambiguo (¿bug del ETL o diseño?). |
+> | **Consistencia del modelo** | ✅ Todo `UserContext` almacenado tiene al menos una fila en `UserContextUpdateCriteria`. | ❌ Rompe la relación 1-a-muchos esperada. |
+>
+> **✅ Decisión arquitectónica: Opción A.** Se prefiere la trazabilidad explícita del origen sobre el ahorro del `ALTER TABLE`. El DDL necesario es:
+> ```sql
+> ALTER TABLE UserContextUpdateCriteria DROP CONSTRAINT chk_criteria_code;
+> ALTER TABLE UserContextUpdateCriteria ADD CONSTRAINT chk_criteria_code
+>   CHECK (criteria_code IN ('CURRENT_EVENT', 'ACTIVE_SEGMENTS', 'VISITED_VENUES', 'MANUAL_REQUEST'));
+> ```
 >
 > **3. `DebugLog`:** Logs internos de diagnóstico del SDK. Sin estructura de datos útil para el pipeline. Se descarta intencionalmente.
 
