@@ -1779,6 +1779,90 @@ export interface UserContextUpdate {
   readonly criteria: UserContextUpdateCriteria[];
   readonly userContext: UserContext;
 }
+
+/**
+ * Nota sobre requestUserContext (evento manual):
+ * A diferencia de UserContextUpdate, el payload de requestUserContext es un objeto UserContext PLANO
+ * sin el wrapper 'userContext' ni el campo 'criteria'.
+ */
+```
+
+#### 4.7.4. SDK Status (`@sentiance-react-native/core`)
+
+Estructura de datos emitida por el listener de estado del SDK. Provee visibilidad sobre permisos, sensores y cuotas de datos.
+
+```typescript
+export type DetectionStatus =
+  | "DISABLED"
+  | "EXPIRED"
+  | "ENABLED"
+  | "PENDING_START"
+  | "PENDING_STOP";
+
+export type LocationSetting = "OK" | "DISABLED" | "UNKNOWN";
+
+export type QuotaStatus = "OK" | "WARNING" | "EXCEEDED";
+
+export type LocationPermission = "ALWAYS" | "WHILE_IN_USE" | "NEVER" | "TO_BE_DETERMINED";
+
+export interface SdkStatus {
+  detectionStatus: DetectionStatus;
+  canDetect: boolean;
+  isRemoteEnabled: boolean;
+  isPreciseLocationPermGranted: boolean;
+  isActivityRecognitionPermGranted: boolean;
+  locationSetting: LocationSetting;
+  isAirplaneModeEnabled: boolean;
+  isLocationAvailable: boolean;
+  isAccelPresent: boolean;
+  isGyroPresent: boolean;
+  isGpsPresent: boolean;
+  isGooglePlayServicesMissing: boolean;
+  isBatteryOptimizationEnabled: boolean;
+  isBatterySavingEnabled: boolean;
+  isBackgroundProcessingRestricted: boolean;
+  isSchedulingExactAlarmsPermitted: boolean;
+  locationPermission: LocationPermission;
+  wifiQuotaStatus: QuotaStatus;
+  mobileQuotaStatus: QuotaStatus;
+  diskQuotaStatus: QuotaStatus;
+}
+```
+
+#### 4.7.5. Vehicle Crash Detection (`@sentiance-react-native/crash-detection`)
+
+Estructura de datos emitida ante la detección de un posible choque vehicular.
+
+```typescript
+export interface CrashEvent {
+  time: number;                   // UTC epoch en ms
+  location: GeoLocation;
+  precedingLocations: GeoLocation[];
+  magnitude: number;              // fuerza G detectada
+  speedAtImpact: number;          // en m/s
+  deltaV: number;                 // cambio de velocidad en m/s
+  confidence: number;             // confianza de la deteccion [0,1]
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  detectorMode: "CAR" | "DRIVE";
+}
+```
+
+#### 4.7.6. Technical & Debug Logs (`DebugLog`)
+
+Los registros de depuración y logs técnicos del SDK se capturan en un formato de texto estructurado para auditoría y resolución de problemas.
+
+```json
+{
+  "timestamp": 1698224000000,
+  "level": "INFO",
+  "tag": "SENTIANCE_SDK",
+  "message": "Detection loop started successfully",
+  "metadata": {
+    "module": "core-engine",
+    "version": "6.2.0"
+  }
+}
+```
 ```
 
 ---
