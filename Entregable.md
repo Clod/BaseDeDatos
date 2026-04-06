@@ -171,6 +171,8 @@ erDiagram
 		numeric_4_3 harsh_braking_score
 		numeric_4_3 harsh_turning_score
 		numeric_4_3 harsh_acceleration_score
+		numeric_4_3 wrong_way_driving_score
+		numeric_4_3 attention_score
 		numeric_12_2 distance_meters
 		varchar_32 occupant_role
 		varbinary_max transport_tags_json
@@ -673,6 +675,8 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | `harsh_braking_score`      | NUMERIC(4, 3) | `safetyScores.harshBrakingScore`      | (0 a 1)                                                   |
 | `harsh_turning_score`      | NUMERIC(4, 3) | `safetyScores.harshTurningScore`      | (0 a 1)                                                   |
 | `harsh_acceleration_score` | NUMERIC(4, 3) | `safetyScores.harshAccelerationScore` | (0 a 1)                                                   |
+| `wrong_way_driving_score`  | NUMERIC(4, 3) | `safetyScores.wrongWayDrivingScore`  | (0 a 1)                                                   |
+| `attention_score`          | NUMERIC(4, 3) | `safetyScores.attentionScore`       | (0 a 1)                                                   |
 | `distance_meters`          | NUMERIC(12, 2)| `transportEvent.distance`             | Distancia extraída en metros                              |
 | `occupant_role`            | VARCHAR(32)   | `transportEvent.occupantRole`         | Enum estricto: *"DRIVER"*, *"PASSENGER"*, *"UNAVAILABLE"* |
 | `transport_tags_json`      | VARBINARY(MAX)| `transportEvent.transportTags`        | Serializado dict key-value                                |

@@ -91,10 +91,8 @@ Almacenados comprimidos en `Trip.waypoints_json` como array JSON:
 | `safetyScores.harshBrakingScore`    | `number?`  | `DrivingInsightsTrip` | `harsh_braking_score`        | Rango [0,1]; 1 = perfecto |
 | `safetyScores.harshTurningScore`    | `number?`  | `DrivingInsightsTrip` | `harsh_turning_score`        | Rango [0,1]; 1 = perfecto |
 | `safetyScores.harshAccelerationScore` | `number?`| `DrivingInsightsTrip` | `harsh_acceleration_score`   | Rango [0,1]; 1 = perfecto |
-| `safetyScores.wrongWayDrivingScore` | `number?`  | `DrivingInsightsTrip` | *(no mapeado aún)*           | `[omitido]` Score WrongWay no tiene columna dedicada en el esquema actual |
-| `safetyScores.attentionScore`       | `number?`  | `DrivingInsightsTrip` | *(no mapeado aún)*           | `[omitido]` Score de atención no tiene columna dedicada en el esquema actual |
-
-> **⚠️ GAP identificado:** Los scores `wrongWayDrivingScore` y `attentionScore` del SDK no tienen columnas dedicadas en `DrivingInsightsTrip`. Se recomienda agregar `wrong_way_driving_score NUMERIC(4,3)` y `attention_score NUMERIC(4,3)`.
+| `safetyScores.wrongWayDrivingScore` | `number?`  | `DrivingInsightsTrip` | `wrong_way_driving_score`    | Rango [0,1]; 1 = perfecto |
+| `safetyScores.attentionScore`       | `number?`  | `DrivingInsightsTrip` | `attention_score`            | Rango [0,1]; 1 = perfecto |
 
 ---
 
