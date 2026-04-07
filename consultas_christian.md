@@ -2,8 +2,8 @@
 
 El concepto central de Lifestyle Insights son los segmentos, que clasifican comportamientos del usuario. Cada segmento tiene: 
 
-- `**category**`: `LEISURE`, `MOBILITY`, `WORKLIFE`
-- `**subcategory**`: `COMMUTE`, `DRIVING`, `ENTERTAINMENT`, `FAMILY`, `HOME`, `SHOPPING`, `SOCIAL`, `TRANSPORT`, `TRAVEL`, `WELLBEING`, `WININGANDDINING`, `WORK`
+- `**category**`: `LEISURE` (Ocio), `MOBILITY` (Movilidad), `WORK_LIFE` (Vida laboral)
+- `**subcategory**`: `COMMUTE` (Desplazamiento al trabajo), `DRIVING` (Conducción), `ENTERTAINMENT` (Entretenimiento), `FAMILY` (Familia), `HOME` (Hogar), `SHOPPING` (Compras), `SOCIAL` (Social), `TRANSPORT` (Transporte), `TRAVEL` (Viajes), `WELLBEING` (Bienestar), `WINING_AND_DINING` (Gastronomía), `WORK` (Trabajo)
 - `**type**`: el perfil específico detectado
 - `**attributes**`: lista de atributos con nombre y valor numérico
 
@@ -67,7 +67,7 @@ El concepto central de Lifestyle Insights son los segmentos, que clasifican comp
 
 El `semanticTime` es personal y relativo al usuario, con los siguientes valores posibles: 
 
-`UNKNOWN` · `MORNING` · `LATEMORNING` · `LUNCH` · `AFTERNOON` · `EARLYEVENING` · `EVENING` · `NIGHT`
+`UNKNOWN` (Desconocido) · `MORNING` (Mañana) · `LATE_MORNING` (Media mañana) · `LUNCH` (Almuerzo) · `AFTERNOON` (Tarde) · `EARLY_EVENING` (Atardecer) · `EVENING` (Noche) · `NIGHT` (Madrugada)
 
 Esto permite saber, por ejemplo, cuándo es el momento adecuado para interactuar con el usuario (por ejemplo, enviar una notificación justo cuando sale del trabajo al mediodía). 
 
