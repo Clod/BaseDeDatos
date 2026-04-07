@@ -48,7 +48,20 @@ El concepto central de Lifestyle Insights son los segmentos, que clasifican comp
 | Workaholic        | Adicto al trabajo            | Trabaja más de lo promedio                              | `worklife.work.workaholic`      |
 
 
-**LEISURE** incluye tipos como `BARGOER`, `FOODIE`, `HEALTHY_BIKER`, `HEALTHY_WALKER`, `NATURE_LOVER`, `RESTO_LOVER`, `SHOPAHOLIC` y `SPORTIVE`. 
+**LEISURE**: 
+
+
+| Tipo           | Traducción                 | Descripción                                                         | Identificador                           |
+| -------------- | -------------------------- | ------------------------------------------------------------------- | --------------------------------------- |
+| Bar Goer       | Asiduo concurrente a bares | Disfruta de las salidas nocturnas en pubs o bares                   | `leisure.entertainment.bar_goer`        |
+| Foodie         | Amante de la comida        | Entusiasta de la comida fresca, compra comida con frecuencia        | `leisure.shopping.foodie`               |
+| Healthy Biker  | Ciclista saludable         | Usa la bicicleta con frecuencia para largas distancias              | `leisure.wellbeing.healthy_biker`       |
+| Healthy Walker | Caminante saludable        | Camina con frecuencia largas distancias                             | `leisure.wellbeing.healthy_walker`      |
+| Nature Lover   | Amante de la naturaleza    | Le gusta ir a parques, jardines públicos, zoos o reservas naturales | `leisure.entertainment.nature_lover`    |
+| Resto Lover    | Amante de restaurantes     | Le gusta comer fuera                                                | `leisure.wining_and_dining.resto_lover` |
+| Shopaholic     | Comprador compulsivo       | Realiza compras con mucha frecuencia                                | `leisure.shopping.shopaholic`           |
+| Sportive       | Deportista                 | Practica deporte con regularidad                                    | `leisure.wellbeing.sportive`            |
+
 
 ## Tiempo Semántico (`semanticTime`)
 
@@ -58,9 +71,3 @@ El `semanticTime` es personal y relativo al usuario, con los siguientes valores 
 
 Esto permite saber, por ejemplo, cuándo es el momento adecuado para interactuar con el usuario (por ejemplo, enviar una notificación justo cuando sale del trabajo al mediodía). 
 
-## Atributos del Segmento
-
-Cada segmento puede tener atributos asociados con dos campos: [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_edddc53a-a68e-4979-b222-14696b40f15f/e19497ec-bade-4300-a198-28161a191ee2/Driving-Lifestyle-insights-data-dictionary.xlsx)
-
-- `**name**`: método de cálculo del valor
-- `**value**`: valor del atributo (numérico)
