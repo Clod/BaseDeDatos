@@ -1873,7 +1873,6 @@ Los registros de depuración y logs técnicos del SDK se capturan en un formato 
   }
 }
 ```
-```
 
 ---
 
