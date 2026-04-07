@@ -157,10 +157,8 @@ Cada elemento del array genera **una fila** en `DrivingInsightsPhoneEvent`.
 | `startTimeEpoch`    | `number`          | `DrivingInsightsPhoneEvent` | `start_time_epoch`        | UTC en ms |
 | `endTime`           | `string`          | `DrivingInsightsPhoneEvent` | `end_time`                | ISO 8601 |
 | `endTimeEpoch`      | `number`          | `DrivingInsightsPhoneEvent` | `end_time_epoch`          | UTC en ms |
-| `callState`         | `string`          | `DrivingInsightsPhoneEvent` | *(no mapeado)*            | `[omitido]` `"NO_CALL"`, `"CALL_IN_PROGRESS"`, `"UNAVAILABLE"` — no tiene columna dedicada en el esquema actual |
+| `callState`         | `string`          | `DrivingInsightsPhoneEvent` | `call_state`              | `"NO_CALL"`, `"CALL_IN_PROGRESS"`, `"UNAVAILABLE"` |
 | `waypoints`         | `Waypoint[]`      | `DrivingInsightsPhoneEvent` | `waypoints_json`          | Array serializado VARBINARY(MAX) |
-
-> **⚠️ GAP identificado:** El campo `callState` (`"NO_CALL"` | `"CALL_IN_PROGRESS"` | `"UNAVAILABLE"`) de `PhoneUsageEvent` no tiene columna dedicada en `DrivingInsightsPhoneEvent`. Se recomienda agregar `call_state VARCHAR(32)`.
 
 #### 3.1.1. Sub-estructura: `waypoints[]` dentro de PhoneUsageEvent
 
@@ -200,10 +198,8 @@ Cada elemento del array genera **una fila** en `DrivingInsightsCallEvent`.
 | `endTimeEpoch`               | `number`        | `DrivingInsightsCallEvent` | `end_time_epoch`             | UTC en ms |
 | `minTraveledSpeedInMps`      | `number\|null`  | `DrivingInsightsCallEvent` | `min_travelled_speed_mps`    | Velocidad mínima en m/s durante la llamada |
 | `maxTraveledSpeedInMps`      | `number\|null`  | `DrivingInsightsCallEvent` | `max_travelled_speed_mps`    | Velocidad máxima en m/s durante la llamada |
-| `handsFreeState`             | `string`        | `DrivingInsightsCallEvent` | *(no mapeado)*               | `[omitido]` `"HANDS_FREE"` / `"HANDHELD"` / `"UNAVAILABLE"` — sin columna en el esquema actual |
+| `handsFreeState`             | `string`        | `DrivingInsightsCallEvent` | `hands_free_state`           | `"HANDS_FREE"` / `"HANDHELD"` / `"UNAVAILABLE"` |
 | `waypoints`                  | `Waypoint[]`    | `DrivingInsightsCallEvent` | `waypoints_json`             | Array serializado VARBINARY(MAX) |
-
-> **⚠️ GAP identificado:** El campo `handsFreeState` de `CallEvent` no tiene columna en `DrivingInsightsCallEvent`. Se recomienda agregar `hands_free_state VARCHAR(32)`.
 
 #### 4.1.1. Sub-estructura: `waypoints[]` dentro de CallEvent
 

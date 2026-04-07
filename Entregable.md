@@ -201,6 +201,7 @@ erDiagram
 		bigint start_time_epoch
 		datetime2_3 end_time
 		bigint end_time_epoch
+		varchar_32 call_state
 		varbinary_max waypoints_json
 	}
 
@@ -214,6 +215,7 @@ erDiagram
 		bigint end_time_epoch
 		numeric_7_2 min_travelled_speed_mps
 		numeric_7_2 max_travelled_speed_mps
+		varchar_32 hands_free_state
 		varbinary_max waypoints_json
 	}
 
@@ -720,6 +722,7 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                 |
 | `min_travelled_speed_mps`  | NUMERIC(7, 2) | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
 | `max_travelled_speed_mps`  | NUMERIC(7, 2) | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
+| `hands_free_state`         | VARCHAR(32)   | `handsFreeState`       | Estado de manos libres (*"HANDS_FREE", "HANDHELD", "UNAVAILABLE"*). |
 | `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 
@@ -770,6 +773,7 @@ Deriva de `getPhoneUsageEvents()`. Representa los momentos en que el conductor i
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`        | Fin del uso del teléfono.                                           |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`   | Tiempo Unix de fin.                                                 |
+| `call_state`               | VARCHAR(32)   | `callState`      | Estado de llamada (*"NO_CALL", "CALL_IN_PROGRESS", "UNAVAILABLE"*). |
 | `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`    | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
 ---
