@@ -5,7 +5,6 @@ El concepto central de Lifestyle Insights son los segmentos, que clasifican comp
 - `**category**`: `LEISURE` (Ocio), `MOBILITY` (Movilidad), `WORK_LIFE` (Vida laboral)
 - `**subcategory**`: `COMMUTE` (Desplazamiento al trabajo), `DRIVING` (Conducción), `ENTERTAINMENT` (Entretenimiento), `FAMILY` (Familia), `HOME` (Hogar), `SHOPPING` (Compras), `SOCIAL` (Social), `TRANSPORT` (Transporte), `TRAVEL` (Viajes), `WELLBEING` (Bienestar), `WINING_AND_DINING` (Gastronomía), `WORK` (Trabajo)
 - `**type**`: el perfil específico detectado
-- `**attributes**`: lista de atributos con nombre y valor numérico
 
 ### Segmentos por categoría
 
@@ -71,33 +70,3 @@ El `semanticTime` es personal y relativo al usuario, con los siguientes valores 
 
 Esto permite saber, por ejemplo, cuándo es el momento adecuado para interactuar con el usuario (por ejemplo, enviar una notificación justo cuando sale del trabajo al mediodía). 
 
-## Atributos del Segmento
-
-Cada segmento puede tener atributos asociados con dos campos esenciales:
-
-- `**name**`: El nombre técnico del atributo (ej. `smooth_driving_score`).
-- `**value**`: El valor numérico del atributo (`float` o `double`).
-
-### Significado de los Valores Numéricos
-
-Basado en la documentación técnica de Sentiance:
-
-1. **Escala de Puntajes (0.0 a 1.0)**:
-  La mayoría de los atributos que representan "Scores" (como en *Driving Insights*) están normalizados. Un valor cercano a **1.0** indica un comportamiento óptimo o una alta adherencia, mientras que valores cercanos a **0.0** indican lo contrario.
-2. **Proporciones y Porcentajes**:
-  Algunos atributos representan la proporción de tiempo o distancia (ej. el atributo `Focus` mide el porcentaje de tiempo que el usuario estuvo concentrado y no manipuló el teléfono).
-3. **Intensidad de Perfiles**:
-  Para los segmentos de tipo "Profile", el valor numérico representa niveles de intensidad:
-  - **LIMITED** (Limitado)
-  - **MODERATE** (Moderado)
-  - **HIGH** (Alto)
-4. **Valores Especiales (Valor -1)**:
-  Un valor de **-1** indica que el SDK **no pudo calcular el puntaje** para ese segmento específico. Las razones comunes incluyen:
-  - Trayectos demasiado cortos (duración < 3 min o distancia < 2 km).
-  - Mala calidad de los datos de los sensores (GPS impreciso o ruidos en la señal).
-  - Datos insuficientes para realizar la normalización poblacional.
-
-> [!TIP]
-> Un puntaje promedio de seguridad general (`OverallSafety`) inferior a **0.7** suele utilizarse como umbral para identificar conductores con margen de mejora.
-
----
