@@ -601,6 +601,8 @@ Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (co
 
 > **⚠️ Nota de Normalización y Almacenamiento:** Aunque el objeto nativo extraído `events[]` contiene un voluminoso array de `waypoints` (coordenadas en milisegundos del trayecto), este campo fue **omitido intencionalmente** del esquema `UserContextEventDetail`. Para evitar duplicidad extrema de Megabytes en JSON, dichos recorridos se almacenan de manera única en la tabla pivote `**Trip**`.
 
+> **⚠️ Nota sobre `venue.location`:** El SDK modela `venue.location` como un `GeoLocation` independiente de `event.location`. Sin embargo, para eventos `STATIONARY` ambos coinciden en la práctica (el venue se infiere a partir de la ubicación del evento). Adicionalmente, Sentiance usa Venue Type Mapping deliberadamente impreciso por privacidad y no expone ubicaciones exactas de venues. Por estos motivos, `venue.location` se **omite intencionalmente** y se retiene únicamente `event.location` (columnas `location_latitude/longitude/accuracy`). Esta misma omisión aplica a la tabla `TimelineEventHistory`.
+
 #### 3.3.4. `UserContextActiveSegmentDetail`
 
 Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos inferidos).
@@ -1112,11 +1114,11 @@ ALTER TABLE UserContextActiveSegmentDetail ADD CONSTRAINT chk_seg_category
 
 -- UserContextUpdateCriteria
 ALTER TABLE UserContextUpdateCriteria ADD CONSTRAINT chk_criteria_code
-  CHECK (criteria_code IN ('CURRENT_EVENT','ACTIVE_SEGMENTS','VISITED_VENUES'));
+  CHECK (criteria_code IN ('CURRENT_EVENT','ACTIVE_SEGMENTS','VISITED_VENUES','MANUAL_REQUEST'));
 
 -- SentianceEventos
 ALTER TABLE SentianceEventos ADD CONSTRAINT chk_tipo
-  CHECK (tipo IN ('UserContextUpdate','TimelineUpdate','DrivingInsightsReady','CrashEvent'));
+  CHECK (tipo IN ('UserContextUpdate','requestUserContext','TimelineUpdate','DrivingInsightsReady','CrashEvent'));
 ```
 
 ## 3.9. Seguridad

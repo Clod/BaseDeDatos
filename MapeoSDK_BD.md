@@ -59,6 +59,7 @@ Representa el viaje motorizado al que corresponden los insights.
 | `transportEvent.occupantRole`     | `OccupantRole` | `Trip`                  | `occupant_role`                    | Idem (vía MERGE) |
 | `transportEvent.transportTags`    | `object`       | `DrivingInsightsTrip`   | `transport_tags_json`              | Serializado VARBINARY(MAX) |
 | `transportEvent.transportTags`    | `object`       | `Trip`                  | `transport_tags_json`              | Idem (vía MERGE) |
+| `transportEvent.type`             | `string`       | —                       | *(campo omitido)*                  | `[omitido]` Siempre `"IN_TRANSPORT"` para DrivingInsights (solo se emiten insights para transportes finalizados). No aporta información discriminante. |
 | `transportEvent.isProvisional`    | `boolean`      | `Trip`                  | `is_provisional`                   | Para `DrivingInsights`, siempre `false` (evento final) |
 | `transportEvent.waypoints`        | `Waypoint[]`   | `Trip`                  | `waypoints_json`                   | Único punto de almacenamiento de coordenadas. Serializado VARBINARY(MAX). |
 | `transportEvent.waypoints`        | `Waypoint[]`   | `DrivingInsightsTrip`   | *(campo omitido)*                  | `[omitido]` Para evitar duplicación masiva de datos GPS. |
@@ -356,6 +357,7 @@ Cada elemento del array genera **una fila** en `UserContextEventDetail`.
 | `location.accuracy`    | `number\|null`        | `UserContextEventDetail` | `location_accuracy`     | Solo para `STATIONARY` |
 | `venue.significance`   | `VenueSignificance\|null` | `UserContextEventDetail` | `venue_significance` | Solo para `STATIONARY` |
 | `venue.type`           | `VenueType\|null`     | `UserContextEventDetail` | `venue_type`            | Solo para `STATIONARY` |
+| `venue.location`       | `GeoLocation\|null`   | —                        | *(campo omitido)*       | `[omitido]` El SDK modela `venue.location` como independiente de `event.location`, pero en la práctica coinciden para eventos STATIONARY (el venue se infiere a partir de la ubicación del evento). Además, Sentiance usa Venue Type Mapping deliberadamente impreciso por privacidad (no expone ubicaciones exactas de venues). Se retiene solo `event.location` (columnas `location_latitude/longitude/accuracy`). |
 | `waypoints`            | `Waypoint[]`          | `UserContextEventDetail` | *(omitido)*             | `[omitido]` Se almacena en `Trip.waypoints_json` para evitar duplicación. |
 
 ---
@@ -421,6 +423,7 @@ El payload es un **array de objetos `Event`**. Cada elemento genera **una fila**
 | `location.accuracy`    | `number\|null`        | `TimelineEventHistory` | `location_accuracy`      | Solo para `STATIONARY` |
 | `venue.significance`   | `VenueSignificance\|null` | `TimelineEventHistory` | `venue_significance` | Solo para `STATIONARY` |
 | `venue.type`           | `VenueType\|null`     | `TimelineEventHistory` | `venue_type`             | Solo para `STATIONARY` |
+| `venue.location`       | `GeoLocation\|null`   | —                      | *(campo omitido)*         | `[omitido]` Misma justificación que sección 7.2.4: `venue.location` coincide con `event.location` para STATIONARY, y Sentiance no expone ubicaciones exactas de venues por privacidad. |
 | `waypoints`            | `Waypoint[]`          | `Trip`                 | `waypoints_json`         | Si `type = "IN_TRANSPORT"`, los waypoints se almacenan en `Trip` vía MERGE. |
 
 #### 9.1.1. Sub-estructura: `waypoints[]` (Event de tipo IN_TRANSPORT)
