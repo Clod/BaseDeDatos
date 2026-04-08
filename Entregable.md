@@ -315,6 +315,8 @@ erDiagram
 		bit is_provisional
 		varbinary_max transport_tags_json
 		varbinary_max waypoints_json
+		varchar_255 start_location_json
+		varchar_255 end_location_json
 		datetime2_3 created_at
 		datetime2_3 updated_at
 	}
@@ -893,6 +895,8 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `is_provisional`               | BIT           | `isProvisional`       | Flag para distinguir borradores de viajes finales definitivos.                |
 | `transport_tags_json`          | VARBINARY(MAX)| `transportTags`       | Tags adicionales del transporte en formato JSON.                              |
 | `waypoints_json`               | VARBINARY(MAX)| `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
+| `start_location_json`          | VARCHAR(255)  | Primera locación      | Posición de inicio (extraída del primer waypoint o inferida).                 |
+| `end_location_json`            | VARCHAR(255)  | Última locación       | Posición de destino (extraída del último waypoint o inferida).                |
 | `created_at`                   | DATETIME2(3)  | Auto                  | Fecha de creación técnica del registro.                                       |
 | `updated_at`                   | DATETIME2(3)  | Auto                  | Fecha de última actualización técnica del registro.                           |
 
