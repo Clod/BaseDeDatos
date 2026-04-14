@@ -267,6 +267,10 @@ erDiagram
 		varchar_32 detection_status
 		varchar_32 location_permission
 		bit precise_location_granted
+		bit is_bg_access_permission_granted
+		bit can_monitor_geofences
+		bit is_google_play_services_missing
+		varchar_32 location_setting
 		varchar_32 quota_status_wifi
 		varchar_32 quota_status_mobile
 		varchar_32 quota_status_disk
@@ -829,6 +833,10 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | `detection_status`         | VARCHAR(32) | `detectionStatus`                                     | Estado operativo de detección.    |
 | `location_permission`      | VARCHAR(32) | `locationPermission`                                  | Permisos del sistema operativo.   |
 | `precise_location_granted` | BIT       | `isPreciseLocationGranted`                            | Si se tiene precisión GPS total.  |
+| `is_bg_access_permission_granted` | BIT | `isBgAccessPermGranted` (iOS) | Permiso de acceso en segundo plano. |
+| `can_monitor_geofences` | BIT | `canMonitorGeofences` (iOS) | Capacidad de monitoreo de geofences. |
+| `is_google_play_services_missing` | BIT | `isGooglePlayServicesMissing` (Android) | Disponibilidad de Google Play Services. |
+| `location_setting` | VARCHAR(32) | `locationSetting` (Android) | Configuración de ubicación del sistema. |
 | `quota_status_wifi`        | VARCHAR(32) | `quotaStatusWiFi`                                     | Estado de cuota en WiFi.          |
 | `quota_status_mobile`      | VARCHAR(32) | `quotaStatusMobile`                                   | Estado de cuota en datos móviles. |
 | `quota_status_disk`        | VARCHAR(32) | `quotaStatusDisk`                                     | Estado de cuota en disco.         |
