@@ -213,8 +213,8 @@ erDiagram
 		bigint start_time_epoch
 		datetime2_3 end_time
 		bigint end_time_epoch
-		numeric_7_2 min_travelled_speed_mps
-		numeric_7_2 max_travelled_speed_mps
+		numeric_7_2 min_traveled_speed_mps
+		numeric_7_2 max_traveled_speed_mps
 		varchar_32 hands_free_state
 		varbinary_max waypoints_json
 	}
@@ -728,8 +728,8 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`       | Tiempo Unix de inicio.                                              |
 | `end_time`                 | DATETIME2(3)  | `endTime`              | Fin de la llamada.                                                  |
 | `end_time_epoch`           | BIGINT        | `endTimeEpoch`         | Tiempo Unix de fin.                                                 |
-| `min_travelled_speed_mps`  | NUMERIC(7, 2) | `minTravelledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
-| `max_travelled_speed_mps`  | NUMERIC(7, 2) | `maxTravelledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
+| `min_traveled_speed_mps`  | NUMERIC(7, 2) | `minTraveledSpeedMps` | Velocidad mínima durante la llamada (metros por segundo).           |
+| `max_traveled_speed_mps`  | NUMERIC(7, 2) | `maxTraveledSpeedMps` | Velocidad máxima durante la llamada (metros por segundo).           |
 | `hands_free_state`         | VARCHAR(32)   | `handsFreeState`       | Estado de manos libres (*"HANDS_FREE", "HANDHELD", "UNAVAILABLE"*). |
 | `waypoints_json`           | VARBINARY(MAX)| `waypoints[]`          | Array de puntos del evento (Lat/Long/Alt) en formato JSON string.   |
 
@@ -1459,8 +1459,8 @@ Para la implementación del Pipeline de Ingestión, el equipo de Backend debe se
     "startTimeEpoch": 1698223200000,
     "endTime": "2023-10-25T08:42:00.000Z",
     "endTimeEpoch": 1698223320000,
-    "minTravelledSpeedInMps": 10.5,
-    "maxTravelledSpeedInMps": 22.3,
+    "minTraveledSpeedInMps": 10.5,
+    "maxTraveledSpeedInMps": 22.3,
     "waypoints": [ ... ]
   }
 ]
@@ -1661,8 +1661,8 @@ export type CallEvent = DrivingEvent & {
 
 /** @deprecated Usar CallEvent en su lugar. */
 export interface CallWhileMovingEvent extends DrivingEvent {
-  maxTravelledSpeedInMps?: number;
-  minTravelledSpeedInMps?: number;
+  maxTraveledSpeedInMps?: number;
+  minTraveledSpeedInMps?: number;
 }
 
 /** Periodo de exceso de velocidad. Hereda todos los campos de DrivingEvent. */
