@@ -21,3 +21,39 @@ To prevent accidental or unsolicited changes to files:
 4. **No Assumptions**: If a request is vague, ask for the exact line number or field name before editing.
 5. **User-Defined Boundaries**: If the user specifies a range (e.g., "from line X to Y" or "within section Z"), you MUST restrict ALL modifications to that exact space. Modifying any character outside these bounds (including headers or adjacent rows) is a CRITICAL FAILURE.
 6. **Detailed Foreign Keys**: Whenever you add or describe a Foreign Key (FK), the explanation MUST explicitly include the target table and the target field name it refers to (e.g., `Table(field)`).
+<!-- TRELLIS:START -->
+# Trellis Instructions
+
+These instructions are for AI assistants working in this project.
+
+Use the `/trellis:start` command when starting a new session to:
+- Initialize your developer identity
+- Understand current project context
+- Read relevant guidelines
+
+Use `@/.trellis/` to learn:
+- Development workflow (`workflow.md`)
+- Project structure guidelines (`spec/`)
+- Developer workspace (`workspace/`)
+
+Keep this managed block so 'trellis update' can refresh the instructions.
+
+<!-- TRELLIS:END -->
+<!-- TRELLIS:START -->
+# Trellis Instructions
+
+These instructions are for AI assistants working in this project.
+
+Use the `/trellis:start` command when starting a new session to:
+- Initialize your developer identity
+- Understand current project context
+- Read relevant guidelines
+
+Use `@/.trellis/` to learn:
+- Development workflow (`workflow.md`)
+- Project structure guidelines (`spec/`)
+- Developer workspace (`workspace/`)
+
+Keep this managed block so 'trellis update' can refresh the instructions.
+
+<!-- TRELLIS:END -->
