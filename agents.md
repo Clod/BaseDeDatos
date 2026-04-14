@@ -13,14 +13,6 @@ Before providing any reasoning, answering questions, or proposing code related t
 3. **No Assumptions**: Do not rely on external knowledge if it contradicts or is not present in the local documentation.
 4. **Citations**: When possible, cite the specific documentation file from `scraped_site/` used to support your answer.
 
-## 🛑 Strict Editing Constraint
-To prevent accidental or unsolicited changes to files:
-1. **Minimum Scope**: You are STRICTLY FORBIDDEN from modifying any line of code or text that the user did not explicitly ask to change.
-2. **Context Preservation**: Do not "cleanup", "refactor", or "improve" any surrounding code or text unless specifically instructed.
-3. **Double-Check Range**: Before applying a `replace_file_content` or `multi_replace_file_content` call, verify that the `StartLine` and `EndLine` cover ONLY the intended target.
-4. **No Assumptions**: If a request is vague, ask for the exact line number or field name before editing.
-5. **User-Defined Boundaries**: If the user specifies a range (e.g., "from line X to Y" or "within section Z"), you MUST restrict ALL modifications to that exact space. Modifying any character outside these bounds (including headers or adjacent rows) is a CRITICAL FAILURE.
-6. **Detailed Foreign Keys**: Whenever you add or describe a Foreign Key (FK), the explanation MUST explicitly include the target table and the target field name it refers to (e.g., `Table(field)`).
 <!-- TRELLIS:START -->
 # Trellis Instructions
 
