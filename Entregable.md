@@ -640,6 +640,10 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 
 Lugares frecuentes estables `home` y `work` del `UserContext`.
 
+> **Nota sobre el proceso de actualización**: 
+> A diferencia de otras tablas de perfil, estas son de **historial**. Cada vez que la App recibe un `UserContextUpdate` (automático) o se invoca `requestUserContext` (manual), el ETL inserta una nueva fila con la ubicación detectada en ese instante. Esto permite trazar la evolución de la ubicación de casa/trabajo, ya que el SDK las refina continuamente a medida que procesa más datos. Están ancladas a la tabla `UserContextHeader` mediante el campo `user_context_payload_id`.
+
+
 
 | Campo                           | Tipo      | Mapeo Sentiance                                                  |
 | ------------------------------- | --------- | ---------------------------------------------------------------- |
