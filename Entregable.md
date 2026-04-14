@@ -1941,3 +1941,27 @@ sequenceDiagram
         deactivate ETL
     end
 ```
+
+---
+
+## 6. Lógica y Restricciones de Integridad (Logic & Constraints)
+
+Para asegurar la calidad de los datos y la alineación técnica con el SDK de Sentiance, se deben observar las siguientes reglas de implementación:
+
+### 6.1. Manejo de Eventos Provisionales (Ongoing Events)
+El SDK emite eventos con el flag `is_provisional = 1` mientras el usuario está en movimiento. Estos registros son fundamentales para el monitoreo en tiempo real, pero deben ser tratados con precaución:
+- **Nullability**: Las columnas `end_time`, `end_time_epoch` y `duration_in_seconds` deben permitir valores `NULL`, ya que el evento aún no ha concluido.
+- **De-duplicación**: Los eventos provisionales tienen IDs que **no coinciden** con el ID del evento final definitivo. El sistema debe conservar ambos, permitiendo al analista filtrar mediante `WHERE is_provisional = 0` para reportes históricos limpios.
+
+### 6.2. Precisión y Unidades de Medida
+- **Velocidad**: Se utiliza estrictamente **Metros por Segundo (mps)**. El tipo de dato `NUMERIC(7,2)` permite almacenar hasta 9,999.99 mps, cubriendo cualquier escenario vehicular.
+- **Coordenadas**: El uso de `DECIMAL(10,8)` y `DECIMAL(11,8)` garantiza una precisión sub-milimétrica, necesaria para el trazado exacto de trayectorias y reconstrucción de accidentes.
+- **Crash Analytics**: Para el análisis de colisiones en `VehicleCrashEvent`, se recomienda mantener la precisión de 3 decimales en campos de fuerza y magnitud (`magnitude`, `delta_v`) para auditorías forenses de seguros.
+
+### 6.3. Convenciones de Nomenclatura (Naming Strategy)
+Aunque el backend está documentado en español, los nombres de las columnas técnicos y mapeos siguen la convención **American English (US)** del SDK de Sentiance (ej. `traveled` con una sola 'l'). 
+- **Razón**: Esto minimiza la fricción en la capa de transformación (ETL), permitiendo mapeos directos entre los objetos JSON y las tablas SQL, reduciendo errores de codificación y facilitando el mantenimiento.
+
+### 6.4. Expansibilidad de Categorías
+Sentiance actualiza sus clasificaciones de `segment_type` y `transport_mode` desde la nube. 
+- **Regla**: Las restricciones `CHECK` en la base de datos deben ser revisadas periódicamente contra la documentación oficial. Se recomienda que el backend maneje una "Graceful Degradation", permitiendo insertar valores nuevos si no están en el enum, alertando al equipo de datos para actualizar los catálogos.
