@@ -280,6 +280,14 @@ erDiagram
 		datetime2_3 captured_at
 	}
 
+	UserMetadata {
+		bigint metadata_id PK
+		varchar_64 sentiance_user_id FK
+		varchar_255 label
+		nvarchar_max value
+		datetime2_3 updated_at
+	}
+
 	UserActivityHistory {
 		bigint user_activity_history_id PK
 		bigint source_event_id FK
@@ -348,6 +356,7 @@ erDiagram
 	Trip||--o{DrivingInsightsTrip:"es el ancestro de"
 	TimelineEventHistory}o--||Trip:"alimenta a"
 	UserContextEventDetail}o--||Trip:"alimenta a"
+	SentianceUser||--o{UserMetadata:"posee"
 ```
 
 ---
@@ -513,6 +522,26 @@ Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON
 | `source_event_ref`  | VARCHAR(64) | ID de referencia directa (`event.id` o `transportEvent.id`)           |
 | `payload_hash`      | VARCHAR(64) | Hash MD5/SHA para determinar unicidad de JSONs procesados             |
 | `created_at`        | DATETIME2(3)| Tiempo Interno de normalización                                       |
+
+
+#### 3.1.3. `UserMetadata`
+
+Esta tabla almacena los metadatos personalizados asociados a un usuario a través del método `addUserMetadataField` del SDK.
+
+**Finalidad Detallada**:
+El SDK de Sentiance genera un `sentiance_user_id` aleatorio al inicializarse. Para que estos datos tengan valor de negocio, deben vincularse con la identidad interna del usuario (ej. `AccountID`, `Email`, `EmployeeNumber`).
+- **Mapeo de Identidad**: Es la tabla recomendada para almacenar el "External ID" o cualquier etiqueta personalizada enviada desde la App.
+- **Flexibilidad**: Permite almacenar múltiples pares Clave-Valor sin modificar el esquema de la base de datos cada vez que se requiera un nuevo atributo de usuario.
+- **Trazabilidad**: Registra la última fecha de actualización de cada metadato.
+
+
+| Campo               | Tipo          | Mapeo Sentiance y Detalles                                    | Notas |
+| ------------------- | ------------- | ------------------------------------------------------------- | ----- |
+| `metadata_id`       | BIGINT PK     | Auto-Generado Interno (IDENTITY 1,1)                          | -     |
+| `sentiance_user_id` | VARCHAR(64) FK| Identificador del usuario de Sentiance.                       | -     |
+| `label`             | VARCHAR(255)  | Nombre/Clave del metadato (ej: `"external_id"`, `"region"`).  | -     |
+| `value`             | NVARCHAR(MAX) | Valor del metadato (soporta strings extensos o fragmentos JSON). | -     |
+| `updated_at`        | DATETIME2(3)  | Fecha de la última actualización del metadato.                | -     |
 
 
 **Nota**: tal vez convendría guardar la fecha también en formato legible por 
