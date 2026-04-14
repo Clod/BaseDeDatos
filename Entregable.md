@@ -256,6 +256,7 @@ erDiagram
 		numeric_4_3 confidence
 		varchar_32 severity
 		varchar_32 detector_mode
+		varchar_32 location_provider
 		varbinary_max preceding_locations_json
 	}
 
@@ -541,7 +542,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | `end_time_epoch`            | BIGINT        | `endTimeEpoch`        | UTC milisegundos                                                                                                                                                        |
 | `duration_in_seconds`       | NUMERIC(10, 0)| `durationInSeconds`   | Nulo si no culminó                                                                                                                                                      |
 | `is_provisional`            | BIT           | `isProvisional`       | Determina si es `true` (en curso) o `false` (final)                                                                                                                     |
-| `transport_mode`            | VARCHAR(32)   | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE"*                                                                |
+| `transport_mode`            | VARCHAR(32)   | `transportMode`       | Enum estricto: *"UNKNOWN", "BICYCLE", "WALKING", "RUNNING", "TRAM", "TRAIN", "CAR", "BUS", "MOTORCYCLE", "PLANE", "BOAT", "METRO"*                                                                |
 | `distance_meters`           | NUMERIC(12, 2)| `distance`            | Distancia del transporte en metros                                                                                                                                      |
 | `occupant_role`             | VARCHAR(32)   | `occupantRole`        | *"DRIVER", "PASSENGER", "UNAVAILABLE"*                                                                                                                                  |
 | `transport_tags_json`       | VARBINARY(MAX)| `transportTags`       | String JSON del objeto Key-Value asignado.                                                                                                                              |
@@ -597,7 +598,7 @@ Los motivos de actualización extraídos del arreglo `criteria[]`.
 | --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_context_update_criteria_id` | BIGINT PK | Auto                                                                                                                                                                                                                                                                                                          |
 | `user_context_payload_id`         | BIGINT FK | FK referenciando a `UserContextHeader(user_context_payload_id)`.                                                                                                                                                                                                                                              |
-| `criteria_code`                   | VARCHAR(32) | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*. |
+| `criteria_code`                   | VARCHAR(32) | Indica el motivo de la actualización. Un `UserContextUpdate` puede tener múltiples motivos simultáneos (ej. cambió el evento y se actualizaron segmentos), por lo que se debe insertar un registro por cada elemento del array recibido. Valores: *"CURRENT_EVENT"*, *"ACTIVE_SEGMENTS"*, *"VISITED_VENUES"*, *"MANUAL_REQUEST"*. |
 
 
 #### 3.3.3. `UserContextEventDetail`
@@ -622,7 +623,7 @@ Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos i
 | `segment_id`                      | VARCHAR(64)       | `id` (Identificador del Segmento)                                |
 | `category`                        | VARCHAR(32)       | `category` (*"LEISURE", "MOBILITY", "WORK_LIFE"*)                |
 | `subcategory`                     | VARCHAR(32)       | `subcategory` (*"SHOPPING", "SOCIAL", "TRANSPORT"*)              |
-| `segment_type`                    | VARCHAR(32)       | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER"*)            |
+| `segment_type`                    | VARCHAR(32)       | `type` (*"CITY_WORKER", "EARLY_BIRD", "RESTO_LOVER", "AGGRESSIVE_DRIVER", "DISTRACTED_DRIVER"*)            |
 | `start_time` / `start_time_epoch` | DATETIME2(3) / BIGINT | `startTime` / `startTimeEpoch`                                   |
 | `end_time` / `end_time_epoch`     | DATETIME2(3) / BIGINT | `endTime` / `endTimeEpoch`                                       |
 
@@ -814,6 +815,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
 | `severity`                 | VARCHAR(32)   | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
 | `detector_mode`            | VARCHAR(32)   | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
+| `location_provider`       | VARCHAR(32)   | `location.provider` (Android)                     | Identifica el proveedor de ubicación (GPS, Network).  |
 | `preceding_locations_json` | VARBINARY(MAX)| Stringificado del JSON Array `precedingLocations` |                                                       |
 
 
@@ -1095,7 +1097,7 @@ ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_event_type
   CHECK (event_type IN ('UNKNOWN','STATIONARY','OFF_THE_GRID','IN_TRANSPORT'));
 
 ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_transport_mode
-  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE') OR transport_mode IS NULL);
+  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE','PLANE','BOAT','METRO') OR transport_mode IS NULL);
 
 ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_occupant_role
   CHECK (occupant_role IN ('DRIVER','PASSENGER','UNAVAILABLE') OR occupant_role IS NULL);
@@ -1105,7 +1107,7 @@ ALTER TABLE TimelineEventHistory ADD CONSTRAINT chk_tl_venue_significance
 
 -- Trip
 ALTER TABLE Trip ADD CONSTRAINT chk_trip_transport_mode
-  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE'));
+  CHECK (transport_mode IN ('UNKNOWN','BICYCLE','WALKING','RUNNING','TRAM','TRAIN','CAR','BUS','MOTORCYCLE','PLANE','BOAT','METRO'));
 
 ALTER TABLE Trip ADD CONSTRAINT chk_trip_occupant_role
   CHECK (occupant_role IN ('DRIVER','PASSENGER','UNAVAILABLE') OR occupant_role IS NULL);
