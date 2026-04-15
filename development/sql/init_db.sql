@@ -2,13 +2,11 @@
 VictaTMTK - Local Environment Initialization
 ============================================
 This script recreates the database schema for local development.
-It includes both the Stage 1 Landing Zone and Stage 2 Domain Model.
 */
 
 USE master;
 GO
 
--- Create database if it doesn't exist
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'VictaTMTK')
 BEGIN
     CREATE DATABASE VictaTMTK;
@@ -18,11 +16,7 @@ GO
 USE VictaTMTK;
 GO
 
--------------------------------------------------------------------------------
--- STAGE 1: LANDING ZONE & AUDIT
--------------------------------------------------------------------------------
-
--- 1. Raw Payloads
+-- 1. Raw Payloads & Audit
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SentianceEventos')
 BEGIN
     CREATE TABLE SentianceEventos (
@@ -32,12 +26,11 @@ BEGIN
         tipo VARCHAR(32),
         created_at DATETIME2(3) DEFAULT GETDATE(),
         is_processed BIT DEFAULT 0,
-        procesado BIT DEFAULT 0, -- Legacy support
+        procesado BIT DEFAULT 0,
         app_version VARCHAR(32)
     );
 END
 
--- 2. Error Shadow Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SentianceEventos_Errors')
 BEGIN
     CREATE TABLE SentianceEventos_Errors (
@@ -51,12 +44,11 @@ BEGIN
     );
 END
 
--- 3. Audit Trail
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SdkSourceEvent')
 BEGIN
     CREATE TABLE SdkSourceEvent (
         source_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        id BIGINT NOT NULL, -- Reference to SentianceEventos
+        id BIGINT NOT NULL,
         record_type VARCHAR(32),
         sentiance_user_id VARCHAR(64),
         source_time DATETIME2(3),
@@ -66,11 +58,7 @@ BEGIN
     );
 END
 
--------------------------------------------------------------------------------
--- STAGE 2: DOMAIN MODEL (Consolidated)
--------------------------------------------------------------------------------
-
--- 4. Central Trip Table
+-- 2. Domain Model
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Trip')
 BEGIN
     CREATE TABLE Trip (
@@ -96,7 +84,6 @@ BEGIN
     );
 END
 
--- 5. Driving Insights (Scores & Harsh Events)
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsTrip')
 BEGIN
     CREATE TABLE DrivingInsightsTrip (
@@ -139,7 +126,7 @@ BEGIN
     );
 END
 
--- 6. User Context (Segments & History)
+-- 3. User Context Tables (NEWLY ADDED)
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextHeader')
 BEGIN
     CREATE TABLE UserContextHeader (
@@ -164,6 +151,32 @@ BEGIN
     );
 END
 
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserHomeHistory')
+BEGIN
+    CREATE TABLE UserHomeHistory (
+        user_home_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_payload_id BIGINT NOT NULL,
+        significance VARCHAR(32),
+        venue_type VARCHAR(32),
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        accuracy NUMERIC(12, 2)
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserWorkHistory')
+BEGIN
+    CREATE TABLE UserWorkHistory (
+        user_work_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_payload_id BIGINT NOT NULL,
+        significance VARCHAR(32),
+        venue_type VARCHAR(32),
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        accuracy NUMERIC(12, 2)
+    );
+END
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextActiveSegmentDetail')
 BEGIN
     CREATE TABLE UserContextActiveSegmentDetail (
@@ -182,7 +195,46 @@ BEGIN
     );
 END
 
--- 7. Timeline History
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextSegmentAttribute')
+BEGIN
+    CREATE TABLE UserContextSegmentAttribute (
+        user_context_segment_attr_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_segment_history_id BIGINT NOT NULL,
+        attribute_name VARCHAR(64),
+        attribute_value NUMERIC(18, 4)
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextEventDetail')
+BEGIN
+    CREATE TABLE UserContextEventDetail (
+        user_context_event_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_payload_id BIGINT NOT NULL,
+        sentiance_user_id VARCHAR(64),
+        event_id VARCHAR(64),
+        event_type VARCHAR(32),
+        start_time DATETIME2(3),
+        start_time_epoch BIGINT,
+        last_update_time DATETIME2(3),
+        last_update_time_epoch BIGINT,
+        end_time DATETIME2(3),
+        end_time_epoch BIGINT,
+        duration_in_seconds NUMERIC(10, 0),
+        is_provisional BIT,
+        transport_mode VARCHAR(32),
+        distance_meters NUMERIC(12, 2),
+        occupant_role VARCHAR(32),
+        transport_tags_json VARBINARY(MAX),
+        location_latitude DECIMAL(10, 8),
+        location_longitude DECIMAL(11, 8),
+        location_accuracy NUMERIC(12, 2),
+        venue_significance VARCHAR(32),
+        venue_type VARCHAR(32),
+        created_at DATETIME2(3) DEFAULT GETDATE()
+    );
+END
+
+-- 4. Timeline & Safety
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TimelineEventHistory')
 BEGIN
     CREATE TABLE TimelineEventHistory (
@@ -212,7 +264,6 @@ BEGIN
     );
 END
 
--- 8. Safety Events
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'VehicleCrashEvent')
 BEGIN
     CREATE TABLE VehicleCrashEvent (
@@ -253,4 +304,4 @@ BEGIN
     );
 END
 
-PRINT 'Schema initialization completed successfully.';
+PRINT 'Local schema updated with missing User Context tables.';
