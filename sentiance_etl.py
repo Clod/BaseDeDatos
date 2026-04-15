@@ -29,6 +29,7 @@ import gzip
 import pyodbc
 import hashlib
 import logging
+import traceback
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -103,6 +104,26 @@ class SentianceETL:
         if self.conn:
             logger.info("Closing database connection.")
             self.conn.close()
+
+    def log_error_to_db(self, original_id, sentiance_id, tipo, raw_json, error_msg):
+        """
+        Records a failed processing attempt in the SentianceEventos_Errors shadow table.
+        This allows for forensic analysis without modifying the primary raw table.
+        """
+        try:
+            logger.warning(
+                f"Logging failure for record {original_id} to shadow table..."
+            )
+            sql = """
+                INSERT INTO SentianceEventos_Errors (original_id, sentiance_user_id, tipo, raw_json, error_message)
+                VALUES (?, ?, ?, ?, ?)
+            """
+            self.cursor.execute(
+                sql, (original_id, sentiance_id, tipo, raw_json, error_msg)
+            )
+            # We don't commit here; it will be committed along with the is_processed = -1 update.
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to write to error shadow table: {e}")
 
     def compress_data(self, data):
         """
@@ -526,13 +547,23 @@ class SentianceETL:
 
                 except Exception as e:
                     self.conn.rollback()
+                    full_traceback = traceback.format_exc()
                     logger.error(f"FAILED record {raw_id}: {e}")
-                    # Mark as failed to prevent blocking the queue
+
+                    # 1. Capture the failure in the shadow table for forensic analysis
+                    self.log_error_to_db(
+                        raw_id, sentiance_id, tipo, raw_json, full_traceback
+                    )
+
+                    # 2. Mark original as toxic (-1) so it doesn't block the queue
                     self.cursor.execute(
                         "UPDATE SentianceEventos SET is_processed = -1 WHERE id = ?",
                         (raw_id,),
                     )
                     self.conn.commit()
+                    logger.warning(
+                        f"Record {raw_id} marked as FAILED (-1) and logged to shadow table."
+                    )
 
             logger.info("Batch execution completed successfully.")
 
