@@ -1,0 +1,583 @@
+[
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "Id",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "Registro",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": true
+  },
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "EventoId",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "usuario",
+    "data_type": "varchar",
+    "max_length": 1000,
+    "is_nullable": true
+  },
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "LeidoFechaHora",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": true
+  },
+  {
+    "table_name": "ChoqueDeVehiculo",
+    "column_name": "json",
+    "data_type": "varchar",
+    "max_length": -1,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "aceleracion",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "uso_telefono",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "curvas",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "celular_fijo",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "frenado",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "exceso_de_velocidad",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "llamados",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Eventos",
+    "column_name": "pantalla",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "aceleracion",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "uso_telefono",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "curvas",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "celular_fijo",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "frenado",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "exceso_velocidad",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "llamados",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "EventosSignificantes",
+    "column_name": "pantalla",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "Id",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "Registro",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "EventoId",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "usuario",
+    "data_type": "varchar",
+    "max_length": 1000,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "LeidoFechaHora",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PerfilDeUsuario",
+    "column_name": "json",
+    "data_type": "varchar",
+    "max_length": -1,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "legal",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "suavidad",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "atencion",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesPrirmariosTr",
+    "column_name": "promedio",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "concentracion",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "aceleracion_fuerte",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "frenado_fuerte",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "curvas_fuertes",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "anticipacion",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "celular_fijo",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "PuntajesSecundariosTr",
+    "column_name": "eventos_fuertes",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "distancia_m",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "polyline",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "puntos_recorrido",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "ubicacion_inicio",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "ubicacion_fin",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Recorridos",
+    "column_name": "maxima_velocidad",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "id",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "sentianceid",
+    "data_type": "varchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "fechahora",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "json",
+    "data_type": "varchar",
+    "max_length": -1,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "tipo",
+    "data_type": "varchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "created_at",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": true
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "procesado",
+    "data_type": "bit",
+    "max_length": 1,
+    "is_nullable": true
+  },
+  {
+    "table_name": "SentianceEventos",
+    "column_name": "app_version",
+    "data_type": "varchar",
+    "max_length": 50,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "IdOffload",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "FechaOffload",
+    "data_type": "date",
+    "max_length": 3,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "usuario",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "viaje",
+    "data_type": "nvarchar",
+    "max_length": 200,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "modo_transporte",
+    "data_type": "nvarchar",
+    "max_length": 100,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "comienzo",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "fin",
+    "data_type": "datetime",
+    "max_length": 8,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "duracion",
+    "data_type": "int",
+    "max_length": 4,
+    "is_nullable": false
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "metadata",
+    "data_type": "text",
+    "max_length": 16,
+    "is_nullable": true
+  },
+  {
+    "table_name": "Transporte",
+    "column_name": "velocidad_maxima",
+    "data_type": "float",
+    "max_length": 8,
+    "is_nullable": false
+  }
+]
