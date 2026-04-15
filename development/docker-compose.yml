@@ -1,4 +1,28 @@
-
+# VictaTMTK - Local SQL Server Infrastructure
+# ==========================================
+# This Docker Compose file sets up a local Microsoft SQL Server environment
+# optimized for Apple Silicon (M1/M2/M3) development.
+#
+# ARCHITECTURE:
+# - Engine: Azure SQL Edge (mcr.microsoft.com/azure-sql-edge)
+#   Chosen because it provides native ARM64 support, ensuring high performance
+#   and stability on Mac computers without needing Rosetta emulation.
+# - Port: 1433 (Standard SQL Server Port)
+#
+# ENVIRONMENT VARIABLES:
+# - ACCEPT_EULA: Required by Microsoft to acknowledge license terms.
+# - MSSQL_SA_PASSWORD: The 'SA' (System Administrator) password for local access.
+#
+# VOLUMES:
+# - sentiance_data: Persistent Docker volume that preserves your database 
+#   tables and records even if the container is deleted.
+# - ./sql: Maps the local initialization scripts into the container for easy access.
+#
+# USAGE:
+# - Start: docker-compose up -d
+# - Stop:  docker-compose down
+# - Wipe Data: docker-compose down -v
+#
 
 services:
   sql-server:
