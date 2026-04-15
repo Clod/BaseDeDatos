@@ -1,7 +1,7 @@
 /*
-VictaTMTK - Local Environment Initialization
-============================================
-This script recreates the database schema for local development.
+VictaTMTK - Complete Database Schema (Sentiance 2026)
+=====================================================
+Ref: Entregable.md & MapeoSDK_BD.md
 */
 
 USE master;
@@ -16,7 +16,10 @@ GO
 USE VictaTMTK;
 GO
 
--- 1. Raw Payloads & Audit
+-------------------------------------------------------------------------------
+-- STAGE 1: LANDING ZONE & AUDIT
+-------------------------------------------------------------------------------
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SentianceEventos')
 BEGIN
     CREATE TABLE SentianceEventos (
@@ -58,7 +61,23 @@ BEGIN
     );
 END
 
--- 2. Domain Model
+-------------------------------------------------------------------------------
+-- STAGE 2: DOMAIN MODEL
+-------------------------------------------------------------------------------
+
+-- 1. Metadata
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserMetadata')
+BEGIN
+    CREATE TABLE UserMetadata (
+        metadata_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        sentiance_user_id VARCHAR(64) NOT NULL,
+        label VARCHAR(255),
+        value NVARCHAR(MAX),
+        updated_at DATETIME2(3) DEFAULT GETDATE()
+    );
+END
+
+-- 2. Central Trip Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Trip')
 BEGIN
     CREATE TABLE Trip (
@@ -79,11 +98,14 @@ BEGIN
         is_provisional BIT DEFAULT 0,
         transport_tags_json VARBINARY(MAX),
         waypoints_json VARBINARY(MAX),
+        start_location_json VARCHAR(255), -- Geocoded address placeholder
+        end_location_json VARCHAR(255),   -- Geocoded address placeholder
         created_at DATETIME2(3) DEFAULT GETDATE(),
         updated_at DATETIME2(3) DEFAULT GETDATE()
     );
 END
 
+-- 3. Driving Insights
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsTrip')
 BEGIN
     CREATE TABLE DrivingInsightsTrip (
@@ -126,7 +148,67 @@ BEGIN
     );
 END
 
--- 3. User Context Tables (NEWLY ADDED)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsPhoneEvent')
+BEGIN
+    CREATE TABLE DrivingInsightsPhoneEvent (
+        phone_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        driving_insights_trip_id BIGINT NOT NULL,
+        start_time DATETIME2(3),
+        start_time_epoch BIGINT,
+        end_time DATETIME2(3),
+        end_time_epoch BIGINT,
+        call_state VARCHAR(32),
+        waypoints_json VARBINARY(MAX)
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsCallEvent')
+BEGIN
+    CREATE TABLE DrivingInsightsCallEvent (
+        call_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        driving_insights_trip_id BIGINT NOT NULL,
+        start_time DATETIME2(3),
+        start_time_epoch BIGINT,
+        end_time DATETIME2(3),
+        end_time_epoch BIGINT,
+        min_traveled_speed_mps NUMERIC(7, 2),
+        max_traveled_speed_mps NUMERIC(7, 2),
+        hands_free_state VARCHAR(32),
+        waypoints_json VARBINARY(MAX)
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsSpeedingEvent')
+BEGIN
+    CREATE TABLE DrivingInsightsSpeedingEvent (
+        speeding_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        driving_insights_trip_id BIGINT NOT NULL,
+        start_time DATETIME2(3),
+        start_time_epoch BIGINT,
+        end_time DATETIME2(3),
+        end_time_epoch BIGINT,
+        waypoints_json VARBINARY(MAX)
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsWrongWayDrivingEvent')
+BEGIN
+    CREATE TABLE DrivingInsightsWrongWayDrivingEvent (
+        wrong_way_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        driving_insights_trip_id BIGINT NOT NULL,
+        start_time DATETIME2(3),
+        start_time_epoch BIGINT,
+        end_time DATETIME2(3),
+        end_time_epoch BIGINT,
+        waypoints_json VARBINARY(MAX)
+    );
+END
+
+-- 4. User Context
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextHeader')
 BEGIN
     CREATE TABLE UserContextHeader (
@@ -234,7 +316,7 @@ BEGIN
     );
 END
 
--- 4. Timeline & Safety
+-- 5. Timeline & System History
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TimelineEventHistory')
 BEGIN
     CREATE TABLE TimelineEventHistory (
@@ -264,6 +346,35 @@ BEGIN
     );
 END
 
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserActivityHistory')
+BEGIN
+    CREATE TABLE UserActivityHistory (
+        user_activity_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        sentiance_user_id VARCHAR(64),
+        activity_type VARCHAR(32),
+        trip_type VARCHAR(32),
+        stationary_latitude DECIMAL(10, 8),
+        stationary_longitude DECIMAL(11, 8),
+        payload_json NVARCHAR(MAX),
+        captured_at DATETIME2(3) DEFAULT GETDATE()
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TechnicalEventHistory')
+BEGIN
+    CREATE TABLE TechnicalEventHistory (
+        technical_event_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        source_event_id BIGINT NOT NULL,
+        sentiance_user_id VARCHAR(64),
+        technical_event_type VARCHAR(32),
+        message NVARCHAR(MAX),
+        payload_json NVARCHAR(MAX),
+        captured_at DATETIME2(3) DEFAULT GETDATE()
+    );
+END
+
+-- 6. Safety Events
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'VehicleCrashEvent')
 BEGIN
     CREATE TABLE VehicleCrashEvent (
@@ -304,4 +415,4 @@ BEGIN
     );
 END
 
-PRINT 'Local schema updated with missing User Context tables.';
+PRINT 'Full relational schema (Stage 2) successfully initialized.';
