@@ -161,25 +161,25 @@ def load_data(env_selector, limit_selector, tipo_selector, get_conn_str, pyodbc,
     """
     _current_conn_str = get_conn_str(env_selector.value)
     
-    query = f"SELECT TOP {limit_selector.value} id, tipo, sentianceid, created_at, is_processed, json FROM SentianceEventos WHERE is_processed = 1"
+    _query = f"SELECT TOP {limit_selector.value} id, tipo, sentianceid, created_at, is_processed, json FROM SentianceEventos WHERE is_processed = 1"
     if tipo_selector.value != "All":
-        query += f" AND tipo = '{tipo_selector.value}'"
-    query += " ORDER BY id DESC"
+        _query += f" AND tipo = '{tipo_selector.value}'"
+    _query += " ORDER BY id DESC"
     
     try:
         import warnings as _warnings
         _conn = pyodbc.connect(_current_conn_str)
         with _warnings.catch_warnings():
-            _warnings.simplefilter("ignore", UserWarning)
-            raw_df = pd.read_sql(query, _conn)
+            _warnings.simplefilter('ignore', UserWarning)
+            raw_df = pd.read_sql(_query, _conn)
         _conn.close()
         
-        display_df = raw_df[['id', 'tipo', 'sentianceid', 'created_at', 'is_processed']]
-        data_grid = mo.ui.table(display_df, selection="single", label="Select a processed record to inspect:")
+        _display_df = raw_df[['id', 'tipo', 'sentianceid', 'created_at', 'is_processed']]
+        data_grid = mo.ui.table(_display_df, selection="single", label="Select a processed record to inspect:")
         grid_status = mo.md(f"Loaded {len(raw_df)} records from {env_selector.value}")
-    except Exception as e:
+    except Exception as _e:
         raw_df = pd.DataFrame()
-        data_grid = mo.md(f"⚠️ **Error connecting to {env_selector.value}:** {e}")
+        data_grid = mo.md(f"⚠️ **Error connecting to {env_selector.value}:** {_e}")
         grid_status = mo.md("")
         
     return raw_df, data_grid, grid_status
@@ -191,41 +191,45 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
     
     Args:
         data_grid (marimo.ui.table): The interactive table.
-        raw_df (DataFrame): The underlying data.
+        raw_df (DataFrame): The underlying data containing the full JSON payload.
         json, mo, pyodbc: Modules.
         get_conn_str, env_selector: Environment dependencies.
         
     Logic:
-        When a user clicks a row, this function parses the raw JSON. It displays 
-        the formatted JSON in the left pane. On the right pane, it dynamically 
-        queries the child domain tables (like DrivingInsightsHarshEvent) to verify 
-        that the number of records found exactly matches the number of elements 
-        in the JSON array.
+        When a user clicks a row, this function finds the corresponding full record 
+        in raw_df. It parses the JSON for the left pane. On the right pane, it 
+        dynamically queries child domain tables (like DrivingInsightsHarshEvent) to verify 
+        record counts exactly match the JSON array length.
         
     Returns:
         tuple: A marimo layout containing the side-by-side JSON and validation panes.
     """
-    _has_sel = False
+    # 1. Safely evaluate if a selection has been made
+    _has_selection = False
     if hasattr(data_grid, "value") and data_grid.value is not None:
         if hasattr(data_grid.value, "empty"):
-            _has_sel = not data_grid.value.empty
+            _has_selection = not data_grid.value.empty
         elif isinstance(data_grid.value, list):
-            _has_sel = len(data_grid.value) > 0
+            _has_selection = len(data_grid.value) > 0
 
-    if not _has_sel:
+    if not _has_selection:
         inspector_content = mo.md("*Select a row from the table above to view details.*")
     else:
+        # 2. Extract the 'id' from the UI selection and fetch the full row from raw_df
+        # This guarantees we have the 'json' column, even though it's hidden from the UI grid.
         if hasattr(data_grid.value, "iloc"):
-            row = data_grid.value.iloc[0]
+            _selected_id = data_grid.value.iloc[0]['id']
+            _row = raw_df[raw_df['id'] == _selected_id].iloc[0]
         else:
-            row = raw_df.iloc[data_grid.value[0]]
+            _selected_idx = data_grid.value[0]
+            _row = raw_df.iloc[_selected_idx]
         
-        raw_id = row['id']
-        tipo = row['tipo']
-        payload = json.loads(row['json'])
+        _raw_id = _row['id']
+        _tipo = _row['tipo']
+        _payload = json.loads(_row['json'])
         
-        pretty_json = json.dumps(payload, indent=2)
-        left_pane = mo.md(f"### Raw Payload (ID: {raw_id})\n```json\n{pretty_json}\n```")
+        _pretty_json = json.dumps(_payload, indent=2)
+        _left_pane = mo.md(f"### Raw Payload (ID: {_raw_id})\n```json\n{_pretty_json}\n```")
         
         _current_conn_str = get_conn_str(env_selector.value)
         import warnings as _warnings
@@ -247,62 +251,62 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 int: The number of rows found, or -1 if an error occurred.
             """
             try:
-                cursor.execute("SELECT source_event_id FROM SdkSourceEvent WHERE id = ?", (int(raw_id),))
-                sid_row = cursor.fetchone()
-                if not sid_row: return 0
-                sid = sid_row[0]
-                cursor.execute(f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?", (sid,))
-                return cursor.fetchone()[0]
+                _cursor.execute("SELECT source_event_id FROM SdkSourceEvent WHERE id = ?", (int(_raw_id),))
+                _sid_row = _cursor.fetchone()
+                if not _sid_row: return 0
+                _sid = _sid_row[0]
+                _cursor.execute(f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?", (_sid,))
+                return _cursor.fetchone()[0]
             except Exception:
                 return -1
                 
-        validation_nodes = []
+        _validation_nodes = []
         
-        if tipo == 'DrivingInsights':
-            audit_count = cursor.execute("SELECT COUNT(*) FROM SdkSourceEvent WHERE id = ?", (int(raw_id),)).fetchone()[0]
-            validation_nodes.append(f"**Audit (SdkSourceEvent):** {'✅' if audit_count > 0 else '❌'} (Found: {audit_count})")
+        if _tipo == 'DrivingInsights':
+            _audit_count = _cursor.execute("SELECT COUNT(*) FROM SdkSourceEvent WHERE id = ?", (int(_raw_id),)).fetchone()[0]
+            _validation_nodes.append(f"**Audit (SdkSourceEvent):** {'✅' if _audit_count > 0 else '❌'} (Found: {_audit_count})")
             
-            di_count = check_tree("DrivingInsightsTrip")
-            validation_nodes.append(f"**DrivingInsightsTrip:** {'✅' if di_count > 0 else '❌'} (Found: {di_count})")
+            _di_count = check_tree("DrivingInsightsTrip")
+            _validation_nodes.append(f"**DrivingInsightsTrip:** {'✅' if _di_count > 0 else '❌'} (Found: {_di_count})")
             
-            expected_harsh = len(payload.get('harshDrivingEvents', []))
-            actual_harsh = check_tree("DrivingInsightsHarshEvent")
-            validation_nodes.append(f"- **HarshEvents:** {'✅' if actual_harsh == expected_harsh else '❌'} (Exp: {expected_harsh}, Found: {actual_harsh})")
+            _expected_harsh = len(_payload.get('harshDrivingEvents', []))
+            _actual_harsh = check_tree("DrivingInsightsHarshEvent")
+            _validation_nodes.append(f"- **HarshEvents:** {'✅' if _actual_harsh == _expected_harsh else '❌'} (Exp: {_expected_harsh}, Found: {_actual_harsh})")
             
-            expected_phone = len(payload.get('phoneUsageEvents', []))
-            actual_phone = check_tree("DrivingInsightsPhoneEvent")
-            validation_nodes.append(f"- **PhoneEvents:** {'✅' if actual_phone == expected_phone else '❌'} (Exp: {expected_phone}, Found: {actual_phone})")
+            _expected_phone = len(_payload.get('phoneUsageEvents', []))
+            _actual_phone = check_tree("DrivingInsightsPhoneEvent")
+            _validation_nodes.append(f"- **PhoneEvents:** {'✅' if _actual_phone == _expected_phone else '❌'} (Exp: {_expected_phone}, Found: {_actual_phone})")
             
-            tid = payload.get('transportEvent', {}).get('id')
-            trip_count = cursor.execute("SELECT COUNT(*) FROM Trip WHERE canonical_transport_event_id = ?", (tid,)).fetchone()[0]
-            validation_nodes.append(f"**Central Trip Sync:** {'✅' if trip_count > 0 else '❌'} (Trip ID {tid})")
+            _tid = _payload.get('transportEvent', {}).get('id')
+            _trip_count = _cursor.execute("SELECT COUNT(*) FROM Trip WHERE canonical_transport_event_id = ?", (_tid,)).fetchone()[0]
+            _validation_nodes.append(f"**Central Trip Sync:** {'✅' if _trip_count > 0 else '❌'} (Trip ID {_tid})")
             
-        elif tipo in ['UserContextUpdate', 'requestUserContext']:
-            ctx = payload if tipo == 'requestUserContext' else payload.get('userContext', {})
+        elif _tipo in ['UserContextUpdate', 'requestUserContext']:
+            _ctx = _payload if _tipo == 'requestUserContext' else _payload.get('userContext', {})
             
-            header_count = check_tree("UserContextHeader")
-            validation_nodes.append(f"**UserContextHeader:** {'✅' if header_count > 0 else '❌'} (Found: {header_count})")
+            _header_count = check_tree("UserContextHeader")
+            _validation_nodes.append(f"**UserContextHeader:** {'✅' if _header_count > 0 else '❌'} (Found: {_header_count})")
             
-            expected_seg = len(ctx.get('activeSegments', []))
-            actual_seg = check_tree("UserContextActiveSegmentDetail")
-            validation_nodes.append(f"- **Active Segments:** {'✅' if actual_seg == expected_seg else '❌'} (Exp: {expected_seg}, Found: {actual_seg})")
+            _expected_seg = len(_ctx.get('activeSegments', []))
+            _actual_seg = check_tree("UserContextActiveSegmentDetail")
+            _validation_nodes.append(f"- **Active Segments:** {'✅' if _actual_seg == _expected_seg else '❌'} (Exp: {_expected_seg}, Found: {_actual_seg})")
             
-            expected_ev = len(ctx.get('events', []))
-            actual_ev = check_tree("UserContextEventDetail")
-            validation_nodes.append(f"- **Context Events:** {'✅' if actual_ev == expected_ev else '❌'} (Exp: {expected_ev}, Found: {actual_ev})")
+            _expected_ev = len(_ctx.get('events', []))
+            _actual_ev = check_tree("UserContextEventDetail")
+            _validation_nodes.append(f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})")
             
-        elif tipo == 'TimelineEvents':
-            events = payload if isinstance(payload, list) else payload.get('events', [])
-            expected_ev = len(events)
-            actual_ev = check_tree("TimelineEventHistory")
-            validation_nodes.append(f"**TimelineEventHistory:** {'✅' if actual_ev == expected_ev else '❌'} (Exp: {expected_ev}, Found: {actual_ev})")
+        elif _tipo == 'TimelineEvents':
+            _events = _payload if isinstance(_payload, list) else _payload.get('events', [])
+            _expected_ev = len(_events)
+            _actual_ev = check_tree("TimelineEventHistory")
+            _validation_nodes.append(f"**TimelineEventHistory:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})")
             
         else:
-            validation_nodes.append(f"**Validation missing for type:** {tipo}")
+            _validation_nodes.append(f"**Validation missing for type:** {_tipo}")
 
         _conn.close()
-        right_pane = mo.md(f"### Relational Tree Validation\n" + "\n".join(validation_nodes))
-        inspector_content = mo.hstack([left_pane, right_pane], widths=[1, 1], gap=2)
+        _right_pane = mo.md(f"### Relational Tree Validation\n" + "\n".join(_validation_nodes))
+        inspector_content = mo.hstack([_left_pane, _right_pane], widths=[1, 1], gap=2)
         
     return inspector_content,
 
