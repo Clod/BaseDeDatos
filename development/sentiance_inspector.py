@@ -192,8 +192,8 @@ def process_selection(grid, df, _json, mo, _pyodbc, get_conn_str, env_selector):
     Returns:
         tuple: A marimo layout containing the side-by-side JSON and validation panes.
     """
-    if not grid.value:
-        _content = mo.md("*Select a row from the table above to view details.*")
+    if not hasattr(grid, "value") or not grid.value:
+        content = mo.md("*Select a row from the table above to view details.*")
     else:
         _selected_idx = grid.value[0]
         _row = df.iloc[_selected_idx]
@@ -276,17 +276,17 @@ def process_selection(grid, df, _json, mo, _pyodbc, get_conn_str, env_selector):
 
         _conn.close()
         _right_pane = mo.md(f"### Relational Tree Validation\n" + "\n".join(_validation_nodes))
-        _content = mo.hstack([_left_pane, _right_pane], widths=[1, 1], gap=2)
+        content = mo.hstack([_left_pane, _right_pane], widths=[1, 1], gap=2)
         
-    return _content,
+    return content,
 
 @app.cell
-def render(header, grid_status, grid, _content, mo):
+def render(header, grid_status, grid, content, mo):
     """
     Renders the final, top-to-bottom UI layout for the notebook.
     
     Args:
-        header, grid_status, grid, _content (marimo.ui): UI components from previous cells.
+        header, grid_status, grid, content (marimo.ui): UI components from previous cells.
         mo (module): The marimo module.
         
     Returns:
@@ -297,7 +297,7 @@ def render(header, grid_status, grid, _content, mo):
         grid_status,
         grid,
         mo.md("---"),
-        _content
+        content
     ])
     return _layout,
 
