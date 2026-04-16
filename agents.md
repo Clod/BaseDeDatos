@@ -1,9 +1,9 @@
 # AI Agent Rules for this Workspace
 
 > [!IMPORTANT]
-> All AI models and agents operating in this workspace MUST follow this strict rule:
+> All AI models and agents operating in this workspace MUST follow these strict rules:
 
-## Documentation Validation
+## 1. Documentation Validation
 Before providing any reasoning, answering questions, or proposing code related to Sentiance technologies (SDKs, Events, Insights, etc.), you **MUST** validate your information against the local Sentiance documentation located at:
 - `scraped_site/`
 
@@ -13,24 +13,18 @@ Before providing any reasoning, answering questions, or proposing code related t
 3. **No Assumptions**: Do not rely on external knowledge if it contradicts or is not present in the local documentation.
 4. **Citations**: When possible, cite the specific documentation file from `scraped_site/` used to support your answer.
 
-<!-- TRELLIS:START -->
-# Trellis Instructions
+## 2. Script Documentation Standards
+Every new script or major modification MUST include:
+1. **Detailed Header**: A top-level comment block explaining:
+   - **DESCRIPTION**: What the script does.
+   - **PURPOSE/WHY**: The business or technical reason for its existence.
+   - **WORKFLOW**: The step-by-step logic it follows.
+   - **USAGE**: How to run it.
+2. **Comprehensive Docstrings**: All classes and methods must have docstrings following standard conventions (Args, Returns, Logic).
+3. **Operational Logging**: Use the `logging` library instead of `print` to provide clear, timestamped feedback on the script's progress.
 
-These instructions are for AI assistants working in this project.
+---
 
-Use the `/trellis:start` command when starting a new session to:
-- Initialize your developer identity
-- Understand current project context
-- Read relevant guidelines
-
-Use `@/.trellis/` to learn:
-- Development workflow (`workflow.md`)
-- Project structure guidelines (`spec/`)
-- Developer workspace (`workspace/`)
-
-Keep this managed block so 'trellis update' can refresh the instructions.
-
-<!-- TRELLIS:END -->
 <!-- TRELLIS:START -->
 # Trellis Instructions
 
