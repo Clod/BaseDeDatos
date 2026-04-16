@@ -1,7 +1,46 @@
 """
-Sentiance SDK Data ETL (Extract, Transform, Load) - ROBUST VERSION
-==================================================================
-Ref: Entregable.md & MapeoSDK_BD.md
+SENTIANCE SDK DATA ETL ENGINE
+=============================
+
+DESCRIPTION:
+This script implements a high-performance, two-stage data pipeline designed 
+to transform raw Sentiance SDK telemetry into a structured relational domain model.
+It handles 15+ different data points including safety scores, mobility segments, 
+historical timelines, and crash detection.
+
+PURPOSE/WHY:
+- Compliance: Mirrors the 'Entregable.md' and 'MapeoSDK_BD.md' specifications.
+- Analytics: Enables SQL-based analysis of driving behavior and user mobility.
+- Efficiency: Implements GZIP compression for volumetric data (waypoints).
+- Robustness: Captures and isolates processing failures in a forensic shadow table.
+
+WORKFLOW:
+1. Extraction: Queries 'SentianceEventos' for unprocessed raw JSON records.
+2. Deduplication: Generates a SHA-256 hash to ensure unique payload processing.
+3. Transformation: 
+   - Normalizes UserContext formats (Manual vs. Listener).
+   - Aggressively discovers journeys (Trips) across all event types.
+   - Truncates timestamps to DATETIME2(3) precision.
+4. Load: Executes atomic MERGE/INSERT operations across the domain tables.
+5. Finalization: Marks original records as processed (1) or failed (-1).
+
+PREREQUISITES:
+- Python 3.10+
+- System: unixODBC (Mac: brew install unixodbc)
+- Driver: Microsoft ODBC Driver 18 for SQL Server
+- Environment: 
+  - .venv (managed by uv or pip)
+  - .env (containing DB_SERVER, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
+
+USAGE:
+Single Batch Execution:
+    python sentiance_etl.py
+
+Continuous Queue Processing:
+    python run_full_pipeline.py
+
+AUTHOR: Claudio Grasso / AI Assistant
+DATE: April 2026
 """
 
 import os
@@ -14,8 +53,10 @@ import traceback
 from datetime import datetime
 from dotenv import load_dotenv
 
+# Load database credentials from the local .env file
 load_dotenv()
 
+# Configure logging for production-grade operational monitoring
 logging.basicConfig(
     level=logging.INFO, 
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -23,8 +64,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SentianceETL")
 
+
 class SentianceETL:
+    """
+    Main ETL engine responsible for transforming raw Sentiance JSON payloads
+    into a structured relational database model.
+    """
+
     def __init__(self):
+        """Initializes the ETL instance by loading configuration from environment."""
         server, port, user, pwd, db = os.getenv("DB_SERVER"), os.getenv("DB_PORT"), os.getenv("DB_USER"), os.getenv("DB_PASSWORD"), os.getenv("DB_NAME")
         if not all([server, port, user, pwd, db]):
             raise ValueError("Missing database configuration in .env")
@@ -32,35 +80,39 @@ class SentianceETL:
         self.conn, self.cursor = None, None
 
     def connect(self):
+        """Establishes a connection to the SQL Server database."""
         self.conn = pyodbc.connect(self.conn_str)
         self.cursor = self.conn.cursor()
 
     def close(self):
+        """Closes the database connection safely."""
         if self.conn: self.conn.close()
 
     def format_ts(self, ts_str):
+        """Safely formats ISO timestamps for SQL Server DATETIME2(3)."""
         if not ts_str: return None
-        # Remove trailing 'Z' and truncate to 23 chars for DATETIME2(3)
         return ts_str.replace('Z', '').replace('T', ' ')[:23]
 
     def compress_data(self, data):
+        """GZIP compression for VARBINARY(MAX) columns."""
         if not data: return None
         return gzip.compress(json.dumps(data).encode("utf-8"))
 
     def get_hash(self, text):
+        """Generates SHA-256 hash for deduplication."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def log_error_to_db(self, raw_id, uid, tipo, json_str, err):
+        """Records a failure attempt in the forensic shadow table."""
         try:
             self.cursor.execute("INSERT INTO SentianceEventos_Errors (original_id, sentiance_user_id, tipo, raw_json, error_message) VALUES (?, ?, ?, ?, ?)",
                                (raw_id, uid, tipo, json_str, err))
         except: pass
 
     def upsert_trip(self, uid, transport):
-        """Creates or updates a record in the central Trip table."""
+        """Consolidates trip data into the central 'Trip' table."""
         tid = transport.get("id")
         if not tid: return None
-        
         sql = """
         MERGE Trip AS target
         USING (SELECT ? AS tid, ? AS uid) AS source
@@ -76,30 +128,21 @@ class SentianceETL:
                     waypoints_json, created_at, updated_at)
             VALUES (?, ?, 'ETL_PROCESS', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE());
         """
-        
-        # Prepare parameters
-        params = [
-            tid, uid,
-            self.format_ts(transport.get("lastUpdateTime")), transport.get("lastUpdateTimeEpoch"),
-            self.format_ts(transport.get("endTime")), transport.get("endTimeEpoch"),
-            transport.get("durationInSeconds"), transport.get("distance"),
-            transport.get("transportMode"), transport.get("occupantRole"),
-            1 if transport.get("isProvisional") else 0,
-            uid, tid, self.format_ts(transport.get("startTime")), transport.get("startTimeEpoch"),
-            self.format_ts(transport.get("lastUpdateTime")), transport.get("lastUpdateTimeEpoch"),
-            self.format_ts(transport.get("endTime")), transport.get("endTimeEpoch"),
-            transport.get("durationInSeconds"), transport.get("distance"),
-            transport.get("transportMode"), transport.get("occupantRole"),
-            1 if transport.get("isProvisional") else 0,
-            self.compress_data(transport.get("transportTags")),
-            self.compress_data(transport.get("waypoints"))
-        ]
-        
+        params = [tid, uid, self.format_ts(transport.get("lastUpdateTime")), transport.get("lastUpdateTimeEpoch"),
+                  self.format_ts(transport.get("endTime")), transport.get("endTimeEpoch"), transport.get("durationInSeconds"),
+                  transport.get("distance"), transport.get("transportMode"), transport.get("occupantRole"), 1 if transport.get("isProvisional") else 0,
+                  uid, tid, self.format_ts(transport.get("startTime")), transport.get("startTimeEpoch"),
+                  self.format_ts(transport.get("lastUpdateTime")), transport.get("lastUpdateTimeEpoch"),
+                  self.format_ts(transport.get("endTime")), transport.get("endTimeEpoch"), transport.get("durationInSeconds"),
+                  transport.get("distance"), transport.get("transportMode"), transport.get("occupantRole"),
+                  1 if transport.get("isProvisional") else 0, self.compress_data(transport.get("transportTags")),
+                  self.compress_data(transport.get("waypoints"))]
         self.cursor.execute(sql, params)
         res = self.cursor.execute("SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?", (tid, uid)).fetchone()
         return res[0] if res else None
 
     def process_driving_insights(self, sid, uid, payload):
+        """Processes safety scores and granular driving incidents."""
         transport = payload.get("transportEvent", {})
         scores = payload.get("safetyScores", {})
         trip_id = self.upsert_trip(uid, transport)
@@ -133,6 +176,7 @@ class SentianceETL:
                                (sid, di_id, self.format_ts(e.get("startTime")), e.get("startTimeEpoch"), self.format_ts(e.get("endTime")), e.get("endTimeEpoch"), self.compress_data(e.get("waypoints"))))
 
     def process_user_context(self, sid, uid, payload, is_manual=False):
+        """Processes behavioral segments, semantic time, and location history."""
         context = payload if is_manual else payload.get("userContext", {})
         criteria = ["MANUAL_REQUEST"] if is_manual else payload.get("criteria", [])
         loc = context.get("lastKnownLocation", {})
@@ -162,12 +206,11 @@ class SentianceETL:
         for e in context.get("events", []):
             self.cursor.execute("INSERT INTO UserContextEventDetail (user_context_payload_id, sentiance_user_id, event_id, event_type, start_time, start_time_epoch, last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, is_provisional, transport_mode, distance_meters, occupant_role, transport_tags_json, location_latitude, location_longitude, location_accuracy, venue_significance, venue_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
                                (phid, uid, e.get("id"), e.get("type"), self.format_ts(e.get("startTime")), e.get("startTimeEpoch"), self.format_ts(e.get("lastUpdateTime")), e.get("lastUpdateTimeEpoch"), self.format_ts(e.get("endTime")), e.get("endTimeEpoch"), e.get("durationInSeconds"), 1 if e.get("isProvisional") else 0, e.get("transportMode"), e.get("distance"), e.get("occupantRole"), self.compress_data(e.get("transportTags")), e.get("location", {}).get("latitude"), e.get("location", {}).get("longitude"), e.get("location", {}).get("accuracy"), e.get("venue", {}).get("significance"), e.get("venue", {}).get("type")))
-            # If it's a transport event (Car, Walking, etc), save to central Trip table
             if e.get("type") == "IN_TRANSPORT" or e.get("transportMode"):
                 self.upsert_trip(uid, e)
 
     def process_timeline_events(self, sid, uid, payload):
-        logger.info("Processing TimelineEvents...")
+        """Processes historical sequences of activity."""
         events = payload if isinstance(payload, list) else payload.get("events", [])
         for e in events:
             self.cursor.execute("INSERT INTO TimelineEventHistory (source_event_id, sentiance_user_id, event_id, event_type, start_time, start_time_epoch, last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, is_provisional, transport_mode, distance_meters, occupant_role, transport_tags_json, location_latitude, location_longitude, location_accuracy, venue_significance, venue_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
@@ -176,32 +219,39 @@ class SentianceETL:
                 self.upsert_trip(uid, e)
 
     def process_metadata(self, uid, payload):
+        """Handles custom user metadata labels."""
         label, val = payload.get("label"), payload.get("value")
         self.cursor.execute("INSERT INTO UserMetadata (sentiance_user_id, label, value, updated_at) VALUES (?, ?, ?, GETDATE())", (uid, label, str(val)))
 
     def process_crash_event(self, sid, uid, payload):
+        """Handles vehicle crash detection telemetry."""
         l = payload.get("location", {})
         self.cursor.execute("INSERT INTO VehicleCrashEvent (source_event_id, sentiance_user_id, crash_time_epoch, latitude, longitude, accuracy, altitude, magnitude, speed_at_impact, delta_v, confidence, severity, detector_mode, preceding_locations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                            (sid, uid, payload.get("time"), l.get("latitude"), l.get("longitude"), l.get("accuracy"), l.get("altitude"), payload.get("magnitude"), payload.get("speedAtImpact"), payload.get("deltaV"), payload.get("confidence"), payload.get("severity"), payload.get("detectorMode"), self.compress_data(payload.get("precedingLocations"))))
 
     def process_sdk_status(self, sid, uid, payload):
+        """Monitors SDK health and permission states."""
         self.cursor.execute("INSERT INTO SdkStatusHistory (source_event_id, sentiance_user_id, start_status, detection_status, location_permission, precise_location_granted, is_location_available, quota_status_wifi, quota_status_mobile, quota_status_disk, can_detect, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
                            (sid, uid, payload.get("startStatus"), payload.get("detectionStatus"), payload.get("locationPermission"), 1 if payload.get("isPreciseLocationPermGranted") else 0, 1 if payload.get("isLocationAvailable") else 0, payload.get("wifiQuotaStatus"), payload.get("mobileQuotaStatus"), payload.get("diskQuotaStatus"), 1 if payload.get("canDetect") else 0))
 
     def process_activity_history(self, sid, uid, payload):
+        """Processes high-level activity summaries."""
         self.cursor.execute("INSERT INTO UserActivityHistory (source_event_id, sentiance_user_id, activity_type, trip_type, stationary_latitude, stationary_longitude, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
                            (sid, uid, payload.get("activityType"), payload.get("tripType"), payload.get("stationaryLocation", {}).get("latitude"), payload.get("stationaryLocation", {}).get("longitude"), json.dumps(payload)))
-        # Also check for trip in UserActivity
         if payload.get("tripType") or payload.get("activityType") == "IN_TRANSPORT":
-            # Synthesize a minimal transport object for upsert
             transport = {"id": sid, "startTime": payload.get("startTime"), "transportMode": payload.get("tripType")}
             self.upsert_trip(uid, transport)
 
     def process_technical_event(self, sid, uid, payload):
+        """Logs technical SDK events for debugging."""
         self.cursor.execute("INSERT INTO TechnicalEventHistory (source_event_id, sentiance_user_id, technical_event_type, message, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, GETDATE())",
                            (sid, uid, payload.get("type"), payload.get("message"), json.dumps(payload)))
 
     def run(self, batch_size=500):
+        """
+        Main execution loop. Fetches unprocessed records and routes to handlers.
+        Returns True if data was processed, False otherwise.
+        """
         logger.info(f"Starting ETL Execution (Batch: {batch_size})")
         self.connect()
         try:
