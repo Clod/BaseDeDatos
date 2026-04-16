@@ -21,3 +21,4 @@ node_modules
 .env.rds
 __pycache__/
 *.pyc
+development/skills-lock.json
