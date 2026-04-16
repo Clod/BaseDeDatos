@@ -228,7 +228,12 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
         _tipo = _row['tipo']
         _payload = json.loads(_row['json'])
         
-        _pretty_json = json.dumps(_payload, indent=2)
+        def _c(x):
+            if isinstance(x, dict): return {k: _c(v) if k != "waypoints" else [f"<{len(v)} waypoints>"] for k, v in x.items()}
+            if isinstance(x, list): return [_c(i) for i in x]
+            return x
+
+        _pretty_json = json.dumps(_c(_payload), indent=2)
         _left_pane = mo.md(f"### Raw Payload (ID: {_raw_id})\n```json\n{_pretty_json}\n```")
         
         _current_conn_str = get_conn_str(env_selector.value)
