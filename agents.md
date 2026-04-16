@@ -23,6 +23,10 @@ Every new script or major modification MUST include:
 2. **Comprehensive Docstrings**: All classes and methods must have docstrings following standard conventions (Args, Returns, Logic).
 3. **Operational Logging**: Use the `logging` library instead of `print` to provide clear, timestamped feedback on the script's progress.
 
+## 3. Git Protocol (MANDATORY)
+1. **NEVER COMMIT WITHOUT ASKING FOR PERMISSION**: You must never execute a `git commit` or `git push` command without receiving explicit approval from the user in the current session.
+2. **Review First**: Always show the `git status` and a summary of changes before asking for permission to commit.
+
 ---
 
 <!-- TRELLIS:START -->
