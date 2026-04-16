@@ -19,3 +19,5 @@ Sentiance_Consistency_Report.md
 node_modules
 .env
 .env.rds
+__pycache__/
+*.pyc
