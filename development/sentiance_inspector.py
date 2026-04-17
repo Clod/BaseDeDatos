@@ -282,13 +282,14 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
         _conn = pyodbc.connect(_current_conn_str)
         _cursor = _conn.cursor()
 
-        def check_tree(table_name, count_column="*"):
+        def check_tree(table_name, count_column="*", use_payload_id=False):
             """
             Helper function to query actual record counts in domain tables.
 
             Args:
                 table_name (str): The domain table to query.
                 count_column (str): The column to count, defaults to '*'.
+                use_payload_id (bool): If True, use user_context_payload_id instead of source_event_id.
 
             Returns:
                 int: The number of rows found, or -1 if an error occurred.
@@ -302,10 +303,25 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 if not _sid_row:
                     return 0
                 _sid = _sid_row[0]
-                _cursor.execute(
-                    f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
-                    (_sid,),
-                )
+
+                if use_payload_id:
+                    _cursor.execute(
+                        "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                        (_sid,),
+                    )
+                    _payload_row = _cursor.fetchone()
+                    if not _payload_row:
+                        return 0
+                    _payload_id = _payload_row[0]
+                    _cursor.execute(
+                        f"SELECT COUNT({count_column}) FROM {table_name} WHERE user_context_payload_id = ?",
+                        (_payload_id,),
+                    )
+                else:
+                    _cursor.execute(
+                        f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
+                        (_sid,),
+                    )
                 return _cursor.fetchone()[0]
             except Exception:
                 return -1
@@ -359,13 +375,15 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             )
 
             _expected_seg = len(_ctx.get("activeSegments", []))
-            _actual_seg = check_tree("UserContextActiveSegmentDetail")
+            _actual_seg = check_tree(
+                "UserContextActiveSegmentDetail", use_payload_id=True
+            )
             _validation_nodes.append(
                 f"- **Active Segments:** {'✅' if _actual_seg == _expected_seg else '❌'} (Exp: {_expected_seg}, Found: {_actual_seg})"
             )
 
             _expected_ev = len(_ctx.get("events", []))
-            _actual_ev = check_tree("UserContextEventDetail")
+            _actual_ev = check_tree("UserContextEventDetail", use_payload_id=True)
             _validation_nodes.append(
                 f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})"
             )
