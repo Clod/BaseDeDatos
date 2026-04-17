@@ -467,9 +467,34 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
         else:
             _validation_nodes.append(f"**Validation missing for type:** {_tipo}")
 
+        _home_count = 0
+        _work_count = 0
+        _criteria_count = 0
+        if _tipo in ["UserContextUpdate", "requestUserContext"]:
+            _home_count = check_tree("UserHomeHistory", use_payload_id=True)
+            _work_count = check_tree("UserWorkHistory", use_payload_id=True)
+            _criteria_count = check_tree(
+                "UserContextUpdateCriteria", use_payload_id=True
+            )
+
         _conn.close()
+
+        _additional_tables = ""
+        if _tipo in ["UserContextUpdate", "requestUserContext"]:
+            _additional_tables = f"""
+---
+**Additional Tables:**
+- **UserHomeHistory:** {_home_count}
+- **UserWorkHistory:** {_work_count}
+- **UserContextUpdateCriteria:** {_criteria_count}
+"""
+        else:
+            _additional_tables = ""
+
         _right_pane = mo.md(
-            f"### Relational Tree Validation\n" + "\n".join(_validation_nodes)
+            f"### Relational Tree Validation\n"
+            + "\n".join(_validation_nodes)
+            + _additional_tables
         )
         inspector_content = mo.hstack([_left_pane, _right_pane], widths=[1, 1], gap=2)
 
