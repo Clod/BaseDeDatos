@@ -380,6 +380,33 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             except Exception:
                 return []
 
+        def fetch_criteria():
+            """Fetch update criteria details."""
+            try:
+                _cursor.execute(
+                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    (int(_raw_id),),
+                )
+                _sid_row = _cursor.fetchone()
+                if not _sid_row:
+                    return []
+                _sid = _sid_row[0]
+                _cursor.execute(
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    (_sid,),
+                )
+                _payload_row = _cursor.fetchone()
+                if not _payload_row:
+                    return []
+                _payload_id = _payload_row[0]
+                _cursor.execute(
+                    "SELECT criteria_code FROM UserContextUpdateCriteria WHERE user_context_payload_id = ?",
+                    (_payload_id,),
+                )
+                return [r[0] for r in _cursor.fetchall()]
+            except Exception:
+                return []
+
         _validation_nodes = []
 
         if _tipo == "DrivingInsights":
@@ -470,23 +497,30 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
         _home_count = 0
         _work_count = 0
         _criteria_count = 0
+        _criteria_list = []
         if _tipo in ["UserContextUpdate", "requestUserContext"]:
             _home_count = check_tree("UserHomeHistory", use_payload_id=True)
             _work_count = check_tree("UserWorkHistory", use_payload_id=True)
             _criteria_count = check_tree(
                 "UserContextUpdateCriteria", use_payload_id=True
             )
+            _criteria_list = fetch_criteria()
 
         _conn.close()
 
         _additional_tables = ""
         if _tipo in ["UserContextUpdate", "requestUserContext"]:
+            _criteria_str = (
+                "<br>".join([f"- {c}" for c in _criteria_list])
+                if _criteria_list
+                else "(none)"
+            )
             _additional_tables = f"""
 ---
 **Additional Tables:**
 - **UserHomeHistory:** {_home_count}
 - **UserWorkHistory:** {_work_count}
-- **UserContextUpdateCriteria:** {_criteria_count}
+- **UserContextUpdateCriteria:** {_criteria_count}<br>{_criteria_str}
 """
         else:
             _additional_tables = ""
