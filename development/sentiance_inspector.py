@@ -362,8 +362,13 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 if not _payload_row:
                     return []
                 _payload_id = _payload_row[0]
+
+                # Fetch segments with segment_id, category, subcategory, segment_type
                 _cursor.execute(
-                    "SELECT category, subcategory FROM UserContextActiveSegmentDetail WHERE user_context_payload_id = ?",
+                    """SELECT s.segment_id, s.category, s.subcategory, s.segment_type,
+                       (SELECT COUNT(*) FROM UserContextSegmentAttribute a WHERE a.user_context_segment_history_id = s.user_context_segment_history_id) as attr_count
+                       FROM UserContextActiveSegmentDetail s
+                       WHERE s.user_context_payload_id = ?""",
                     (_payload_id,),
                 )
                 return _cursor.fetchall()
@@ -478,7 +483,12 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             )
             _segment_details = fetch_segments()
             _segment_list = (
-                "<br>".join([f"- {cat} / {sub}" for cat, sub in _segment_details])
+                "<br>".join(
+                    [
+                        f"- {sid}: {cat} / {sub} ({typ}) [{attrs} attrs]"
+                        for sid, cat, sub, typ, attrs in _segment_details
+                    ]
+                )
                 if _segment_details
                 else "(none)"
             )
