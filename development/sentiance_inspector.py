@@ -508,28 +508,32 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
 
         _conn.close()
 
-        _additional_tables = ""
         if _tipo in ["UserContextUpdate", "requestUserContext"]:
             _criteria_str = (
                 "<br>".join([f"- {c}" for c in _criteria_list])
                 if _criteria_list
                 else "(none)"
             )
-            _additional_tables = f"""
----
-**Additional Tables:**
+
+            _left_col = mo.md(
+                f"""**Primary Tables:**
+{chr(10).join(_validation_nodes)}"""
+            )
+
+            _right_col = mo.md(
+                f"""**Additional Tables:**
 - **UserHomeHistory:** {_home_count}
 - **UserWorkHistory:** {_work_count}
-- **UserContextUpdateCriteria:** {_criteria_count}<br>{_criteria_str}
-"""
-        else:
-            _additional_tables = ""
+- **UserContextUpdateCriteria:** {_criteria_count}<br>{_criteria_str}"""
+            )
 
-        _right_pane = mo.md(
-            f"### Relational Tree Validation\n"
-            + "\n".join(_validation_nodes)
-            + _additional_tables
-        )
+            _right_pane = mo.md(f"### Relational Tree Validation")
+            _right_pane = mo.hstack([_left_col, _right_col], widths=[1, 1], gap=2)
+        else:
+            _right_pane = mo.md(
+                f"### Relational Tree Validation\n" + "\n".join(_validation_nodes)
+            )
+
         inspector_content = mo.hstack([_left_pane, _right_pane], widths=[1, 1], gap=2)
 
     return (inspector_content,)
