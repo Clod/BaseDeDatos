@@ -23,3 +23,4 @@ __pycache__/
 *.pyc
 development/skills-lock.json
 development/borrar.json
+development/sample_payloads.json
