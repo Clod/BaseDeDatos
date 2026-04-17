@@ -326,6 +326,60 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             except Exception:
                 return -1
 
+        def fetch_segments():
+            """Fetch active segments details."""
+            try:
+                _cursor.execute(
+                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    (int(_raw_id),),
+                )
+                _sid_row = _cursor.fetchone()
+                if not _sid_row:
+                    return []
+                _sid = _sid_row[0]
+                _cursor.execute(
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    (_sid,),
+                )
+                _payload_row = _cursor.fetchone()
+                if not _payload_row:
+                    return []
+                _payload_id = _payload_row[0]
+                _cursor.execute(
+                    "SELECT category, subcategory FROM UserContextActiveSegmentDetail WHERE user_context_payload_id = ?",
+                    (_payload_id,),
+                )
+                return _cursor.fetchall()
+            except Exception:
+                return []
+
+        def fetch_events():
+            """Fetch context event details."""
+            try:
+                _cursor.execute(
+                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    (int(_raw_id),),
+                )
+                _sid_row = _cursor.fetchone()
+                if not _sid_row:
+                    return []
+                _sid = _sid_row[0]
+                _cursor.execute(
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    (_sid,),
+                )
+                _payload_row = _cursor.fetchone()
+                if not _payload_row:
+                    return []
+                _payload_id = _payload_row[0]
+                _cursor.execute(
+                    "SELECT event_type FROM UserContextEventDetail WHERE user_context_payload_id = ?",
+                    (_payload_id,),
+                )
+                return _cursor.fetchall()
+            except Exception:
+                return []
+
         _validation_nodes = []
 
         if _tipo == "DrivingInsights":
@@ -378,14 +432,26 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             _actual_seg = check_tree(
                 "UserContextActiveSegmentDetail", use_payload_id=True
             )
+            _segment_details = fetch_segments()
+            _segment_list = (
+                "<br>".join([f"- {cat} / {sub}" for cat, sub in _segment_details])
+                if _segment_details
+                else "(none)"
+            )
             _validation_nodes.append(
-                f"- **Active Segments:** {'✅' if _actual_seg == _expected_seg else '❌'} (Exp: {_expected_seg}, Found: {_actual_seg})"
+                f"- **Active Segments:** {'✅' if _actual_seg == _expected_seg else '❌'} (Exp: {_expected_seg}, Found: {_actual_seg})<br>{_segment_list}"
             )
 
             _expected_ev = len(_ctx.get("events", []))
             _actual_ev = check_tree("UserContextEventDetail", use_payload_id=True)
+            _event_details = fetch_events()
+            _event_list = (
+                "<br>".join([f"- {t[0]}" for t in _event_details])
+                if _event_details
+                else "(none)"
+            )
             _validation_nodes.append(
-                f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})"
+                f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})<br>{_event_list}"
             )
 
         elif _tipo == "TimelineEvents":
