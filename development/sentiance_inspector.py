@@ -128,6 +128,9 @@ def create_ui(mo, envs_dict):
         start=10, stop=500, value=50, step=10, label="Records to Load: "
     )
 
+    id_from = mo.ui.number(start=1, value=None, step=1, label="From ID (optional): ")
+    id_to = mo.ui.number(start=1, value=None, step=1, label="To ID (optional): ")
+
     tipo_selector = mo.ui.dropdown(
         options=[
             "All",
@@ -150,21 +153,29 @@ def create_ui(mo, envs_dict):
     *A tool to inspect ETL domain projection and verify data integrity.*
     
     **Controls:**
-    {env_selector} | {tipo_selector} | {limit_selector}
+    {env_selector} | {tipo_selector} | {limit_selector} | {id_from} | {id_to}
     ---
     """)
-    return env_selector, limit_selector, tipo_selector, header
+    return env_selector, limit_selector, tipo_selector, id_from, id_to, header
 
 
 @app.cell
 def load_data(
-    env_selector, limit_selector, tipo_selector, get_conn_str, pyodbc, pd, mo
+    env_selector,
+    limit_selector,
+    tipo_selector,
+    id_from,
+    id_to,
+    get_conn_str,
+    pyodbc,
+    pd,
+    mo,
 ):
     """
     Fetches processed records from the database and populates an interactive data grid.
 
     Args:
-        env_selector, limit_selector, tipo_selector (marimo.ui): User inputs.
+        env_selector, limit_selector, tipo_selector, id_from, id_to (marimo.ui): User inputs.
         get_conn_str (callable): Function to get the ODBC string.
         pyodbc, pd, mo: Required modules.
 
@@ -178,10 +189,16 @@ def load_data(
     """
     _current_conn_str = get_conn_str(env_selector.value)
 
-    _query = f"SELECT TOP {limit_selector.value} id, tipo, sentianceid, created_at, is_processed, json FROM SentianceEventos WHERE is_processed = 1"
+    _conditions = ["is_processed = 1"]
     if tipo_selector.value != "All":
-        _query += f" AND tipo = '{tipo_selector.value}'"
-    _query += " ORDER BY id DESC"
+        _conditions.append(f"tipo = '{tipo_selector.value}'")
+    if id_from.value is not None:
+        _conditions.append(f"id >= {id_from.value}")
+    if id_to.value is not None:
+        _conditions.append(f"id <= {id_to.value}")
+
+    _where = " AND ".join(_conditions)
+    _query = f"SELECT TOP {limit_selector.value} id, tipo, sentianceid, created_at, is_processed, json FROM SentianceEventos WHERE {_where} ORDER BY id DESC"
 
     try:
         import warnings as _warnings
