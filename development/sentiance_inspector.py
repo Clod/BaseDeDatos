@@ -508,6 +508,31 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})<br>{_event_list}"
             )
 
+            # Check for IN_TRANSPORT event and Trip sync
+            _transport_event = None
+            _events = _ctx.get("events", [])
+            if _events:
+                for ev in _events:
+                    ev_type = str(ev.get("type", "")).upper()
+                    if ev_type == "IN_TRANSPORT":
+                        _transport_event = ev
+                        break
+            if _transport_event:
+                _tid = _transport_event.get("id")
+                if _tid:
+                    try:
+                        _trip_count = _cursor.execute(
+                            "SELECT COUNT(*) FROM Trip WHERE canonical_transport_event_id = ?",
+                            (_tid,),
+                        ).fetchone()[0]
+                        _validation_nodes.append(
+                            f"**Trip Sync (IN_TRANSPORT):** {'✅' if _trip_count > 0 else '❌'} (Trip ID {_tid})"
+                        )
+                    except Exception as _e:
+                        _validation_nodes.append(
+                            f"**Trip Sync (IN_TRANSPORT):** ⚠️ Error: {_e}"
+                        )
+
         elif _tipo == "TimelineEvents":
             _events = (
                 _payload if isinstance(_payload, list) else _payload.get("events", [])
