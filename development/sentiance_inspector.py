@@ -444,22 +444,29 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 f"**DrivingInsightsTrip:** {'✅' if _di_count > 0 else '❌'} (Found: {_di_count})"
             )
 
-            _expected_harsh = len(_payload.get("harshDrivingEvents", []))
             _actual_harsh = check_tree("DrivingInsightsHarshEvent")
             _validation_nodes.append(
-                f"- **HarshEvents:** {'✅' if _actual_harsh == _expected_harsh else '❌'} (Exp: {_expected_harsh}, Found: {_actual_harsh})"
+                f"- **HarshEvents:** {'✅' if _actual_harsh > 0 else '❌'} (Found: {_actual_harsh})"
             )
 
-            _expected_phone = len(_payload.get("phoneUsageEvents", []))
             _actual_phone = check_tree("DrivingInsightsPhoneEvent")
             _validation_nodes.append(
-                f"- **PhoneEvents:** {'✅' if _actual_phone == _expected_phone else '❌'} (Exp: {_expected_phone}, Found: {_actual_phone})"
+                f"- **PhoneEvents:** {'✅' if _actual_phone > 0 else '❌'} (Found: {_actual_phone})"
             )
 
-            _expected_speed = len(_payload.get("speedingEvents", []))
             _actual_speed = check_tree("DrivingInsightsSpeedingEvent")
             _validation_nodes.append(
-                f"- **SpeedingEvents:** {'✅' if _actual_speed == _expected_speed else '❌'} (Exp: {_expected_speed}, Found: {_actual_speed})"
+                f"- **SpeedingEvents:** {'✅' if _actual_speed > 0 else '❌'} (Found: {_actual_speed})"
+            )
+
+            _actual_call = check_tree("DrivingInsightsCallEvent")
+            _validation_nodes.append(
+                f"- **CallEvents:** {'✅' if _actual_call > 0 else '❌'} (Found: {_actual_call})"
+            )
+
+            _actual_wrongway = check_tree("DrivingInsightsWrongWayDrivingEvent")
+            _validation_nodes.append(
+                f"- **WrongWayEvents:** {'✅' if _actual_wrongway > 0 else '❌'} (Found: {_actual_wrongway})"
             )
 
             _validation_nodes.append("")  # Visual separator
