@@ -142,7 +142,7 @@ BEGIN
         end_time DATETIME2(3),
         end_time_epoch BIGINT,
         magnitude NUMERIC(6, 3),
-        confidence NUMERIC(4, 3),
+        confidence NUMERIC(5, 3),
         harsh_type VARCHAR(32),
         waypoints_json VARBINARY(MAX)
     );
@@ -389,7 +389,7 @@ BEGIN
         magnitude NUMERIC(6, 3),
         speed_at_impact NUMERIC(7, 2),
         delta_v NUMERIC(7, 2),
-        confidence NUMERIC(4, 3),
+        confidence NUMERIC(5, 3),
         severity VARCHAR(32),
         detector_mode VARCHAR(32),
         preceding_locations_json VARBINARY(MAX)
