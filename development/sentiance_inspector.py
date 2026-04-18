@@ -456,6 +456,13 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 f"- **PhoneEvents:** {'✅' if _actual_phone == _expected_phone else '❌'} (Exp: {_expected_phone}, Found: {_actual_phone})"
             )
 
+            _expected_speed = len(_payload.get("speedingEvents", []))
+            _actual_speed = check_tree("DrivingInsightsSpeedingEvent")
+            _validation_nodes.append(
+                f"- **SpeedingEvents:** {'✅' if _actual_speed == _expected_speed else '❌'} (Exp: {_expected_speed}, Found: {_actual_speed})"
+            )
+
+            _validation_nodes.append("")  # Visual separator
             _tid = _payload.get("transportEvent", {}).get("id")
             _trip_count = _cursor.execute(
                 "SELECT COUNT(*) FROM Trip WHERE canonical_transport_event_id = ?",
