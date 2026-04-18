@@ -186,15 +186,19 @@ class SentianceETL:
         scores = payload.get("safetyScores", {})
         trip_id = self.upsert_trip(uid, transport)
 
-        sql = """INSERT INTO DrivingInsightsTrip (source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id, 
-                 smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score, 
-                 harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score, 
-                 distance_meters, occupant_role, transport_tags_json, created_at) 
+        r_id = self.cursor.execute(
+            "SELECT id FROM SdkSourceEvent WHERE source_event_id = ?", (sid,)
+        ).fetchone()[0]
+
+        sql = """INSERT INTO DrivingInsightsTrip (source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
+                 smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
+                 harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score,
+                 distance_meters, occupant_role, transport_tags_json, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())"""
         self.cursor.execute(
             sql,
             (
-                sid,
+                r_id,
                 trip_id,
                 uid,
                 transport.get("id"),
@@ -217,9 +221,9 @@ class SentianceETL:
 
         for e in payload.get("harshDrivingEvents", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    sid,
+                    r_id,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -236,7 +240,7 @@ class SentianceETL:
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsPhoneEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    sid,
+                    r_id,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -251,7 +255,7 @@ class SentianceETL:
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsCallEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    sid,
+                    r_id,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -268,7 +272,7 @@ class SentianceETL:
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsSpeedingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    sid,
+                    r_id,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -280,13 +284,17 @@ class SentianceETL:
 
     def process_driving_insights_harsh_events(self, sid, uid, payload):
         """Processes standalone harsh driving events fetched via getHarshDrivingEvents."""
-        logger.debug(f"process_driving_insights_harsh_events called with payload keys: {list(payload.keys())}")
+        logger.debug(
+            f"process_driving_insights_harsh_events called with payload keys: {list(payload.keys())}"
+        )
         transport_id = payload.get("transportId")
         if not transport_id:
             logger.warning("No transportId found in payload")
             return
         logger.debug(f"Looking up trip for transport_id={transport_id} uid={uid}")
-        logger.debug(f"Parameter types: transport_id={type(transport_id)}, uid={type(uid)}")
+        logger.debug(
+            f"Parameter types: transport_id={type(transport_id)}, uid={type(uid)}"
+        )
         trip_res = self.cursor.execute(
             "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (str(transport_id), str(uid)),
