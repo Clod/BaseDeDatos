@@ -334,6 +334,23 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                         f"SELECT COUNT({count_column}) FROM {table_name} WHERE user_context_payload_id = ?",
                         (_payload_id,),
                     )
+                elif table_name.startswith("DrivingInsights"):
+                    _cursor.execute(
+                        "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE source_event_id = ?",
+                        (_sid,),
+                    )
+                    _trip_row = _cursor.fetchone()
+                    if _trip_row:
+                        _trip_id = _trip_row[0]
+                        _cursor.execute(
+                            f"SELECT COUNT({count_column}) FROM {table_name} WHERE driving_insights_trip_id = ?",
+                            (_trip_id,),
+                        )
+                    else:
+                        _cursor.execute(
+                            f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
+                            (_sid,),
+                        )
                 else:
                     _cursor.execute(
                         f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
