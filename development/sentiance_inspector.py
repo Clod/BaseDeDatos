@@ -340,17 +340,13 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                         (_sid,),
                     )
                     _trip_row = _cursor.fetchone()
-                    if _trip_row:
-                        _trip_id = _trip_row[0]
-                        _cursor.execute(
-                            f"SELECT COUNT({count_column}) FROM {table_name} WHERE driving_insights_trip_id = ?",
-                            (_trip_id,),
-                        )
-                    else:
-                        _cursor.execute(
-                            f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
-                            (_sid,),
-                        )
+                    if not _trip_row:
+                        return 0
+                    _trip_id = _trip_row[0]
+                    _cursor.execute(
+                        f"SELECT COUNT({count_column}) FROM {table_name} WHERE driving_insights_trip_id = ?",
+                        (_trip_id,),
+                    )
                 else:
                     _cursor.execute(
                         f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
