@@ -518,6 +518,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                         _transport_event = ev
                         break
             if _transport_event:
+                _validation_nodes.append("")  # Visual separator
                 _tid = _transport_event.get("id")
                 if _tid:
                     try:
