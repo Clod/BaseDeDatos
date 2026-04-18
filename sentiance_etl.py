@@ -180,7 +180,7 @@ class SentianceETL:
         ).fetchone()
         return res[0] if res else None
 
-    def process_driving_insights(self, r_id, uid, payload):
+    def process_driving_insights(self, sid, uid, payload):
         """Processes safety scores and granular driving incidents."""
         transport = payload.get("transportEvent", {})
         scores = payload.get("safetyScores", {})
@@ -194,7 +194,7 @@ class SentianceETL:
         self.cursor.execute(
             sql,
             (
-                r_id,
+                sid,
                 trip_id,
                 uid,
                 transport.get("id"),
@@ -278,7 +278,7 @@ class SentianceETL:
                 ),
             )
 
-def process_driving_insights_harsh_events(self, r_id, uid, payload):
+    def process_driving_insights_harsh_events(self, sid, uid, payload):
         """Processes standalone harsh driving events fetched via getHarshDrivingEvents."""
         logger.debug(f"process_driving_insights_harsh_events called with payload keys: {list(payload.keys())}")
         transport_id = payload.get("transportId")
@@ -295,67 +295,15 @@ def process_driving_insights_harsh_events(self, r_id, uid, payload):
             logger.warning(f"No trip found for transport_id={transport_id}")
             return
         trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if di_res:
-            di_trip_id = di_res[0]
-        else:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}, using trip_id as fallback")
-            di_trip_id = trip_id
         logger.debug(
-            f"Using driving_insights_trip_id={di_trip_id}, inserting {len(payload.get('events', []))} events"
-        )
-        for e in payload.get("events", []):
-            self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    r_id,
-                    di_trip_id,
-                    self.format_ts(e.get("startTime")),
-                    e.get("startTimeEpoch"),
-                    self.format_ts(e.get("endTime")),
-                    e.get("endTimeEpoch"),
-                    e.get("magnitude"),
-                    e.get("confidence"),
-                    e.get("type"),
-                    self.compress_data(e.get("waypoints")),
-                ),
-            )
-        transport_id = payload.get("transportId")
-        if not transport_id:
-            logger.warning("No transportId found in payload")
-            return
-        logger.debug(f"Looking up trip for transport_id={transport_id} uid={uid}")
-        logger.debug(
-            f"Parameter types: transport_id={type(transport_id)}, uid={type(uid)}"
-        )
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
-            (str(transport_id), str(uid)),
-        ).fetchone()
-        if not trip_res:
-            logger.warning(f"No trip found for transport_id={transport_id}")
-            return
-        trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if not di_res:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}")
-            return
-        di_trip_id = di_res[0]
-        logger.debug(
-            f"Found driving_insights_trip_id={di_trip_id}, inserting {len(payload.get('events', []))} events"
+            f"Found trip_id={trip_id}, inserting {len(payload.get('events', []))} events"
         )
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    di_trip_id,
+                    trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -367,7 +315,7 @@ def process_driving_insights_harsh_events(self, r_id, uid, payload):
                 ),
             )
 
-    def process_driving_insights_phone_events(self, r_id, uid, payload):
+    def process_driving_insights_phone_events(self, sid, uid, payload):
         """Processes standalone phone usage events fetched via getPhoneUsageEvents."""
         transport_id = payload.get("transportId")
         if not transport_id:
@@ -379,21 +327,12 @@ def process_driving_insights_harsh_events(self, r_id, uid, payload):
         if not trip_res:
             return
         trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if di_res:
-            di_trip_id = di_res[0]
-        else:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}, using trip_id as fallback")
-            di_trip_id = trip_id
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsPhoneEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsPhoneEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
-                    di_trip_id,
+                    sid,
+                    trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -403,7 +342,7 @@ def process_driving_insights_harsh_events(self, r_id, uid, payload):
                 ),
             )
 
-def process_driving_insights_call_events(self, r_id, uid, payload):
+    def process_driving_insights_call_events(self, sid, uid, payload):
         """Processes standalone call events fetched via getCallEvents."""
         transport_id = payload.get("transportId")
         if not transport_id:
@@ -415,21 +354,12 @@ def process_driving_insights_call_events(self, r_id, uid, payload):
         if not trip_res:
             return
         trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if di_res:
-            di_trip_id = di_res[0]
-        else:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}, using trip_id as fallback")
-            di_trip_id = trip_id
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsCallEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsCallEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
-                    di_trip_id,
+                    sid,
+                    trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -441,7 +371,7 @@ def process_driving_insights_call_events(self, r_id, uid, payload):
                 ),
             )
 
-def process_driving_insights_speeding_events(self, r_id, uid, payload):
+    def process_driving_insights_speeding_events(self, sid, uid, payload):
         """Processes standalone speeding events fetched via getSpeedingEvents."""
         transport_id = payload.get("transportId")
         if not transport_id:
@@ -453,21 +383,12 @@ def process_driving_insights_speeding_events(self, r_id, uid, payload):
         if not trip_res:
             return
         trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if di_res:
-            di_trip_id = di_res[0]
-        else:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}, using trip_id as fallback")
-            di_trip_id = trip_id
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsSpeedingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsSpeedingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
-                    di_trip_id,
+                    sid,
+                    trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -476,7 +397,7 @@ def process_driving_insights_speeding_events(self, r_id, uid, payload):
                 ),
             )
 
-    def process_driving_insights_wrong_way_events(self, r_id, uid, payload):
+    def process_driving_insights_wrong_way_events(self, sid, uid, payload):
         """Processes standalone wrong way driving events fetched via getWrongWayDrivingEvents."""
         transport_id = payload.get("transportId")
         if not transport_id:
@@ -488,21 +409,12 @@ def process_driving_insights_speeding_events(self, r_id, uid, payload):
         if not trip_res:
             return
         trip_id = trip_res[0]
-        di_res = self.cursor.execute(
-            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE trip_id = ?",
-            (trip_id,),
-        ).fetchone()
-        if di_res:
-            di_trip_id = di_res[0]
-        else:
-            logger.warning(f"No DrivingInsightsTrip found for trip_id={trip_id}, using trip_id as fallback")
-            di_trip_id = trip_id
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsWrongWayDrivingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsWrongWayDrivingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
-                    di_trip_id,
+                    sid,
+                    trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -781,17 +693,17 @@ def process_driving_insights_speeding_events(self, r_id, uid, payload):
                     )
                     sid = self.cursor.execute("SELECT @@IDENTITY").fetchone()[0]
                     if tipo == "DrivingInsights":
-                        self.process_driving_insights(r_id, uid, p)
+                        self.process_driving_insights(sid, uid, p)
                     elif tipo == "DrivingInsightsHarshEvents":
-                        self.process_driving_insights_harsh_events(r_id, uid, p)
+                        self.process_driving_insights_harsh_events(sid, uid, p)
                     elif tipo == "DrivingInsightsPhoneEvents":
-                        self.process_driving_insights_phone_events(r_id, uid, p)
+                        self.process_driving_insights_phone_events(sid, uid, p)
                     elif tipo == "DrivingInsightsCallEvents":
-                        self.process_driving_insights_call_events(r_id, uid, p)
+                        self.process_driving_insights_call_events(sid, uid, p)
                     elif tipo == "DrivingInsightsSpeedingEvents":
-                        self.process_driving_insights_speeding_events(r_id, uid, p)
+                        self.process_driving_insights_speeding_events(sid, uid, p)
                     elif tipo == "DrivingInsightsWrongWayDrivingEvents":
-                        self.process_driving_insights_wrong_way_events(r_id, uid, p)
+                        self.process_driving_insights_wrong_way_events(sid, uid, p)
                     elif tipo in ["UserContextUpdate", "requestUserContext"]:
                         self.process_user_context(
                             sid, uid, p, tipo == "requestUserContext"
