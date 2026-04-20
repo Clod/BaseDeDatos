@@ -50,8 +50,8 @@ END
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SdkSourceEvent')
 BEGIN
     CREATE TABLE SdkSourceEvent (
-        source_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        sentiance_eventos_id BIGINT NOT NULL,
         record_type VARCHAR(32),
         sentiance_user_id VARCHAR(64),
         source_time DATETIME2(3),
@@ -110,7 +110,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsTrip')
 BEGIN
     CREATE TABLE DrivingInsightsTrip (
         driving_insights_trip_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         trip_id BIGINT,
         sentiance_user_id VARCHAR(64),
         canonical_transport_event_id VARCHAR(64),
@@ -135,7 +135,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsHarshEvent'
 BEGIN
     CREATE TABLE DrivingInsightsHarshEvent (
         harsh_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         driving_insights_trip_id BIGINT NOT NULL,
         start_time DATETIME2(3),
         start_time_epoch BIGINT,
@@ -152,7 +152,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsPhoneEvent'
 BEGIN
     CREATE TABLE DrivingInsightsPhoneEvent (
         phone_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         driving_insights_trip_id BIGINT NOT NULL,
         start_time DATETIME2(3),
         start_time_epoch BIGINT,
@@ -167,7 +167,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsCallEvent')
 BEGIN
     CREATE TABLE DrivingInsightsCallEvent (
         call_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         driving_insights_trip_id BIGINT NOT NULL,
         start_time DATETIME2(3),
         start_time_epoch BIGINT,
@@ -184,7 +184,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsSpeedingEve
 BEGIN
     CREATE TABLE DrivingInsightsSpeedingEvent (
         speeding_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         driving_insights_trip_id BIGINT NOT NULL,
         start_time DATETIME2(3),
         start_time_epoch BIGINT,
@@ -198,7 +198,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DrivingInsightsWrongWayDri
 BEGIN
     CREATE TABLE DrivingInsightsWrongWayDrivingEvent (
         wrong_way_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         driving_insights_trip_id BIGINT NOT NULL,
         start_time DATETIME2(3),
         start_time_epoch BIGINT,
@@ -213,7 +213,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextHeader')
 BEGIN
     CREATE TABLE UserContextHeader (
         user_context_payload_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         context_source_type VARCHAR(32),
         semantic_time VARCHAR(32),
@@ -321,7 +321,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TimelineEventHistory')
 BEGIN
     CREATE TABLE TimelineEventHistory (
         timeline_event_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         event_id VARCHAR(64),
         event_type VARCHAR(32),
@@ -350,7 +350,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserActivityHistory')
 BEGIN
     CREATE TABLE UserActivityHistory (
         user_activity_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         activity_type VARCHAR(32),
         trip_type VARCHAR(32),
@@ -365,7 +365,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TechnicalEventHistory')
 BEGIN
     CREATE TABLE TechnicalEventHistory (
         technical_event_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         technical_event_type VARCHAR(32),
         message NVARCHAR(MAX),
@@ -379,7 +379,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'VehicleCrashEvent')
 BEGIN
     CREATE TABLE VehicleCrashEvent (
         vehicle_crash_event_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         crash_time_epoch BIGINT,
         latitude DECIMAL(10, 8),
@@ -400,7 +400,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SdkStatusHistory')
 BEGIN
     CREATE TABLE SdkStatusHistory (
         sdk_status_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        source_event_id BIGINT NOT NULL,
+        sdk_source_event_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         start_status VARCHAR(32),
         detection_status VARCHAR(32),

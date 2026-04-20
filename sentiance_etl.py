@@ -186,11 +186,7 @@ class SentianceETL:
         scores = payload.get("safetyScores", {})
         trip_id = self.upsert_trip(uid, transport)
 
-        r_id = self.cursor.execute(
-            "SELECT id FROM SdkSourceEvent WHERE source_event_id = ?", (sid,)
-        ).fetchone()[0]
-
-        sql = """INSERT INTO DrivingInsightsTrip (source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
+        sql = """INSERT INTO DrivingInsightsTrip (sdk_source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
                  smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
                  harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score,
                  distance_meters, occupant_role, transport_tags_json, created_at)
@@ -198,7 +194,7 @@ class SentianceETL:
         self.cursor.execute(
             sql,
             (
-                r_id,
+                sid,
                 trip_id,
                 uid,
                 transport.get("id"),
@@ -221,9 +217,9 @@ class SentianceETL:
 
         for e in payload.get("harshDrivingEvents", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
+                    sid,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -238,9 +234,9 @@ class SentianceETL:
 
         for e in payload.get("phoneUsageEvents", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsPhoneEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
+                    sid,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -253,9 +249,9 @@ class SentianceETL:
 
         for e in payload.get("callWhileMovingEvents", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsCallEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
+                    sid,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -270,9 +266,9 @@ class SentianceETL:
 
         for e in payload.get("speedingEvents", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsSpeedingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    r_id,
+                    sid,
                     di_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
@@ -308,7 +304,7 @@ class SentianceETL:
         )
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
                     trip_id,
@@ -337,7 +333,7 @@ class SentianceETL:
         trip_id = trip_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsPhoneEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
                     trip_id,
@@ -364,7 +360,7 @@ class SentianceETL:
         trip_id = trip_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsCallEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
                     trip_id,
@@ -393,7 +389,7 @@ class SentianceETL:
         trip_id = trip_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsSpeedingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
                     trip_id,
@@ -419,7 +415,7 @@ class SentianceETL:
         trip_id = trip_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsWrongWayDrivingEvent (source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO DrivingInsightsWrongWayDrivingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
                     trip_id,
@@ -438,7 +434,7 @@ class SentianceETL:
         loc = context.get("lastKnownLocation", {})
 
         self.cursor.execute(
-            "INSERT INTO UserContextHeader (source_event_id, sentiance_user_id, context_source_type, semantic_time, last_known_latitude, last_known_longitude, last_known_accuracy, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
+            "INSERT INTO UserContextHeader (sdk_source_event_id, sentiance_user_id, context_source_type, semantic_time, last_known_latitude, last_known_longitude, last_known_accuracy, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
                 sid,
                 uid,
@@ -532,7 +528,7 @@ class SentianceETL:
         events = payload if isinstance(payload, list) else payload.get("events", [])
         for e in events:
             self.cursor.execute(
-                "INSERT INTO TimelineEventHistory (source_event_id, sentiance_user_id, event_id, event_type, start_time, start_time_epoch, last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, is_provisional, transport_mode, distance_meters, occupant_role, transport_tags_json, location_latitude, location_longitude, location_accuracy, venue_significance, venue_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
+                "INSERT INTO TimelineEventHistory (sdk_source_event_id, sentiance_user_id, event_id, event_type, start_time, start_time_epoch, last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, is_provisional, transport_mode, distance_meters, occupant_role, transport_tags_json, location_latitude, location_longitude, location_accuracy, venue_significance, venue_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
                 (
                     sid,
                     uid,
@@ -572,7 +568,7 @@ class SentianceETL:
         """Handles vehicle crash detection telemetry."""
         l = payload.get("location", {})
         self.cursor.execute(
-            "INSERT INTO VehicleCrashEvent (source_event_id, sentiance_user_id, crash_time_epoch, latitude, longitude, accuracy, altitude, magnitude, speed_at_impact, delta_v, confidence, severity, detector_mode, preceding_locations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO VehicleCrashEvent (sdk_source_event_id, sentiance_user_id, crash_time_epoch, latitude, longitude, accuracy, altitude, magnitude, speed_at_impact, delta_v, confidence, severity, detector_mode, preceding_locations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 sid,
                 uid,
@@ -594,7 +590,7 @@ class SentianceETL:
     def process_sdk_status(self, sid, uid, payload):
         """Monitors SDK health and permission states."""
         self.cursor.execute(
-            "INSERT INTO SdkStatusHistory (source_event_id, sentiance_user_id, start_status, detection_status, location_permission, precise_location_granted, is_location_available, quota_status_wifi, quota_status_mobile, quota_status_disk, can_detect, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
+            "INSERT INTO SdkStatusHistory (sdk_source_event_id, sentiance_user_id, start_status, detection_status, location_permission, precise_location_granted, is_location_available, quota_status_wifi, quota_status_mobile, quota_status_disk, can_detect, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
                 sid,
                 uid,
@@ -613,7 +609,7 @@ class SentianceETL:
     def process_activity_history(self, sid, uid, payload):
         """Processes high-level activity summaries."""
         self.cursor.execute(
-            "INSERT INTO UserActivityHistory (source_event_id, sentiance_user_id, activity_type, trip_type, stationary_latitude, stationary_longitude, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
+            "INSERT INTO UserActivityHistory (sdk_source_event_id, sentiance_user_id, activity_type, trip_type, stationary_latitude, stationary_longitude, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
                 sid,
                 uid,
@@ -635,7 +631,7 @@ class SentianceETL:
     def process_technical_event(self, sid, uid, payload):
         """Logs technical SDK events for debugging."""
         self.cursor.execute(
-            "INSERT INTO TechnicalEventHistory (source_event_id, sentiance_user_id, technical_event_type, message, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, GETDATE())",
+            "INSERT INTO TechnicalEventHistory (sdk_source_event_id, sentiance_user_id, technical_event_type, message, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, GETDATE())",
             (
                 sid,
                 uid,
@@ -696,7 +692,7 @@ class SentianceETL:
                         or str(r_id)
                     )
                     self.cursor.execute(
-                        "INSERT INTO SdkSourceEvent (id, record_type, sentiance_user_id, source_time, source_event_ref, payload_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())",
+                        "INSERT INTO SdkSourceEvent (sentiance_eventos_id, record_type, sentiance_user_id, source_time, source_event_ref, payload_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())",
                         (r_id, tipo, uid, st, ref, self.get_hash(r_json)),
                     )
                     sid = self.cursor.execute("SELECT @@IDENTITY").fetchone()[0]
