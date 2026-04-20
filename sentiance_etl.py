@@ -287,27 +287,28 @@ class SentianceETL:
         if not transport_id:
             logger.warning("No transportId found in payload")
             return
-        logger.debug(f"Looking up trip for transport_id={transport_id} uid={uid}")
         logger.debug(
-            f"Parameter types: transport_id={type(transport_id)}, uid={type(uid)}"
+            f"Looking up driving_insights_trip_id for transport_id={transport_id} uid={uid}"
         )
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+        di_res = self.cursor.execute(
+            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (str(transport_id), str(uid)),
         ).fetchone()
-        if not trip_res:
-            logger.warning(f"No trip found for transport_id={transport_id}")
+        if not di_res:
+            logger.warning(
+                f"No DrivingInsightsTrip found for transport_id={transport_id}"
+            )
             return
-        trip_id = trip_res[0]
+        di_trip_id = di_res[0]
         logger.debug(
-            f"Found trip_id={trip_id}, inserting {len(payload.get('events', []))} events"
+            f"Found driving_insights_trip_id={di_trip_id}, inserting {len(payload.get('events', []))} events"
         )
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    trip_id,
+                    di_trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -324,19 +325,19 @@ class SentianceETL:
         transport_id = payload.get("transportId")
         if not transport_id:
             return
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+        di_res = self.cursor.execute(
+            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (transport_id, uid),
         ).fetchone()
-        if not trip_res:
+        if not di_res:
             return
-        trip_id = trip_res[0]
+        di_trip_id = di_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    trip_id,
+                    di_trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -351,19 +352,19 @@ class SentianceETL:
         transport_id = payload.get("transportId")
         if not transport_id:
             return
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+        di_res = self.cursor.execute(
+            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (transport_id, uid),
         ).fetchone()
-        if not trip_res:
+        if not di_res:
             return
-        trip_id = trip_res[0]
+        di_trip_id = di_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    trip_id,
+                    di_trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -380,19 +381,19 @@ class SentianceETL:
         transport_id = payload.get("transportId")
         if not transport_id:
             return
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+        di_res = self.cursor.execute(
+            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (transport_id, uid),
         ).fetchone()
-        if not trip_res:
+        if not di_res:
             return
-        trip_id = trip_res[0]
+        di_trip_id = di_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    trip_id,
+                    di_trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
@@ -406,19 +407,19 @@ class SentianceETL:
         transport_id = payload.get("transportId")
         if not transport_id:
             return
-        trip_res = self.cursor.execute(
-            "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+        di_res = self.cursor.execute(
+            "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (transport_id, uid),
         ).fetchone()
-        if not trip_res:
+        if not di_res:
             return
-        trip_id = trip_res[0]
+        di_trip_id = di_res[0]
         for e in payload.get("events", []):
             self.cursor.execute(
                 "INSERT INTO DrivingInsightsWrongWayDrivingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     sid,
-                    trip_id,
+                    di_trip_id,
                     self.format_ts(e.get("startTime")),
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
