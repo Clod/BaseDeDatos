@@ -666,6 +666,7 @@ class SentianceETL:
                 "'UserMetadata'",
                 "'TechnicalEvent'",
                 "'UserActivity'",
+                "'TimelineUpdate'",
             )
             query = f"SELECT TOP {batch_size} id, sentianceid, json, tipo FROM SentianceEventos WHERE is_processed = 0 AND tipo IN ({','.join(types)})"
             logger.debug(f"Query: {query}")
@@ -674,10 +675,61 @@ class SentianceETL:
             logger.debug(f"Fetched {len(rows)} rows")
             if not rows:
                 return False
+
+            # Define child event types that require a parent DrivingInsights record to exist
+            child_event_types = (
+                "'DrivingInsightsHarshEvents'",
+                "'DrivingInsightsPhoneEvents'",
+                "'DrivingInsightsCallEvents'",
+                "'DrivingInsightsSpeedingEvents'",
+                "'DrivingInsightsWrongWayDrivingEvents'",
+            )
+
             for r_id, uid, r_json, tipo in rows:
                 try:
                     logger.debug(f"Processing {tipo} id={r_id} uid={uid}")
                     p = json.loads(r_json)
+
+                    # For child events, verify parent DrivingInsights record exists BEFORE
+                    # creating any downstream records (SdkSourceEvent, DrivingInsights*Event tables).
+                    # This prevents orphaned child records when parent never arrives.
+                    if tipo in (
+                        "DrivingInsightsHarshEvents",
+                        "DrivingInsightsPhoneEvents",
+                        "DrivingInsightsCallEvents",
+                        "DrivingInsightsSpeedingEvents",
+                        "DrivingInsightsWrongWayDrivingEvents",
+                    ):
+                        transport_id = p.get("transportId")
+                        if not transport_id:
+                            logger.warning(
+                                f"Child event {tipo} id={r_id} has no transportId, skipping"
+                            )
+                            self.cursor.execute(
+                                "UPDATE SentianceEventos SET is_processed = -1 WHERE id = ?",
+                                (r_id,),
+                            )
+                            self.conn.commit()
+                            continue
+
+                        # Check if parent DrivingInsightsTrip exists for this transport/user
+                        parent_exists = self.cursor.execute(
+                            "SELECT 1 FROM DrivingInsightsTrip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+                            (transport_id, uid),
+                        ).fetchone()
+
+                        if not parent_exists:
+                            # Parent not found - skip this child, don't mark as processed.
+                            # Child will remain with is_processed=0 and be retried on next ETL run.
+                            # When parent arrives and is processed, the retry will succeed.
+                            # If parent never arrives, periodic SentianceEventos purge will clean this up.
+                            logger.warning(
+                                f"Orphan child event detected: {tipo} id={r_id} transportId={transport_id} "
+                                f"uid={uid} - no parent DrivingInsightsTrip found. Skipping (will retry)."
+                            )
+                            # Don't update is_processed - leave as 0 for retry
+                            continue
+
                     st = self.format_ts(
                         p.get("transportEvent", {}).get("startTime")
                         or (
@@ -713,7 +765,7 @@ class SentianceETL:
                         self.process_user_context(
                             sid, uid, p, tipo == "requestUserContext"
                         )
-                    elif tipo == "TimelineEvents":
+                    elif tipo in ("TimelineEvents", "TimelineUpdate"):
                         self.process_timeline_events(sid, uid, p)
                     elif tipo == "UserMetadata":
                         self.process_metadata(uid, p)
@@ -746,6 +798,14 @@ class SentianceETL:
 
 
 if __name__ == "__main__":
+    import sys
+
+    max_iterations = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     etl = SentianceETL()
-    while etl.run(batch_size=1000):
-        pass
+    for i in range(max_iterations):
+        if not etl.run(batch_size=1000):
+            print(f"No more records to process after {i + 1} iterations")
+            break
+    else:
+        print(f"Reached max iterations ({max_iterations})")
+    print("ETL completed")
