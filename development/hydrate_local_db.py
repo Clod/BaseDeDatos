@@ -77,7 +77,7 @@ def recreate_schema():
         raise
 
 
-def hydrate(json_file="sample_payloads.json.gz", clear_first=True):
+def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
     server, database, username, password = (
         "localhost",
         "VictaTMTK",
@@ -102,6 +102,10 @@ def hydrate(json_file="sample_payloads.json.gz", clear_first=True):
     except Exception as e:
         logger.error(f"Failed to read data file: {e}")
         return
+
+    if limit:
+        records = records[:limit]
+        logger.info(f"Limiting to {limit} records")
 
     try:
         logger.info(f"Connecting to local database '{database}'...")
@@ -163,6 +167,12 @@ if __name__ == "__main__":
         default="sample_payloads.json.gz",
         help="JSON file to hydrate (default: sample_payloads.json.gz)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of records to hydrate",
+    )
     args = parser.parse_args()
 
     if args.recreate_only:
@@ -170,6 +180,6 @@ if __name__ == "__main__":
         logger.info("Schema recreated (no data loaded).")
     elif args.recreate:
         recreate_schema()
-        hydrate(args.file, clear_first=False)
+        hydrate(args.file, clear_first=False, limit=args.limit)
     else:
-        hydrate(args.file, clear_first=not args.no_clear)
+        hydrate(args.file, clear_first=not args.no_clear, limit=args.limit)
