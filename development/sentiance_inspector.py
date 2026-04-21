@@ -269,7 +269,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             _selected_idx = data_grid.value[0]
             _row = raw_df.iloc[_selected_idx]
 
-        _raw_id = _row["id"]
+        _raw_id = int(_row["id"])
         _tipo = _row["tipo"]
         _payload = json.loads(_row["json"])
 
@@ -337,7 +337,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                     )
                 elif table_name.startswith("DrivingInsights"):
                     _cursor.execute(
-                        "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE source_event_id = ?",
+                        "SELECT driving_insights_trip_id FROM DrivingInsightsTrip WHERE sdk_source_event_id = ?",
                         (_sid,),
                     )
                     _trip_row = _cursor.fetchone()
