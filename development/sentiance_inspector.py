@@ -138,6 +138,7 @@ def create_ui(mo, envs_dict):
             "UserContextUpdate",
             "requestUserContext",
             "TimelineEvents",
+            "TimelineUpdate",
             "VehicleCrash",
             "SDKStatus",
             "UserMetadata",
@@ -313,7 +314,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             """
             try:
                 _cursor.execute(
-                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    "SELECT sdk_source_event_id FROM SdkSourceEvent WHERE sentiance_eventos_id = ?",
                     (int(_raw_id),),
                 )
                 _sid_row = _cursor.fetchone()
@@ -360,7 +361,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             """Fetch active segments details."""
             try:
                 _cursor.execute(
-                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    "SELECT sdk_source_event_id FROM SdkSourceEvent WHERE sentiance_eventos_id = ?",
                     (int(_raw_id),),
                 )
                 _sid_row = _cursor.fetchone()
@@ -392,7 +393,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             """Fetch context event details."""
             try:
                 _cursor.execute(
-                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    "SELECT sdk_source_event_id FROM SdkSourceEvent WHERE sentiance_eventos_id = ?",
                     (int(_raw_id),),
                 )
                 _sid_row = _cursor.fetchone()
@@ -419,7 +420,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             """Fetch update criteria details."""
             try:
                 _cursor.execute(
-                    "SELECT source_event_id FROM SdkSourceEvent WHERE id = ?",
+                    "SELECT sdk_source_event_id FROM SdkSourceEvent WHERE sentiance_eventos_id = ?",
                     (int(_raw_id),),
                 )
                 _sid_row = _cursor.fetchone()
@@ -446,7 +447,8 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
 
         if _tipo == "DrivingInsights":
             _audit_count = _cursor.execute(
-                "SELECT COUNT(*) FROM SdkSourceEvent WHERE id = ?", (int(_raw_id),)
+                "SELECT COUNT(*) FROM SdkSourceEvent WHERE sentiance_eventos_id = ?",
+                (int(_raw_id),),
             ).fetchone()[0]
             _validation_nodes.append(
                 f"**Audit (SdkSourceEvent):** {'✅' if _audit_count > 0 else '❌'} (Found: {_audit_count})"
