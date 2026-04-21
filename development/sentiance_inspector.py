@@ -306,7 +306,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
 
         _left_pane = mo.vstack([
             mo.md(f"### Raw Payload (ID: {_raw_id})"),
-            mo.tree(_c(_payload)),
+            mo.Html(f'<div style="max-height: 600px; overflow-y: auto; overflow-x: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #fafafa;">{mo.tree(_c(_payload))}</div>'),
         ])
 
         _current_conn_str = get_conn_str(env_selector.value)
