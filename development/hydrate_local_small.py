@@ -3,13 +3,14 @@
 Hydrates local SQL Server with small test dataset for ETL testing.
 
 DESCRIPTION:
-    Loads test dataset from test_small_full.json (93 records) covering all DrivingInsights event types.
-    Contains DrivingInsights + DrivingInsights*HarshEvents/PhoneEvents/SpeedingEvents/CallEvents.
+    Loads test dataset from a JSON file (defaults to test_small_full.json).
 
 USAGE:
     python hydrate_local_small.py
+    python hydrate_local_small.py --file test_context_timeline.json
 """
 
+import argparse
 import json
 import logging
 import pyodbc
@@ -73,9 +74,9 @@ def create_schema():
     logger.info("Schema created")
 
 
-def hydrate():
-    logger.info("Loading test data...")
-    with open("test_small_full.json", "r") as f:
+def hydrate(json_file: str):
+    logger.info(f"Loading test data from {json_file}...")
+    with open(json_file, "r") as f:
         records = json.load(f)
 
     conn = get_connection()
@@ -113,8 +114,10 @@ def hydrate():
 
 
 def main():
-    # Skip create_schema - database already exists
-    hydrate()
+    parser = argparse.ArgumentParser(description="Hydrate local SQL Server with test data")
+    parser.add_argument("--file", default="test_small_full.json", help="JSON test data file to load")
+    args = parser.parse_args()
+    hydrate(args.file)
     logger.info("SUCCESS: Test dataset loaded")
 
 
