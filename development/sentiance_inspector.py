@@ -304,13 +304,10 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 return [_c(i) for i in x]
             return x
 
-        _pretty_json = json.dumps(_c(_payload), indent=2)
-        _left_pane = mo.md(f"""<div style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
-### Raw Payload (ID: {_raw_id})
-```json
-{_pretty_json}
-```
-</div>""")
+        _left_pane = mo.vstack([
+            mo.md(f"### Raw Payload (ID: {_raw_id})"),
+            mo.tree(_c(_payload)),
+        ])
 
         _current_conn_str = get_conn_str(env_selector.value)
         import warnings as _warnings
