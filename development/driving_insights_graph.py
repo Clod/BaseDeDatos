@@ -214,16 +214,7 @@ def build_graph(data_grid, records_df, get_conn_str, env_selector, pyodbc, mo):
 
         net.set_options("""
         {
-          "layout": {
-            "hierarchical": {
-              "enabled": true,
-              "direction": "UD",
-              "sortMethod": "directed",
-              "nodeSpacing": 220,
-              "levelSeparation": 140,
-              "treeSpacing": 250
-            }
-          },
+          "layout": { "randomSeed": 0 },
           "physics": { "enabled": false },
           "nodes": {
             "shape": "box",
@@ -235,7 +226,7 @@ def build_graph(data_grid, records_df, get_conn_str, env_selector, pyodbc, mo):
           "edges": {
             "arrows": { "to": { "enabled": true, "scaleFactor": 0.7 } },
             "color": { "color": "#888", "highlight": "#333" },
-            "smooth": { "type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4 },
+            "smooth": { "type": "cubicBezier", "roundness": 0.4 },
             "width": 1.8
           },
           "interaction": {
@@ -251,98 +242,105 @@ def build_graph(data_grid, records_df, get_conn_str, env_selector, pyodbc, mo):
         def _fmt_time(t):
             return str(t)[:16] if t else "—"
 
-        def _add(nid, label, color, level, title=""):
+        def _add(nid, label, color, x, y, title=""):
             net.add_node(
                 nid,
                 label=label,
                 color={"background": color, "border": color,
                        "highlight": {"background": color, "border": "#fff"}},
-                level=level,
+                x=x, y=y,
+                physics=False,
                 title=title or label,
             )
 
-        # Level 0 — SentianceEventos
+        # ── Collect leaf data first so we can compute x positions ────────────
+        _leaves = []   # (nid, label, color, title)
+
+        if _trip:
+            _tmode = str(_trip[1]) if _trip[1] else "—"
+            _leaves.append((
+                "TRIP",
+                f"Trip\nid: {_trip[0]}\nMode: {_tmode}\n{_fmt_time(_trip[2])}",
+                "#1A9B8A",
+                f"Trip\nid: {_trip[0]}\nMode: {_tmode}\nStart: {_fmt_time(_trip[2])}\nEnd: {_fmt_time(_trip[3])}",
+            ))
+
+        for r in _harsh:
+            _leaves.append((
+                f"HARSH_{r[0]}",
+                f"HarshEvent\nid: {r[0]}\n{r[1] or '—'}",
+                "#C0392B",
+                f"HarshEvent\nid: {r[0]}\nType: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
+            ))
+
+        for r in _phone:
+            _leaves.append((
+                f"PHONE_{r[0]}",
+                f"PhoneEvent\nid: {r[0]}\n{r[1] or '—'}",
+                "#7D3C98",
+                f"PhoneEvent\nid: {r[0]}\nState: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
+            ))
+
+        for r in _call:
+            _leaves.append((
+                f"CALL_{r[0]}",
+                f"CallEvent\nid: {r[0]}\n{r[1] or '—'}",
+                "#CB4E8E",
+                f"CallEvent\nid: {r[0]}\nHands-free: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
+            ))
+
+        for r in _speed:
+            _leaves.append((
+                f"SPEED_{r[0]}",
+                f"SpeedingEvent\nid: {r[0]}\n{_fmt_time(r[1])}",
+                "#B8860B",
+                f"SpeedingEvent\nid: {r[0]}\nTime: {_fmt_time(r[1])}",
+            ))
+
+        for r in _wrong:
+            _leaves.append((
+                f"WRONG_{r[0]}",
+                f"WrongWayEvent\nid: {r[0]}\n{_fmt_time(r[1])}",
+                "#784212",
+                f"WrongWayDrivingEvent\nid: {r[0]}\nTime: {_fmt_time(r[1])}",
+            ))
+
+        # ── Compute positions ────────────────────────────────────────────────
+        _Y = {0: 0, 1: 180, 2: 360, 3: 560}
+        _x_gap = 230
+        _n = max(len(_leaves), 1)
+        _total_w = (_n - 1) * _x_gap
+
+        # ── Add trunk nodes ──────────────────────────────────────────────────
         _add(
             "SE", f"SentianceEventos\nid: {_sel_id}",
-            "#E8781A", 0,
+            "#E8781A", x=0, y=_Y[0],
             title=f"SentianceEventos\nid: {_sel_id}\nuser: {_ssk[1] if _ssk else '—'}",
         )
 
-        # Level 1 — SdkSourceEvent
         if _ssk:
             _add(
                 "SSK", f"SdkSourceEvent\nid: {_ssk_id}",
-                "#3A6BC9", 1,
+                "#3A6BC9", x=0, y=_Y[1],
                 title=f"SdkSourceEvent\nid: {_ssk_id}\nuser: {_ssk[1]}\ntime: {_fmt_time(_ssk[2])}",
             )
             net.add_edge("SE", "SSK")
 
-        # Level 2 — DrivingInsightsTrip
         if _dit:
             _score = f"{float(_dit[1]):.3f}" if _dit[1] is not None else "N/A"
             _dist  = f"{float(_dit[2])/1000:.2f} km" if _dit[2] is not None else "N/A"
             _add(
                 "DIT",
                 f"DrivingInsightsTrip\nid: {_dit_id}\nScore: {_score}  |  {_dist}",
-                "#2E8B57", 2,
+                "#2E8B57", x=0, y=_Y[2],
                 title=f"DrivingInsightsTrip\nid: {_dit_id}\nScore: {_score}\nDist: {_dist}\ncanonical_id: {_dit[3]}",
             )
             net.add_edge("SSK", "DIT")
 
-        # Level 3 — leaf nodes
-        if _trip:
-            _tmode = str(_trip[1]) if _trip[1] else "—"
-            _add(
-                "TRIP",
-                f"Trip\nid: {_trip[0]}\nMode: {_tmode}\n{_fmt_time(_trip[2])}",
-                "#1A9B8A", 3,
-                title=f"Trip\nid: {_trip[0]}\nMode: {_tmode}\nStart: {_fmt_time(_trip[2])}\nEnd:   {_fmt_time(_trip[3])}",
-            )
-            net.add_edge("DIT", "TRIP")
-
-        for r in _harsh:
-            nid = f"HARSH_{r[0]}"
-            _add(
-                nid, f"HarshEvent\nid: {r[0]}\n{r[1] or '—'}",
-                "#C0392B", 3,
-                title=f"HarshEvent\nid: {r[0]}\nType: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
-            )
-            net.add_edge("DIT", nid)
-
-        for r in _phone:
-            nid = f"PHONE_{r[0]}"
-            _add(
-                nid, f"PhoneEvent\nid: {r[0]}\n{r[1] or '—'}",
-                "#7D3C98", 3,
-                title=f"PhoneEvent\nid: {r[0]}\nState: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
-            )
-            net.add_edge("DIT", nid)
-
-        for r in _call:
-            nid = f"CALL_{r[0]}"
-            _add(
-                nid, f"CallEvent\nid: {r[0]}\n{r[1] or '—'}",
-                "#CB4E8E", 3,
-                title=f"CallEvent\nid: {r[0]}\nHands-free: {r[1] or '—'}\nTime: {_fmt_time(r[2])}",
-            )
-            net.add_edge("DIT", nid)
-
-        for r in _speed:
-            nid = f"SPEED_{r[0]}"
-            _add(
-                nid, f"SpeedingEvent\nid: {r[0]}\n{_fmt_time(r[1])}",
-                "#B8860B", 3,
-                title=f"SpeedingEvent\nid: {r[0]}\nTime: {_fmt_time(r[1])}",
-            )
-            net.add_edge("DIT", nid)
-
-        for r in _wrong:
-            nid = f"WRONG_{r[0]}"
-            _add(
-                nid, f"WrongWayEvent\nid: {r[0]}\n{_fmt_time(r[1])}",
-                "#784212", 3,
-                title=f"WrongWayDrivingEvent\nid: {r[0]}\nTime: {_fmt_time(r[1])}",
-            )
+        # ── Add leaf nodes spread evenly at level 3 ──────────────────────────
+        for i, (nid, label, color, title) in enumerate(_leaves):
+            _x = int(-_total_w / 2 + i * _x_gap)
+            _add(nid, label, color, x=_x, y=_Y[3], title=title)
             net.add_edge("DIT", nid)
 
         # ── Embed as iframe ──────────────────────────────────────────────────
