@@ -60,7 +60,8 @@ def run():
                 
         except Exception as e:
             logger.error(f"Batch #{batch_count} encountered a fatal error: {e}")
-            break
+            logger.info("Retrying next batch after fatal error...")
+            continue
         
         # Operational check: How much work is left?
         try:

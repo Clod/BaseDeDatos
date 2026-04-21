@@ -94,6 +94,16 @@ class SentianceETL:
         self.conn = pyodbc.connect(self.conn_str)
         self.cursor = self.conn.cursor()
 
+    def reconnect(self):
+        """Drops the current connection and opens a fresh one."""
+        try:
+            if self.conn:
+                self.conn.close()
+        except Exception:
+            pass
+        self.conn = pyodbc.connect(self.conn_str)
+        self.cursor = self.conn.cursor()
+
     def close(self):
         """Closes the database connection safely."""
         if self.conn:
@@ -685,6 +695,7 @@ class SentianceETL:
                 "'DrivingInsightsWrongWayDrivingEvents'",
             )
 
+            processed_count = 0
             for r_id, uid, r_json, tipo in rows:
                 try:
                     logger.debug(f"Processing {tipo} id={r_id} uid={uid}")
@@ -782,16 +793,29 @@ class SentianceETL:
                         (r_id,),
                     )
                     self.conn.commit()
+                    processed_count += 1
                 except Exception as e:
-                    self.conn.rollback()
-                    self.log_error_to_db(
-                        r_id, uid, tipo, r_json, traceback.format_exc()
-                    )
-                    self.cursor.execute(
-                        "UPDATE SentianceEventos SET is_processed = -1 WHERE id = ?",
-                        (r_id,),
-                    )
-                    self.conn.commit()
+                    err_trace = traceback.format_exc()
+                    try:
+                        self.conn.rollback()
+                    except Exception:
+                        logger.warning(f"Rollback failed for id={r_id}, connection may be dead. Reconnecting.")
+                        self.reconnect()
+                    self.log_error_to_db(r_id, uid, tipo, r_json, err_trace)
+                    try:
+                        self.cursor.execute(
+                            "UPDATE SentianceEventos SET is_processed = -1 WHERE id = ?",
+                            (r_id,),
+                        )
+                        self.conn.commit()
+                    except Exception:
+                        logger.error(f"Could not mark id={r_id} as failed after connection loss; will be retried next run.")
+            if processed_count == 0:
+                logger.warning(
+                    f"Batch fetched {len(rows)} records but processed 0 "
+                    "(all were orphan children waiting for parent). Stopping to avoid infinite loop."
+                )
+                return False
             return True
         finally:
             self.close()
