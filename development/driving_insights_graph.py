@@ -104,7 +104,8 @@ def load_records(env_selector, limit_selector, get_conn_str, pyodbc, pd, mo):
             ssk.sdk_source_event_id,
             dit.driving_insights_trip_id,
             CAST(dit.overall_score AS FLOAT)    AS overall_score,
-            CAST(dit.distance_meters AS FLOAT)  AS distance_meters
+            CAST(dit.distance_meters AS FLOAT)  AS distance_meters,
+            dit.canonical_transport_event_id
         FROM SentianceEventos se
         LEFT JOIN SdkSourceEvent ssk
                ON ssk.sentiance_eventos_id = se.id
