@@ -342,7 +342,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
 
                 if use_payload_id:
                     _cursor.execute(
-                        "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                        "SELECT user_context_payload_id FROM UserContextHeader WHERE sdk_source_event_id = ?",
                         (_sid,),
                     )
                     _payload_row = _cursor.fetchone()
@@ -368,7 +368,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                     )
                 else:
                     _cursor.execute(
-                        f"SELECT COUNT({count_column}) FROM {table_name} WHERE source_event_id = ?",
+                        f"SELECT COUNT({count_column}) FROM {table_name} WHERE sdk_source_event_id = ?",
                         (_sid,),
                     )
                 return _cursor.fetchone()[0]
@@ -387,7 +387,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                     return []
                 _sid = _sid_row[0]
                 _cursor.execute(
-                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE sdk_source_event_id = ?",
                     (_sid,),
                 )
                 _payload_row = _cursor.fetchone()
@@ -419,7 +419,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                     return []
                 _sid = _sid_row[0]
                 _cursor.execute(
-                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE sdk_source_event_id = ?",
                     (_sid,),
                 )
                 _payload_row = _cursor.fetchone()
@@ -446,7 +446,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                     return []
                 _sid = _sid_row[0]
                 _cursor.execute(
-                    "SELECT user_context_payload_id FROM UserContextHeader WHERE source_event_id = ?",
+                    "SELECT user_context_payload_id FROM UserContextHeader WHERE sdk_source_event_id = ?",
                     (_sid,),
                 )
                 _payload_row = _cursor.fetchone()
@@ -589,6 +589,39 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             _actual_ev = check_tree("TimelineEventHistory")
             _validation_nodes.append(
                 f"**TimelineEventHistory:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})"
+            )
+
+        elif _tipo == "VehicleCrash":
+            _crash_count = check_tree("VehicleCrashEvent")
+            _validation_nodes.append(
+                f"**VehicleCrashEvent:** {'✅' if _crash_count > 0 else '❌'} (Found: {_crash_count})"
+            )
+
+        elif _tipo == "SDKStatus":
+            _status_count = check_tree("SdkStatusHistory")
+            _validation_nodes.append(
+                f"**SdkStatusHistory:** {'✅' if _status_count > 0 else '❌'} (Found: {_status_count})"
+            )
+
+        elif _tipo == "UserActivity":
+            _activity_count = check_tree("UserActivityHistory")
+            _validation_nodes.append(
+                f"**UserActivityHistory:** {'✅' if _activity_count > 0 else '❌'} (Found: {_activity_count})"
+            )
+
+        elif _tipo == "TechnicalEvent":
+            _tech_count = check_tree("TechnicalEventHistory")
+            _validation_nodes.append(
+                f"**TechnicalEventHistory:** {'✅' if _tech_count > 0 else '❌'} (Found: {_tech_count})"
+            )
+
+        elif _tipo == "UserMetadata":
+            _meta_count = _cursor.execute(
+                "SELECT COUNT(*) FROM UserMetadata WHERE sentiance_user_id = ?",
+                (_payload.get("sentiance_user_id") or _row["sentianceid"]),
+            ).fetchone()[0]
+            _validation_nodes.append(
+                f"**UserMetadata:** {'✅' if _meta_count > 0 else '❌'} (Found: {_meta_count})"
             )
 
         else:
