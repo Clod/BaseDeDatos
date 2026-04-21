@@ -128,8 +128,8 @@ def create_ui(mo, envs_dict):
         start=10, stop=500, value=50, step=10, label="Records to Load: "
     )
 
-    id_from = mo.ui.number(start=1, value=None, step=1, label="From ID (optional): ")
-    id_to = mo.ui.number(start=1, value=None, step=1, label="To ID (optional): ")
+    id_from = mo.ui.number(value=None, step=1, label="From ID (optional): ")
+    id_to = mo.ui.number(value=None, step=1, label="To ID (optional): ")
 
     tipo_selector = mo.ui.dropdown(
         options=[
@@ -190,13 +190,34 @@ def load_data(
     """
     _current_conn_str = get_conn_str(env_selector.value)
 
+    _effective_from = id_from.value
+    _effective_to = id_to.value
+    if (
+        _effective_from is None
+        and _effective_to is None
+        and tipo_selector.value == "All"
+    ):
+        try:
+            _conn = pyodbc.connect(_current_conn_str)
+            _cursor = _conn.cursor()
+            _cursor.execute(
+                "SELECT MIN(id), MAX(id) FROM SentianceEventos WHERE is_processed = 1"
+            )
+            _row = _cursor.fetchone()
+            _conn.close()
+            if _row and _row[0] is not None:
+                _effective_from = _row[0]
+                _effective_to = _row[1]
+        except Exception:
+            pass
+
     _conditions = ["is_processed = 1"]
     if tipo_selector.value != "All":
         _conditions.append(f"tipo = '{tipo_selector.value}'")
-    if id_from.value is not None:
-        _conditions.append(f"id >= {id_from.value}")
-    if id_to.value is not None:
-        _conditions.append(f"id <= {id_to.value}")
+    if _effective_from is not None:
+        _conditions.append(f"id >= {_effective_from}")
+    if _effective_to is not None:
+        _conditions.append(f"id <= {_effective_to}")
 
     _where = " AND ".join(_conditions)
     _query = f"SELECT TOP {limit_selector.value} id, tipo, sentianceid, created_at, is_processed, json FROM SentianceEventos WHERE {_where} ORDER BY id DESC"
