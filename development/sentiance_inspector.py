@@ -398,7 +398,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 # Fetch segments with segment_id, category, subcategory, segment_type
                 _cursor.execute(
                     """SELECT s.segment_id, s.category, s.subcategory, s.segment_type,
-                       (SELECT COUNT(*) FROM UserContextSegmentAttribute a WHERE a.user_context_segment_history_id = s.user_context_segment_history_id) as attr_count
+                       (SELECT COUNT(*) FROM UserContextSegmentAttribute a WHERE a.user_context_active_segment_detail_id = s.user_context_active_segment_detail_id) as attr_count
                        FROM UserContextActiveSegmentDetail s
                        WHERE s.user_context_payload_id = ?""",
                     (_payload_id,),

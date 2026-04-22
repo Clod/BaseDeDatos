@@ -500,7 +500,7 @@ class SentianceETL:
             sh_id = self.cursor.execute("SELECT @@IDENTITY").fetchone()[0]
             for a in s.get("attributes", []):
                 self.cursor.execute(
-                    "INSERT INTO UserContextSegmentAttribute (user_context_segment_history_id, attribute_name, attribute_value) VALUES (?, ?, ?)",
+                    "INSERT INTO UserContextSegmentAttribute (user_context_active_segment_detail_id, attribute_name, attribute_value) VALUES (?, ?, ?)",
                     (sh_id, a.get("name"), a.get("value")),
                 )
 

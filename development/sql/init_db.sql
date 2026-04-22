@@ -262,7 +262,7 @@ END
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextActiveSegmentDetail')
 BEGIN
     CREATE TABLE UserContextActiveSegmentDetail (
-        user_context_segment_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_active_segment_detail_id BIGINT IDENTITY(1,1) PRIMARY KEY,
         user_context_payload_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         segment_id VARCHAR(64),
@@ -281,7 +281,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextSegmentAttribut
 BEGIN
     CREATE TABLE UserContextSegmentAttribute (
         user_context_segment_attr_id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        user_context_segment_history_id BIGINT NOT NULL,
+        user_context_active_segment_detail_id BIGINT NOT NULL,
         attribute_name VARCHAR(64),
         attribute_value NUMERIC(18, 4)
     );
@@ -290,7 +290,7 @@ END
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserContextEventDetail')
 BEGIN
     CREATE TABLE UserContextEventDetail (
-        user_context_event_history_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_context_event_detail_id BIGINT IDENTITY(1,1) PRIMARY KEY,
         user_context_payload_id BIGINT NOT NULL,
         sentiance_user_id VARCHAR(64),
         event_id VARCHAR(64),
