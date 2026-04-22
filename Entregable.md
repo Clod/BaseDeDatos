@@ -1,7 +1,7 @@
 # Diseño de Base de Datos - Eventos Sentiance
 
-> **Versión:** 1.0.0  
-> **Última Actualización:** 30 de marzo de 2026  
+> **Versión:** 1.1.0  
+> **Última Actualización:** 21 de abril de 2026  
 > **Motor Objetivo:** Microsoft SQL Server (T-SQL)
 
 ## 1. Contexto y Origen de Datos (Payloads)
@@ -35,8 +35,8 @@ erDiagram
 	}
 
 	SdkSourceEvent {
-		bigint source_event_id PK
-		bigint id FK
+		bigint sdk_source_event_id PK
+		bigint sentiance_eventos_id FK
 		varchar_32 record_type
 		varchar_64 sentiance_user_id
 		datetime2_3 source_time
@@ -47,7 +47,7 @@ erDiagram
 
 	TimelineEventHistory {
 		bigint timeline_event_history_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		varchar_64 event_id
 		varchar_32 event_type
@@ -73,7 +73,7 @@ erDiagram
 
 	UserContextHeader {
 		bigint user_context_payload_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		varchar_32 context_source_type
 		varchar_32 semantic_time
@@ -84,7 +84,7 @@ erDiagram
 	}
 
 	UserContextEventDetail {
-		bigint user_context_event_history_id PK
+		bigint user_context_event_detail_id PK
 		bigint user_context_payload_id FK
 		varchar_64 sentiance_user_id
 		varchar_64 event_id
@@ -110,7 +110,7 @@ erDiagram
 	}
 
 	UserContextActiveSegmentDetail {
-		bigint user_context_segment_history_id PK
+		bigint user_context_active_segment_detail_id PK
 		bigint user_context_payload_id FK
 		varchar_64 sentiance_user_id
 		varchar_64 segment_id
@@ -126,7 +126,7 @@ erDiagram
 
 	UserContextSegmentAttribute {
 		bigint user_context_segment_attr_id PK
-		bigint user_context_segment_history_id FK
+		bigint user_context_active_segment_detail_id FK
 		varchar_64 attribute_name
 		numeric_18_4 attribute_value
 	}
@@ -159,7 +159,7 @@ erDiagram
 
 	DrivingInsightsTrip {
 		bigint driving_insights_trip_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint trip_id FK
 		varchar_64 sentiance_user_id
 		varchar_64 canonical_transport_event_id
@@ -181,7 +181,7 @@ erDiagram
 
 	DrivingInsightsHarshEvent {
 		bigint harsh_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint driving_insights_trip_id FK
 		datetime2_3 start_time
 		bigint start_time_epoch
@@ -195,7 +195,7 @@ erDiagram
 
 	DrivingInsightsPhoneEvent {
 		bigint phone_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint driving_insights_trip_id FK
 		datetime2_3 start_time
 		bigint start_time_epoch
@@ -207,7 +207,7 @@ erDiagram
 
 	DrivingInsightsCallEvent {
 		bigint call_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint driving_insights_trip_id FK
 		datetime2_3 start_time
 		bigint start_time_epoch
@@ -221,7 +221,7 @@ erDiagram
 
 	DrivingInsightsSpeedingEvent {
 		bigint speeding_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint driving_insights_trip_id FK
 		datetime2_3 start_time
 		bigint start_time_epoch
@@ -232,7 +232,7 @@ erDiagram
 
 	DrivingInsightsWrongWayDrivingEvent {
 		bigint wrong_way_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		bigint driving_insights_trip_id FK
 		datetime2_3 start_time
 		bigint start_time_epoch
@@ -243,7 +243,7 @@ erDiagram
 
 	VehicleCrashEvent {
 		bigint vehicle_crash_event_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		bigint crash_time_epoch
 		decimal_10_8 latitude
@@ -256,33 +256,28 @@ erDiagram
 		numeric_4_3 confidence
 		varchar_32 severity
 		varchar_32 detector_mode
-		varchar_32 location_provider
 		varbinary_max preceding_locations_json
 	}
 
 	SdkStatusHistory {
 		bigint sdk_status_history_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		varchar_32 start_status
 		varchar_32 detection_status
 		varchar_32 location_permission
 		bit precise_location_granted
-		bit is_bg_access_permission_granted
-		bit can_monitor_geofences
-		bit is_google_play_services_missing
-		varchar_32 location_setting
+		bit is_location_available
 		varchar_32 quota_status_wifi
 		varchar_32 quota_status_mobile
 		varchar_32 quota_status_disk
-		bit is_location_available
 		bit can_detect
 		datetime2_3 captured_at
 	}
 
 	UserMetadata {
 		bigint metadata_id PK
-		varchar_64 sentiance_user_id FK
+		varchar_64 sentiance_user_id
 		varchar_255 label
 		nvarchar_max value
 		datetime2_3 updated_at
@@ -290,7 +285,7 @@ erDiagram
 
 	UserActivityHistory {
 		bigint user_activity_history_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		varchar_32 activity_type
 		varchar_32 trip_type
@@ -302,7 +297,7 @@ erDiagram
 
 	TechnicalEventHistory {
 		bigint technical_event_history_id PK
-		bigint source_event_id FK
+		bigint sdk_source_event_id FK
 		varchar_64 sentiance_user_id
 		varchar_32 technical_event_type
 		nvarchar_max message
@@ -512,10 +507,10 @@ Tabla originaria donde el backend "aterriza" la recepción del payload de la app
 Auditoría de los registros. Permite referenciar un objeto normalizado a su JSON originario.
 
 
-| Campo               | Tipo      | Mapeo Interno                                                         |
-| ------------------- | --------- | --------------------------------------------------------------------- |
-| `source_event_id`   | BIGINT PK | Clave única autogenerada                                              |
-| `id`                | BIGINT FK | Referencia al `id` de `SentianceEventos`                              |
+| Campo                   | Tipo      | Mapeo Interno                                                         |
+| ----------------------- | --------- | --------------------------------------------------------------------- |
+| `sdk_source_event_id`   | BIGINT PK | Clave única autogenerada                                              |
+| `sentiance_eventos_id`  | BIGINT FK | Referencia al `id` de `SentianceEventos`                              |
 | `record_type`       | VARCHAR(32) | Denominación del payload extraído (`CrashEvent`, `UserContext`, etc.) |
 | `sentiance_user_id` | VARCHAR(64) | `user_id`                                                             |
 | `source_time`       | DATETIME2(3)| Obtenido de los epoch del evento principal en el JSON                 |
@@ -559,7 +554,7 @@ Eventos de línea de tiempo del listener `addTimelineUpdateListener`.
 | Campo                       | Tipo          | Mapeo Sentiance       | JSON Detail                                                                                                                                                             |
 | --------------------------- | ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `timeline_event_history_id` | BIGINT PK     | N/A                   | PK de tabla                                                                                                                                                             |
-| `source_event_id`           | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                                                                             |
+| `sdk_source_event_id`       | BIGINT FK     | N/A                   | Relación a `SdkSourceEvent`                                                                                                                                             |
 | `sentiance_user_id`         | VARCHAR(64)   | `user_id`             | -                                                                                                                                                                       |
 | `event_id`                  | VARCHAR(64)   | `id`                  | Id único del evento temporal. **Nota:** Si `event_type` es *"IN_TRANSPORT"*, este ID coincide exactamente con el `canonical_transport_event_id` de la tabla `**Trip**`. |
 | `event_type`                | VARCHAR(32)   | `type`                | Enum estricto: *"UNKNOWN", "STATIONARY", "OFF_THE_GRID", "IN_TRANSPORT"*                                                                                                |
@@ -594,7 +589,7 @@ Derivados del Listener `addUserContextUpdateListener`.
 Contiene los datos básicos del objeto `UserContextUpdate` y sirve como punto de entrada para los segmentos y eventos que vienen en el mismo lote.
 
 **Relación con Tablas Dependientes**:  
-Para recuperar los datos asociados a una actualización, usa el `**source_event_id**` (Foreign Key):
+Para recuperar los datos asociados a una actualización, usa el `**sdk_source_event_id**` (Foreign Key):
 
 - En `**UserContextSegmentHistory**` estarán los segmentos de este lote.
 - En `**UserTimelineEventHistory**` estarán los eventos de este lote.
@@ -609,9 +604,9 @@ Para evitar registros repetidos en el historial si un mismo evento llega en dist
 | Campo                     | Tipo      | Mapeo Sentiance               | Detalles                                                                                                                                 |
 | ------------------------- | --------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_context_payload_id` | BIGINT PK | N/A                           | Identificador único e incremental para cada registro de contexto recibido, sirviendo como raíz para las tablas de criterios y segmentos. |
-| `source_event_id`         | BIGINT FK | N/A                           | PK SdkSourceEvent                                                                                                                        |
+| `sdk_source_event_id`     | BIGINT FK | N/A                           | PK SdkSourceEvent                                                                                                                        |
 | `sentiance_user_id`       | VARCHAR(64) | N/A                           | ID Sentiance                                                                                                                             |
-| `first_seen_from`         | VARCHAR(32) | N/A                           | Meta-origen: *"TIMELINE"* o *"USER_CONTEXT_LISTENER"*                                                                                    |
+| `context_source_type`     | VARCHAR(32) | N/A                           | Origen del registro: *"MANUAL"* (requestUserContext) o *"LISTENER"* (UserContextUpdate)                                                  |
 | `semantic_time`           | VARCHAR(32) | `userContext.semanticTime`    | *"MORNING", "LATE_MORNING", "NIGHT"*, etc.                                                                                               |
 | `last_known_latitude`     | DECIMAL(10, 8)| `lastKnownLocation.latitude`  | Coordenada Y                                                                                                                             |
 | `last_known_longitude`    | DECIMAL(11, 8)| `lastKnownLocation.longitude` | Coordenada X                                                                                                                             |
@@ -644,9 +639,9 @@ Mapeo idéntico a `TimelineEventHistory` porque ambos usan el modelo `Event` (co
 Desgloce de la lista `activeSegments[]` del usuario (Comportamientos/Segmentos inferidos).
 
 
-| Campo                             | Tipo              | Mapeo Sentiance                                                  |
-| --------------------------------- | ----------------- | ---------------------------------------------------------------- |
-| `user_context_segment_history_id` | BIGINT PK         | ID Interno                                                       |
+| Campo                                  | Tipo              | Mapeo Sentiance                                                  |
+| -------------------------------------- | ----------------- | ---------------------------------------------------------------- |
+| `user_context_active_segment_detail_id` | BIGINT PK        | ID Interno                                                       |
 | `user_context_payload_id`         | BIGINT FK         | FK referenciando a `UserContextHeader(user_context_payload_id)`. |
 | `sentiance_user_id`               | VARCHAR(64)       | ID Sentiance                                                     |
 | `segment_id`                      | VARCHAR(64)       | `id` (Identificador del Segmento)                                |
@@ -664,8 +659,8 @@ Iterado mediante objeto secundario `attributes[]` hijo del arreglo `activeSegmen
 
 | Campo                             | Tipo      | Mapeo Sentiance                                                                               |
 | --------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `user_context_segment_attr_id`    | BIGINT PK     | Auto                                                                                         |
-| `user_context_segment_history_id` | BIGINT FK | FK referenciando a `UserContextActiveSegmentDetail(user_context_segment_history_id)`.        |
+| `user_context_segment_attr_id`         | BIGINT PK | Auto                                                                                         |
+| `user_context_active_segment_detail_id` | BIGINT FK | FK referenciando a `UserContextActiveSegmentDetail(user_context_active_segment_detail_id)`. |
 | `attribute_name`                  | VARCHAR(64) | `name` (Ej. `home_time`, `arrival_time_weekday`, etc.)                                     |
 | `attribute_value`                 | NUMERIC(18, 4)| `value` (Valor del atributo)                                                               |
 
@@ -707,7 +702,7 @@ Mapeo principal de `DrivingInsights` (contiene `transportEvent` y `safetyScores`
 | Campo                      | Tipo          | Mapeo Sentiance                       | Notas                                                     |
 | -------------------------- | ------------- | ------------------------------------- | --------------------------------------------------------- |
 | `driving_insights_trip_id` | BIGINT PK     | -                                     | -                                                         |
-| `source_event_id`          | BIGINT FK     | -                                     | FK referenciando a `SdkSourceEvent(source_event_id)`.     |
+| `sdk_source_event_id`      | BIGINT FK     | -                                     | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.     |
 | `trip_id`                  | BIGINT FK     | -                                     | FK referenciando a la tabla canónica `Trip(trip_id)`.     |
 | `sentiance_user_id`        | VARCHAR(64)   | -                                     | Sentiance Id                                              |
 | `canonical_transport_event_id` | VARCHAR(64)   | `transportEvent.id`                   | **Clave de Unicidad**: ID oficial del viaje proporcionada por la Timeline. |
@@ -734,7 +729,7 @@ Deriva de `getHarshDrivingEvents()`.
 | Campo                      | Tipo          | Mapeo Sentiance                              | Notas                                                                      |
 | -------------------------- | ------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
 | `harsh_event_id`           | BIGINT PK     | Auto                                         | Identificador único del evento brusco.                                     |
-| `source_event_id`          | BIGINT FK     | FK Raíz                                      | FK referenciando a `SdkSourceEvent(source_event_id)`.                      |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz                                      | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.                      |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre                                     | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`.        |
 | `start_time`               | DATETIME2(3)  | `startTime`                                  | Inicio del evento.                                                         |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`                             | Tiempo Unix de inicio.                                                     |
@@ -756,7 +751,7 @@ Deriva de llamadas auxiliares a `getPhoneUsageEvents()` y `getCallWhileMovingEve
 | Campo                      | Tipo          | Mapeo Sentiance        | Notas                                                               |
 | -------------------------- | ------------- | ---------------------- | ------------------------------------------------------------------- |
 | `call_event_id`            | BIGINT PK     | Auto                   | Identificador único del evento de llamada.                          |
-| `source_event_id`          | BIGINT FK     | FK Raíz                | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz                | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre               | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
 | `start_time`               | DATETIME2(3)  | `startTime`            | Inicio de la llamada.                                               |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch`       | Tiempo Unix de inicio.                                              |
@@ -776,7 +771,7 @@ Deriva de `getSpeedingEvents()`.
 | Campo                      | Tipo          | Mapeo Sentiance  | Notas                                                               |
 | -------------------------- | ------------- | ---------------- | ------------------------------------------------------------------- |
 | `speeding_event_id`        | BIGINT PK     | Auto             | Identificador único del evento de exceso de velocidad.              |
-| `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
 | `start_time`               | DATETIME2(3)  | `startTime`      | Inicio del exceso de velocidad.                                     |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
@@ -793,7 +788,7 @@ Deriva de `getWrongWayDrivingEvents()`.
 | Campo                      | Tipo          | Mapeo Sentiance  | Notas                                                               |
 | -------------------------- | ------------- | ---------------- | ------------------------------------------------------------------- |
 | `wrong_way_event_id`       | BIGINT PK     | Auto             | Identificador único del evento de conducción en contramano.         |
-| `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
 | `start_time`               | DATETIME2(3)  | `startTime`      | Inicio de la conducción en contramano.                              |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
@@ -809,7 +804,7 @@ Deriva de `getPhoneUsageEvents()`. Representa los momentos en que el conductor i
 | Campo                      | Tipo          | Mapeo Sentiance  | Notas                                                               |
 | -------------------------- | ------------- | ---------------- | ------------------------------------------------------------------- |
 | `phone_event_id`           | BIGINT PK     | Auto             | Identificador único del evento de distracción.                      |
-| `source_event_id`          | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(source_event_id)`.               |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz          | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.               |
 | `driving_insights_trip_id` | BIGINT FK     | FK Padre         | FK referenciando a `DrivingInsightsTrip(driving_insights_trip_id)`. |
 | `start_time`               | DATETIME2(3)  | `startTime`      | Inicio del uso del teléfono.                                        |
 | `start_time_epoch`         | BIGINT        | `startTimeEpoch` | Tiempo Unix de inicio.                                              |
@@ -831,7 +826,7 @@ Provisto a través de `addVehicleCrashEventListener`.
 | Campo                      | Tipo          | Mapeo Sentiance                                   | Notas                                                 |
 | -------------------------- | ------------- | ------------------------------------------------- | ----------------------------------------------------- |
 | `vehicle_crash_event_id`   | BIGINT PK     | Auto                                              | Identificador único del evento de choque.             |
-| `source_event_id`          | BIGINT FK     | FK Raíz                                           | FK referenciando a `SdkSourceEvent(source_event_id)`. |
+| `sdk_source_event_id`      | BIGINT FK     | FK Raíz                                           | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`. |
 | `sentiance_user_id`        | VARCHAR(64)   | -                                                 | ID del usuario de Sentiance.                          |
 | `crash_time_epoch`         | BIGINT        | `time`                                            | Tiempo Unix del impacto.                              |
 | `latitude`                 | DECIMAL(10, 8)| `location.latitude`                               | Coordenada Y del impacto.                             |
@@ -844,7 +839,6 @@ Provisto a través de `addVehicleCrashEventListener`.
 | `confidence`               | NUMERIC(4, 3) | `confidence`                                      | Nivel de confianza del sensor (0-1).                  |
 | `severity`                 | VARCHAR(32)   | `severity`                                        | Gravedad (*"LOW", "MEDIUM", "HIGH"*).                 |
 | `detector_mode`            | VARCHAR(32)   | `detectorMode` (*"CAR", "TWO_WHEELER"*)           |                                                       |
-| `location_provider`       | VARCHAR(32)   | `location.provider` (Android)                     | Identifica el proveedor de ubicación (GPS, Network).  |
 | `preceding_locations_json` | VARBINARY(MAX)| Stringificado del JSON Array `precedingLocations` |                                                       |
 
 
@@ -858,20 +852,16 @@ Estado general de recolección en los dispositivos a través del listener de sta
 | Campo                      | Tipo      | Mapeo Sentiance y Detalles                            | Notas                             |
 | -------------------------- | --------- | ----------------------------------------------------- | --------------------------------- |
 | `sdk_status_history_id`    | BIGINT PK | Auto                                                  | -                                 |
-| `source_event_id`          | BIGINT FK | FK referenciando a `SdkSourceEvent(source_event_id)`. | -                                 |
+| `sdk_source_event_id`      | BIGINT FK | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`. | -                                 |
 | `sentiance_user_id`        | VARCHAR(64) | Identificador del usuario.                            | -                                 |
 | `start_status`             | VARCHAR(32) | `startStatus`                                         | Estado de arranque del SDK.       |
 | `detection_status`         | VARCHAR(32) | `detectionStatus`                                     | Estado operativo de detección.    |
 | `location_permission`      | VARCHAR(32) | `locationPermission`                                  | Permisos del sistema operativo.   |
 | `precise_location_granted` | BIT       | `isPreciseLocationGranted`                            | Si se tiene precisión GPS total.  |
-| `is_bg_access_permission_granted` | BIT | `isBgAccessPermGranted` (iOS) | Permiso de acceso en segundo plano. |
-| `can_monitor_geofences` | BIT | `canMonitorGeofences` (iOS) | Capacidad de monitoreo de geofences. |
-| `is_google_play_services_missing` | BIT | `isGooglePlayServicesMissing` (Android) | Disponibilidad de Google Play Services. |
-| `location_setting` | VARCHAR(32) | `locationSetting` (Android) | Configuración de ubicación del sistema. |
+| `is_location_available`    | BIT       | `isLocationAvailable`                                 | Si la ubicación está encendida.   |
 | `quota_status_wifi`        | VARCHAR(32) | `quotaStatusWiFi`                                     | Estado de cuota en WiFi.          |
 | `quota_status_mobile`      | VARCHAR(32) | `quotaStatusMobile`                                   | Estado de cuota en datos móviles. |
 | `quota_status_disk`        | VARCHAR(32) | `quotaStatusDisk`                                     | Estado de cuota en disco.         |
-| `is_location_available`    | BIT       | `isLocationAvailable`                                 | Si la ubicación está encendida.   |
 | `can_detect`               | BIT       | `canDetect`                                           | Si el SDK puede recolectar datos. |
 | `captured_at`              | DATETIME2(3)| Instante de persistencia del status.                  | -                                 |
 
@@ -884,7 +874,7 @@ Recopilación de contextos gruesos emitidos por el listener de User Activity. Ma
 | Campo                      | Tipo          | Mapeo Sentiance y Detalles                                                   | Notas |
 | -------------------------- | ------------- | ---------------------------------------------------------------------------- | ----- |
 | `user_activity_history_id` | BIGINT PK     | Auto                                                                         | -     |
-| `source_event_id`          | BIGINT FK     | FK referenciando a `SdkSourceEvent(source_event_id)`.                        | -     |
+| `sdk_source_event_id`      | BIGINT FK     | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.                        | -     |
 | `sentiance_user_id`        | VARCHAR(64)   | Identificador del usuario.                                                   | -     |
 | `activity_type`            | VARCHAR(32)   | `type` (Ej. *"USER_ACTIVITY_TYPE_TRIP"*, *"USER_ACTIVITY_TYPE_STATIONARY"*). | -     |
 | `trip_type`                | VARCHAR(32)   | `tripInfo.type`. Solo si la actividad es de tipo viaje.                      | -     |
@@ -902,7 +892,7 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | Campo                        | Tipo          | Mapeo Sentiance y Detalles                                        | Notas |
 | ---------------------------- | ------------- | ----------------------------------------------------------------- | ----- |
 | `technical_event_history_id` | BIGINT PK     | Auto                                                              | -     |
-| `source_event_id`            | BIGINT FK     | FK referenciando a `SdkSourceEvent(source_event_id)`.             | -     |
+| `sdk_source_event_id`        | BIGINT FK     | FK referenciando a `SdkSourceEvent(sdk_source_event_id)`.             | -     |
 | `sentiance_user_id`          | VARCHAR(64)   | Identificador del usuario.                                        | -     |
 | `technical_event_type`       | VARCHAR(32)   | Tipo de evento técnico (ej: *"ERROR"*, *"WARNING"*, *"SDK_LOG"*). | -     |
 | `message`                    | NVARCHAR(MAX) | Descripción textual del evento o error.                           | -     |
@@ -976,17 +966,17 @@ Por el diseño establecido, recomendamos enfáticamente crear los siguientes ín
   Las queries analíticas por rango de tiempo lo usan intensivamente. Ejemplo: `CREATE INDEX idx_source_time ON SdkSourceEvent(source_time)`.
 5. **Índice Filtrado por `is_provisional`:**
   Tablas como `Trip` o `TimelineEventHistory` frecuentemente serán consultadas bajo la estricta premisa `WHERE is_provisional = 0`. Generar un índice condicional (particularmente un *Filtered Index* en SQL Server: `CREATE INDEX idx_final_trips ON Trip (trip_id) WHERE is_provisional = 0`) hará que listar la billetera de viajes finalizados sea instantáneo sin escanear el remanente inútil temporal.
-6. **Índices en Claves Foráneas (`trip_id`, `source_event_id`)**:
-  La FK `source_event_id` no tiene índice explícito en ninguna de las tablas hija, lo que penaliza los JOINs de auditoría (ej: "dado este evento raw, ¿qué registros derivados generó?"). Deben crearse en cada tabla dependiente:
-  - `CREATE INDEX idx_src_tl    ON TimelineEventHistory(source_event_id)`
-  - `CREATE INDEX idx_src_uch   ON UserContextHeader(source_event_id)`
-  - `CREATE INDEX idx_src_di    ON DrivingInsightsTrip(source_event_id)`
-  - `CREATE INDEX idx_src_harsh ON DrivingInsightsHarshEvent(source_event_id)`
-  - `CREATE INDEX idx_src_phone ON DrivingInsightsPhoneEvent(source_event_id)`
-  - `CREATE INDEX idx_src_crash ON VehicleCrashEvent(source_event_id)`
-  - `CREATE INDEX idx_src_sdk   ON SdkStatusHistory(source_event_id)`
-  - `CREATE INDEX idx_src_act   ON UserActivityHistory(source_event_id)`
-  - `CREATE INDEX idx_src_tech  ON TechnicalEventHistory(source_event_id)`
+6. **Índices en Claves Foráneas (`trip_id`, `sdk_source_event_id`)**:
+  La FK `sdk_source_event_id` no tiene índice explícito en ninguna de las tablas hija, lo que penaliza los JOINs de auditoría (ej: "dado este evento raw, ¿qué registros derivados generó?"). Deben crearse en cada tabla dependiente:
+  - `CREATE INDEX idx_src_tl    ON TimelineEventHistory(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_uch   ON UserContextHeader(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_di    ON DrivingInsightsTrip(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_harsh ON DrivingInsightsHarshEvent(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_phone ON DrivingInsightsPhoneEvent(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_crash ON VehicleCrashEvent(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_sdk   ON SdkStatusHistory(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_act   ON UserActivityHistory(sdk_source_event_id)`
+  - `CREATE INDEX idx_src_tech  ON TechnicalEventHistory(sdk_source_event_id)`
 7. **Índice Único Transaccional (UNIQUE CONSTRAINT)**:
   En la tabla colaborativa maestra `Trip`, es **fundamental** indexar `canonical_transport_event_id` bajo una restricción única. Sin ella, el mecanismo atómico de `MERGE`/`UPSERT` ("si existe hago update, sino insert") no es viable y generará carreras críticas al momento de recibir los resúmenes del final del viaje. Ejemplo: `CREATE UNIQUE INDEX idx_canonical_trip ON Trip(canonical_transport_event_id)`.
 8. **Índice Único Compuesto en `UserContextActiveSegmentDetail`:**
@@ -1019,7 +1009,7 @@ Ninguna FK del esquema define actualmente acciones referenciales. Si se purga un
 -- ================================================================
 ALTER TABLE SdkSourceEvent
   ADD CONSTRAINT fk_sdk_source_sentiance
-  FOREIGN KEY (id) REFERENCES SentianceEventos(id)
+  FOREIGN KEY (sentiance_eventos_id) REFERENCES SentianceEventos(id)
   ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- ================================================================
@@ -1027,73 +1017,73 @@ ALTER TABLE SdkSourceEvent
 -- ================================================================
 ALTER TABLE TimelineEventHistory
   ADD CONSTRAINT fk_tl_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE UserContextHeader
   ADD CONSTRAINT fk_uch_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE UserContextEventDetail
   ADD CONSTRAINT fk_uce_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE UserContextActiveSegmentDetail
   ADD CONSTRAINT fk_ucas_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- NOTA: nombre real de la tabla es DrivingInsightsTrip (no DrivingInsightsTripData)
 ALTER TABLE DrivingInsightsTrip
   ADD CONSTRAINT fk_di_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE DrivingInsightsHarshEvent
   ADD CONSTRAINT fk_harsh_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE DrivingInsightsPhoneEvent
   ADD CONSTRAINT fk_phone_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE DrivingInsightsCallEvent
   ADD CONSTRAINT fk_call_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE DrivingInsightsSpeedingEvent
   ADD CONSTRAINT fk_speeding_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE DrivingInsightsWrongWayDrivingEvent
   ADD CONSTRAINT fk_wrongway_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE VehicleCrashEvent
   ADD CONSTRAINT fk_crash_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE SdkStatusHistory
   ADD CONSTRAINT fk_sdk_status_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE UserActivityHistory
   ADD CONSTRAINT fk_activity_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 ALTER TABLE TechnicalEventHistory
   ADD CONSTRAINT fk_tech_source
-  FOREIGN KEY (source_event_id) REFERENCES SdkSourceEvent(source_event_id)
+  FOREIGN KEY (sdk_source_event_id) REFERENCES SdkSourceEvent(sdk_source_event_id)
   ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- ================================================================
@@ -1111,7 +1101,7 @@ ALTER TABLE DrivingInsightsTrip
 > DELETE FROM SentianceEventos
 > WHERE is_processed = 1
 >   AND created_at < DATEADD(DAY, -30, GETDATE())
->   AND id NOT IN (SELECT id FROM SdkSourceEvent WHERE id IS NOT NULL);
+>   AND id NOT IN (SELECT sentiance_eventos_id FROM SdkSourceEvent WHERE sentiance_eventos_id IS NOT NULL);
 > ```
 
 ---
@@ -1955,7 +1945,7 @@ sequenceDiagram
         ETL->>ETL: Parser: Deserializa e identifica el Event Type
         
         ETL->>Source: INSERT SdkSourceEvent (Metadatos Generales)
-        Source-->>ETL: Retorna `source_event_id` (Genera Raíz)
+        Source-->>ETL: Retorna `sdk_source_event_id` (Genera Raíz)
         
         opt Contiene Trayecto ("transportEvent" o "Event")
             ETL->>Trip: MERGE (T-SQL Upsert) sobre canonical_transport_event_id
@@ -1964,7 +1954,7 @@ sequenceDiagram
         end
         
         ETL->>Satelite: INSERT Tablas Dependientes (DrivingInsightsPhone, TimelineHist, etc.)
-        note right of Satelite: Anclados via FK (source_event_id) y ocasionalmente FK (trip_id)
+        note right of Satelite: Anclados via FK (sdk_source_event_id) y ocasionalmente FK (trip_id)
         
         ETL->>Raw: UPDATE SentianceEventos (Marcado como is_processed = 1)
         deactivate ETL
