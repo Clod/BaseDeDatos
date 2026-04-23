@@ -524,11 +524,11 @@ class SentianceETL:
                     e.get("distance"),
                     e.get("occupantRole"),
                     self.compress_data(e.get("transportTags")),
-                    e.get("location", {}).get("latitude"),
-                    e.get("location", {}).get("longitude"),
-                    e.get("location", {}).get("accuracy"),
-                    e.get("venue", {}).get("significance"),
-                    e.get("venue", {}).get("type"),
+                    (e.get("location") or {}).get("latitude"),
+                    (e.get("location") or {}).get("longitude"),
+                    (e.get("location") or {}).get("accuracy"),
+                    (e.get("venue") or {}).get("significance"),
+                    (e.get("venue") or {}).get("type"),
                 ),
             )
             if e.get("type") == "IN_TRANSPORT" or e.get("transportMode"):
@@ -557,11 +557,11 @@ class SentianceETL:
                     e.get("distance"),
                     e.get("occupantRole"),
                     self.compress_data(e.get("transportTags")),
-                    e.get("location", {}).get("latitude"),
-                    e.get("location", {}).get("longitude"),
-                    e.get("location", {}).get("accuracy"),
-                    e.get("venue", {}).get("significance"),
-                    e.get("venue", {}).get("type"),
+                    (e.get("location") or {}).get("latitude"),
+                    (e.get("location") or {}).get("longitude"),
+                    (e.get("location") or {}).get("accuracy"),
+                    (e.get("venue") or {}).get("significance"),
+                    (e.get("venue") or {}).get("type"),
                 ),
             )
             if e.get("type") == "IN_TRANSPORT" or e.get("transportMode"):
