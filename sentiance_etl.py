@@ -137,6 +137,8 @@ class SentianceETL:
 
     def upsert_trip(self, uid, transport):
         """Consolidates trip data into the central 'Trip' table."""
+        if transport.get("isProvisional"):
+            return None
         tid = transport.get("id")
         if not tid:
             return None
