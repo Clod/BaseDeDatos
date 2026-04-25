@@ -555,30 +555,38 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                 f"- **Context Events:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})<br>{_event_list}"
             )
 
-            # Check for IN_TRANSPORT event and Trip sync
-            _transport_event = None
-            _events = _ctx.get("events", [])
-            if _events:
-                for ev in _events:
-                    ev_type = str(ev.get("type", "")).upper()
-                    if ev_type == "IN_TRANSPORT":
-                        _transport_event = ev
-                        break
-            if _transport_event:
+            # Trip sync: validate every IN_TRANSPORT event in the context against Trip.
+            # isProvisional=false → trip MUST be in Trip (assert presence)
+            # isProvisional=true  → trip must NOT be in Trip (assert absence)
+            _transport_events = [
+                ev for ev in _ctx.get("events", [])
+                if str(ev.get("type", "")).upper() == "IN_TRANSPORT"
+            ]
+            if _transport_events:
                 _validation_nodes.append("")  # Visual separator
-                _tid = _transport_event.get("id")
-                if _tid:
+                _validation_nodes.append("**Trip Sync (IN_TRANSPORT):**")
+                for _tev in _transport_events:
+                    _tid = _tev.get("id")
+                    _is_provisional = bool(_tev.get("isProvisional", False))
+                    if not _tid:
+                        continue
                     try:
                         _trip_count = _cursor.execute(
                             "SELECT COUNT(*) FROM Trip WHERE canonical_transport_event_id = ?",
                             (_tid,),
                         ).fetchone()[0]
+                        if _is_provisional:
+                            _ok = _trip_count == 0
+                            _label = "provisional — must NOT be in Trip"
+                        else:
+                            _ok = _trip_count > 0
+                            _label = "final — must be in Trip"
                         _validation_nodes.append(
-                            f"**Trip Sync (IN_TRANSPORT):** {'✅' if _trip_count > 0 else '❌'} (Trip ID {_tid})"
+                            f"- {'✅' if _ok else '❌'} `{_tid}` ({_label}, found: {_trip_count})"
                         )
                     except Exception as _e:
                         _validation_nodes.append(
-                            f"**Trip Sync (IN_TRANSPORT):** ⚠️ Error: {_e}"
+                            f"- ⚠️ `{_tid}` Error: {_e}"
                         )
 
         elif _tipo == "TimelineEvents":
