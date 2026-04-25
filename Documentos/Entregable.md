@@ -325,6 +325,8 @@ erDiagram
 		varbinary_max waypoints_json
 		varchar_255 start_location_json
 		varchar_255 end_location_json
+		bigint creating_sdk_source_event_id FK
+		bigint last_updated_by_sdk_source_event_id FK
 		datetime2_3 created_at
 		datetime2_3 updated_at
 	}
@@ -348,6 +350,7 @@ erDiagram
 	DrivingInsightsTrip||--o{DrivingInsightsHarshEvent:"registra"
 	DrivingInsightsTrip||--o{DrivingInsightsCallEvent:"registra"
 	DrivingInsightsTrip||--o{DrivingInsightsWrongWayDrivingEvent:"registra"
+	SdkSourceEvent||--o{Trip:"origina / actualiza"
 	Trip||--o{DrivingInsightsTrip:"es el ancestro de"
 	TimelineEventHistory}o--||Trip:"alimenta a"
 	UserContextEventDetail}o--||Trip:"alimenta a"
@@ -930,21 +933,21 @@ Logueo de advertencias o errores nativos del SDK, para debugging en servidor sin
 | `waypoints_json`               | VARBINARY(MAX)| `waypoints[]`         | **Punto Único de Verdad**: Coordenadas consolidadas del viaje.                |
 | `start_location_json`          | VARCHAR(255)  | Primera locación      | Posición de inicio (extraída del primer waypoint o inferida).                 |
 | `end_location_json`            | VARCHAR(255)  | Última locación       | Posición de destino (extraída del último waypoint o inferida).                |
-| `created_at`                   | DATETIME2(3)  | Auto                  | Fecha de creación técnica del registro.                                       |
-| `updated_at`                   | DATETIME2(3)  | Auto                  | Fecha de última actualización técnica del registro.                           |
+| `creating_sdk_source_event_id`         | BIGINT FK     | -                     | FK a `SdkSourceEvent`. Registra qué evento ETL insertó por primera vez esta fila. Se fija en el INSERT y nunca cambia. |
+| `last_updated_by_sdk_source_event_id`  | BIGINT FK     | -                     | FK a `SdkSourceEvent`. Registra qué evento ETL realizó la última actualización vía MERGE. Se actualiza en cada UPDATE. |
+| `created_at`                           | DATETIME2(3)  | Auto                  | Fecha de creación técnica del registro.                                       |
+| `updated_at`                           | DATETIME2(3)  | Auto                  | Fecha de última actualización técnica del registro.                           |
 
 
 > **IMPORTANTE: Cómo trata el backend a los eventos provisionales y finales (`isProvisional`)**:  
-> Según la documentación de Sentiance, los eventos provisionales generados en tiempo real **se generan independientemente a los finales y NO tienen el mismo ID**. 
-> - A medida que el usuario se mueve, el SDK genera eventos provisorios en tiempo real (ej: "En movimiento IN_TRANSPORT") donde `isProvisional` es `true`. Estos se iteran e insertan en la tabla `Trip` como historias/segmentos. 
+> Según la documentación de Sentiance, los eventos provisionales generados en tiempo real **se generan independientemente a los finales y NO tienen el mismo ID**.
+> - A medida que el usuario se mueve, el SDK genera eventos provisorios en tiempo real (ej: "En movimiento IN_TRANSPORT") donde `isProvisional` es `true`. **El ETL descarta estos eventos: no se escriben en `Trip`.**
 > - Una vez que el usuario se vuelve a quedar estacionario, Sentiance consolida todo el movimiento previo, procesa los scores y emite los eventos **Finales** (`isProvisional = false`). Los eventos finales tienen **IDs completamente nuevos** y Sentiance no provee links/claves foráneas apuntando a sus eventos "borrador" preliminares.
-> - *↳ **Resultado en Base de Datos**: El backend **no actualiza ni reemplaza (UPDATE)** los records provisionales. Simplemente ingresa la nueva fila definitiva enviada por el evento final. Para análisis de scores de viaje limpio, reporting, o consumo en la UI usuaria final, la base de datos se debe filtrar buscando excluyentemente `WHERE is_provisional = 0` para aislar el output definitivo del viaje, descartando los borradores en tiempo real.*
+> - *↳ **Resultado en Base de Datos**: `Trip` contiene **únicamente viajes finales** (`is_provisional = 0`). El ETL ignora cualquier evento con `isProvisional = true` antes de ejecutar el MERGE, garantizando que la tabla nunca acumule borradores provisorios.*
 
 > [!NOTE]
-> **Nota Técnica de Implementación: Deduplicación vs Desvinculación de Viajes**  
-> Es imperativo para el equipo de Backend (ETL) distinguir mecánicamente entre dos flujos totalmente diferentes al procesar identificadores (`canonical_transport_event_id`):
-> 1. **Deduplicación de Evento Final (Uso de UPDATE / MERGE):** Cuando un "Viaje Final" concluye, múltiples módulos nativos de Sentiance (`UserContext`, `DrivingInsights`, `Timeline`) se disparan concurrentemente hacia la nube. Todos emiten de manera redundante el **mismo ID de viaje Final**. El backend debe usar `MERGE` en T-SQL para que el webhook que llegue primero realice el `INSERT` original, y los webhooks subsecuentes (que traen el mismo ID) realicen un `UPDATE`, enriqueciendo la fila única (ej. anexándole `waypoints` y Safety Scores).
-> 2. **Desvinculación absoluta del Provisorio (Uso exclusivo de INSERT):** Los eventos en vivo emitidos en tiempo real (donde `isProvisional = true`) usan un ID propio que **no guarda relación alguna u originaria** con el ID del evento Final. El `MERGE` del webhook final nunca va a "coincidir" ni pisar al borrador. Cada evento provisorio que expulse la App simplemente realiza un `INSERT` pasivo (se acumulan muertos), y cuando se despacha el Viaje Final definitivo meses o minutos después, se somete a un `INSERT` independiente en otra fila con un GUID completamente nuevo.
+> **Nota Técnica de Implementación: Deduplicación de Viajes Finales**  
+> Cuando un viaje final concluye, múltiples módulos nativos de Sentiance (`UserContext`, `DrivingInsights`, `Timeline`) pueden dispararse concurrentemente hacia la nube. Todos emiten de manera redundante el **mismo ID de viaje final** (`canonical_transport_event_id`). El ETL usa `MERGE` en T-SQL para que el webhook que llegue primero realice el `INSERT` original (registrando `creating_sdk_source_event_id`), y los webhooks subsecuentes (que traen el mismo ID) realicen un `UPDATE`, enriqueciendo la fila única y actualizando `last_updated_by_sdk_source_event_id`.
 
 ---
 

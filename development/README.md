@@ -73,5 +73,37 @@ Para hacer una corrida:
 Para revisar a mano los resultados:
 
 ```python
-    marimo run sentiance_ispector.py
+    marimo run sentiance_inspector.py
 ```
+
+## Schema Changes
+
+### Trip table — source traceability (added 2026-04-25)
+
+Two `BIGINT NULL` columns were added to `Trip` to track which `SdkSourceEvent` row was responsible for creating and last updating each trip:
+
+| Column | Type | FK | Description |
+|---|---|---|---|
+| `creating_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Set once on INSERT — the event that first discovered this trip |
+| `last_updated_by_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Updated on every MERGE — the last event that refreshed trip data |
+
+To apply to an existing database without a full recreate:
+
+```sql
+ALTER TABLE Trip
+    ADD creating_sdk_source_event_id BIGINT NULL
+            REFERENCES SdkSourceEvent(sdk_source_event_id),
+        last_updated_by_sdk_source_event_id BIGINT NULL
+            REFERENCES SdkSourceEvent(sdk_source_event_id);
+```
+
+### ETL behaviour changes (2026-04-25)
+
+- **Provisional trips are no longer written to `Trip`.**  
+  `upsert_trip` now returns `None` immediately if `isProvisional = true`.  
+  A trip is only stored once Sentiance marks it as final (`isProvisional = false`).
+
+- **Trip Sync validation rule in the inspector:**  
+  For each `IN_TRANSPORT` event in a `UserContextUpdate` or `requestUserContext` payload:
+  - `isProvisional = false` → trip **must** exist in `Trip` (✅ if found, ❌ if missing)
+  - `isProvisional = true` → trip **must not** exist in `Trip` (✅ if absent, ❌ if present)
