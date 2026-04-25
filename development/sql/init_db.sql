@@ -100,6 +100,8 @@ BEGIN
         waypoints_json VARBINARY(MAX),
         start_location_json VARCHAR(255), -- Geocoded address placeholder
         end_location_json VARCHAR(255),   -- Geocoded address placeholder
+        creating_sdk_source_event_id BIGINT NULL REFERENCES SdkSourceEvent(sdk_source_event_id),
+        last_updated_by_sdk_source_event_id BIGINT NULL REFERENCES SdkSourceEvent(sdk_source_event_id),
         created_at DATETIME2(3) DEFAULT GETDATE(),
         updated_at DATETIME2(3) DEFAULT GETDATE()
     );

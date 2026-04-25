@@ -135,7 +135,7 @@ class SentianceETL:
         except:
             pass
 
-    def upsert_trip(self, uid, transport):
+    def upsert_trip(self, sid, uid, transport):
         """Consolidates trip data into the central 'Trip' table."""
         if transport.get("isProvisional"):
             return None
@@ -147,19 +147,21 @@ class SentianceETL:
         USING (SELECT ? AS tid, ? AS uid) AS source
         ON target.canonical_transport_event_id = source.tid AND target.sentiance_user_id = source.uid
         WHEN MATCHED THEN
-            UPDATE SET last_update_time = ?, last_update_time_epoch = ?, end_time = ?, end_time_epoch = ?, 
-                       duration_in_seconds = ?, distance_meters = ?, transport_mode = ?, occupant_role = ?, 
-                       is_provisional = ?, updated_at = GETDATE()
+            UPDATE SET last_update_time = ?, last_update_time_epoch = ?, end_time = ?, end_time_epoch = ?,
+                       duration_in_seconds = ?, distance_meters = ?, transport_mode = ?, occupant_role = ?,
+                       is_provisional = ?, last_updated_by_sdk_source_event_id = ?, updated_at = GETDATE()
         WHEN NOT MATCHED THEN
-            INSERT (sentiance_user_id, canonical_transport_event_id, first_seen_from, start_time, start_time_epoch, 
-                    last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, 
-                    distance_meters, transport_mode, occupant_role, is_provisional, transport_tags_json, 
-                    waypoints_json, created_at, updated_at)
-            VALUES (?, ?, 'ETL_PROCESS', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE());
+            INSERT (sentiance_user_id, canonical_transport_event_id, first_seen_from, start_time, start_time_epoch,
+                    last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds,
+                    distance_meters, transport_mode, occupant_role, is_provisional, transport_tags_json,
+                    waypoints_json, creating_sdk_source_event_id, last_updated_by_sdk_source_event_id,
+                    created_at, updated_at)
+            VALUES (?, ?, 'ETL_PROCESS', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE());
         """
         params = [
             tid,
             uid,
+            # WHEN MATCHED
             self.format_ts(transport.get("lastUpdateTime")),
             transport.get("lastUpdateTimeEpoch"),
             self.format_ts(transport.get("endTime")),
@@ -169,6 +171,8 @@ class SentianceETL:
             transport.get("transportMode"),
             transport.get("occupantRole"),
             1 if transport.get("isProvisional") else 0,
+            sid,
+            # WHEN NOT MATCHED
             uid,
             tid,
             self.format_ts(transport.get("startTime")),
@@ -184,6 +188,8 @@ class SentianceETL:
             1 if transport.get("isProvisional") else 0,
             self.compress_data(transport.get("transportTags")),
             self.compress_data(transport.get("waypoints")),
+            sid,
+            sid,
         ]
         self.cursor.execute(sql, params)
         res = self.cursor.execute(
@@ -196,7 +202,7 @@ class SentianceETL:
         """Processes safety scores and granular driving incidents."""
         transport = payload.get("transportEvent", {})
         scores = payload.get("safetyScores", {})
-        trip_id = self.upsert_trip(uid, transport)
+        trip_id = self.upsert_trip(sid, uid, transport)
 
         sql = """INSERT INTO DrivingInsightsTrip (sdk_source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
                  smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
@@ -534,7 +540,7 @@ class SentianceETL:
                 ),
             )
             if e.get("type") == "IN_TRANSPORT" or e.get("transportMode"):
-                self.upsert_trip(uid, e)
+                self.upsert_trip(sid, uid, e)
 
     def process_timeline_events(self, sid, uid, payload):
         """Processes historical sequences of activity."""
@@ -567,7 +573,7 @@ class SentianceETL:
                 ),
             )
             if e.get("type") == "IN_TRANSPORT" or e.get("transportMode"):
-                self.upsert_trip(uid, e)
+                self.upsert_trip(sid, uid, e)
 
     def process_metadata(self, uid, payload):
         """Handles custom user metadata labels."""
@@ -639,7 +645,7 @@ class SentianceETL:
                 "startTime": payload.get("startTime"),
                 "transportMode": payload.get("tripType"),
             }
-            self.upsert_trip(uid, transport)
+            self.upsert_trip(sid, uid, transport)
 
     def process_technical_event(self, sid, uid, payload):
         """Logs technical SDK events for debugging."""
