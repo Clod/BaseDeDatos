@@ -71,12 +71,27 @@ logger = logging.getLogger("SentianceETL")
 
 class SentianceETL:
     """
-    Main ETL engine responsible for transforming raw Sentiance JSON payloads
-    into a structured relational database model.
+    Main ETL engine for the Sentiance SDK data pipeline.
+
+    Transforms raw JSON payloads stored in SentianceEventos into a normalised
+    relational domain model across 15+ tables. Each payload type is routed to a
+    dedicated process_* method that performs the necessary INSERT / MERGE
+    operations and marks the source record as processed.
+
+    Typical lifecycle per batch:
+        etl = SentianceETL()
+        etl.run(batch_size=500)   # opens, processes, commits, closes
     """
 
     def __init__(self):
-        """Initializes the ETL instance by loading configuration from environment."""
+        """Reads database credentials from environment variables and builds the ODBC connection string.
+
+        Reads: DB_SERVER, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME from the
+        environment (loaded via python-dotenv from .env).
+
+        Raises:
+            ValueError: if any of the five required environment variables is missing.
+        """
         server, port, user, pwd, db = (
             os.getenv("DB_SERVER"),
             os.getenv("DB_PORT"),
@@ -90,12 +105,21 @@ class SentianceETL:
         self.conn, self.cursor = None, None
 
     def connect(self):
-        """Establishes a connection to the SQL Server database."""
+        """Opens a new pyodbc connection and assigns self.conn and self.cursor.
+
+        Called once at the start of each run() invocation. Use reconnect()
+        instead if a live connection needs to be replaced after an error.
+        """
         self.conn = pyodbc.connect(self.conn_str)
         self.cursor = self.conn.cursor()
 
     def reconnect(self):
-        """Drops the current connection and opens a fresh one."""
+        """Closes the current connection (ignoring errors) and opens a fresh one.
+
+        Called from the error handler inside run() when a pyodbc connection is
+        found to be dead after a failed commit/rollback. Replaces self.conn and
+        self.cursor so the next record in the batch can be attempted cleanly.
+        """
         try:
             if self.conn:
                 self.conn.close()
@@ -105,28 +129,81 @@ class SentianceETL:
         self.cursor = self.conn.cursor()
 
     def close(self):
-        """Closes the database connection safely."""
+        """Closes the database connection if one is open.
+
+        Called in the finally block of run() to guarantee the connection is
+        released even when an unhandled exception propagates out of the batch loop.
+        """
         if self.conn:
             self.conn.close()
 
     def format_ts(self, ts_str):
-        """Safely formats ISO timestamps for SQL Server DATETIME2(3)."""
+        """Converts an ISO 8601 timestamp string to the SQL Server DATETIME2(3) text format.
+
+        Strips the trailing 'Z' (UTC marker), replaces the 'T' separator with a
+        space, and truncates to 23 characters (YYYY-MM-DD HH:MM:SS.mmm). This
+        matches the precision accepted by DATETIME2(3) without requiring a cast
+        inside the SQL statement.
+
+        Args:
+            ts_str: ISO 8601 string such as "2026-04-21T15:04:23.824-0300" or
+                    "2026-04-21T15:04:23.824Z". None or empty string is allowed.
+
+        Returns:
+            Formatted string "YYYY-MM-DD HH:MM:SS.mmm", or None if ts_str is falsy.
+        """
         if not ts_str:
             return None
         return ts_str.replace("Z", "").replace("T", " ")[:23]
 
     def compress_data(self, data):
-        """GZIP compression for VARBINARY(MAX) columns."""
+        """Serialises a Python object to JSON and compresses it with GZIP.
+
+        Used to store high-cardinality arrays (waypoints, transportTags) in
+        VARBINARY(MAX) columns, reducing row size significantly compared to
+        plain JSON text.
+
+        Args:
+            data: any JSON-serialisable value (dict, list, etc.). None or empty
+                  values short-circuit immediately without allocating.
+
+        Returns:
+            bytes: GZIP-compressed UTF-8 JSON, or None if data is falsy.
+        """
         if not data:
             return None
         return gzip.compress(json.dumps(data).encode("utf-8"))
 
     def get_hash(self, text):
-        """Generates SHA-256 hash for deduplication."""
+        """Computes a SHA-256 hex digest of a string for payload deduplication.
+
+        The digest is stored in SdkSourceEvent.payload_hash. A duplicate hash
+        indicates the exact same raw JSON was already submitted, which can happen
+        when the mobile app retries a failed webhook delivery.
+
+        Args:
+            text: the raw JSON string of the payload.
+
+        Returns:
+            str: 64-character lowercase hexadecimal SHA-256 digest.
+        """
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def log_error_to_db(self, raw_id, uid, tipo, json_str, err):
-        """Records a failure attempt in the forensic shadow table."""
+        """Persists a processing failure to the SentianceEventos_Errors shadow table.
+
+        Called after a rollback inside the run() error handler. The insert is
+        attempted on a best-effort basis: any secondary failure is silently
+        swallowed to avoid masking the original error. This table serves as a
+        forensic audit trail for records that could not be processed.
+
+        Args:
+            raw_id: SentianceEventos.id of the failed record.
+            uid:    Sentiance user ID associated with the record.
+            tipo:   payload type string (e.g. 'DrivingInsights').
+            json_str: raw JSON string of the original payload.
+            err:    formatted traceback string from traceback.format_exc().
+        """
         try:
             self.cursor.execute(
                 "INSERT INTO SentianceEventos_Errors (original_id, sentiance_user_id, tipo, raw_json, error_message) VALUES (?, ?, ?, ?, ?)",
@@ -275,7 +352,23 @@ class SentianceETL:
         )
 
     def process_driving_insights_harsh_events(self, sid, uid, payload):
-        """Processes standalone harsh driving events fetched via getHarshDrivingEvents."""
+        """Stores harsh driving events for a completed trip into DrivingInsightsHarshEvent.
+
+        Harsh events are acceleration, braking, and turning incidents detected
+        during the trip. Each carries a magnitude, confidence score, type, and
+        a compressed waypoints trail covering the incident interval.
+
+        Resolves the parent DrivingInsightsTrip row via transportId. Silently
+        returns if no matching parent is found (parent-guard enforced upstream).
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: dict with 'transportId' (str) and 'events' (list of HarshDrivingEvent).
+
+        Returns:
+            None
+        """
         logger.debug(
             f"process_driving_insights_harsh_events called with payload keys: {list(payload.keys())}"
         )
@@ -317,7 +410,20 @@ class SentianceETL:
             )
 
     def process_driving_insights_phone_events(self, sid, uid, payload):
-        """Processes standalone phone usage events fetched via getPhoneUsageEvents."""
+        """Stores phone-screen interaction events for a completed trip into DrivingInsightsPhoneEvent.
+
+        Resolves the parent DrivingInsightsTrip row via transportId before inserting.
+        Silently returns if the parent does not yet exist (parent-guard is enforced
+        upstream in run() before this method is ever called).
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: dict with 'transportId' (str) and 'events' (list of PhoneUsageEvent).
+
+        Returns:
+            None
+        """
         transport_id = payload.get("transportId")
         if not transport_id:
             return
@@ -344,7 +450,19 @@ class SentianceETL:
             )
 
     def process_driving_insights_call_events(self, sid, uid, payload):
-        """Processes standalone call events fetched via getCallEvents."""
+        """Stores call-while-moving events for a completed trip into DrivingInsightsCallEvent.
+
+        Supersedes the deprecated getCallWhileMovingEvents API. Each event
+        captures speed range and hands-free state for the duration of the call.
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: dict with 'transportId' (str) and 'events' (list of CallEvent).
+
+        Returns:
+            None
+        """
         transport_id = payload.get("transportId")
         if not transport_id:
             return
@@ -373,7 +491,16 @@ class SentianceETL:
             )
 
     def process_driving_insights_speeding_events(self, sid, uid, payload):
-        """Processes standalone speeding events fetched via getSpeedingEvents."""
+        """Stores speed-limit-exceedance intervals for a completed trip into DrivingInsightsSpeedingEvent.
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: dict with 'transportId' (str) and 'events' (list of SpeedingEvent).
+
+        Returns:
+            None
+        """
         transport_id = payload.get("transportId")
         if not transport_id:
             return
@@ -399,7 +526,16 @@ class SentianceETL:
             )
 
     def process_driving_insights_wrong_way_events(self, sid, uid, payload):
-        """Processes standalone wrong way driving events fetched via getWrongWayDrivingEvents."""
+        """Stores wrong-way driving intervals for a completed trip into DrivingInsightsWrongWayDrivingEvent.
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: dict with 'transportId' (str) and 'events' (list of WrongWayDrivingEvent).
+
+        Returns:
+            None
+        """
         transport_id = payload.get("transportId")
         if not transport_id:
             return
@@ -425,7 +561,31 @@ class SentianceETL:
             )
 
     def process_user_context(self, sid, uid, payload, is_manual=False):
-        """Processes behavioral segments, semantic time, and location history."""
+        """Processes a UserContext snapshot into the user-context domain tables.
+
+        Handles two payload shapes:
+          - Listener (UserContextUpdate): payload = {"criteria": [...], "userContext": {...}}
+          - Manual   (requestUserContext): payload is the context object directly.
+
+        Write order (all keyed by user_context_payload_id from UserContextHeader):
+            1. UserContextHeader            → one row per event (semantic time, location).
+            2. UserContextUpdateCriteria    → one row per criteria code.
+            3. UserHomeHistory / UserWorkHistory → one row each if home/work present.
+            4. UserContextActiveSegmentDetail   → one row per active behavioural segment.
+            5. UserContextSegmentAttribute      → one row per segment attribute.
+            6. UserContextEventDetail           → one row per activity in the events array.
+            7. Trip (via upsert_trip)           → one upsert per finalised IN_TRANSPORT event.
+
+        Args:
+            sid:       sdk_source_event_id of the current SdkSourceEvent row.
+            uid:       Sentiance user ID.
+            payload:   parsed JSON dict. Shape depends on is_manual.
+            is_manual: True for 'requestUserContext' (payload IS the context);
+                       False for 'UserContextUpdate' (context is under 'userContext' key).
+
+        Returns:
+            None
+        """
         context = payload if is_manual else payload.get("userContext", {})
         criteria = ["MANUAL_REQUEST"] if is_manual else payload.get("criteria", [])
         loc = context.get("lastKnownLocation", {})
@@ -521,7 +681,24 @@ class SentianceETL:
                 self.upsert_trip(sid, uid, e)
 
     def process_timeline_events(self, sid, uid, payload):
-        """Processes historical sequences of activity."""
+        """Stores a historical activity timeline into TimelineEventHistory.
+
+        Handles two payload shapes accepted by the SDK:
+          - Object:  {"events": [...]}  (TimelineEvents / TimelineUpdate webhooks)
+          - Array:   [...]              (direct list of events, some integration variants)
+
+        Each event in the array is inserted as one TimelineEventHistory row. Any
+        event with type IN_TRANSPORT or a non-null transportMode is also upserted
+        into Trip via upsert_trip (provisional events are discarded there).
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed JSON — either a dict with an 'events' key or a list.
+
+        Returns:
+            None
+        """
         events = payload if isinstance(payload, list) else payload.get("events", [])
         for e in events:
             self.cursor.execute(
@@ -554,7 +731,19 @@ class SentianceETL:
                 self.upsert_trip(sid, uid, e)
 
     def process_metadata(self, uid, payload):
-        """Handles custom user metadata labels."""
+        """Stores a custom user metadata label-value pair into UserMetadata.
+
+        Metadata records are arbitrary key-value tags set by the host application
+        (e.g. vehicle type, driver tier, fleet ID). Multiple records with the same
+        label are allowed; deduplication is the responsibility of the consumer.
+
+        Args:
+            uid:     Sentiance user ID.
+            payload: dict with 'label' (str) and 'value' (any scalar, coerced to str).
+
+        Returns:
+            None
+        """
         label, val = payload.get("label"), payload.get("value")
         self.cursor.execute(
             "INSERT INTO UserMetadata (sentiance_user_id, label, value, updated_at) VALUES (?, ?, ?, GETDATE())",
@@ -562,7 +751,21 @@ class SentianceETL:
         )
 
     def process_crash_event(self, sid, uid, payload):
-        """Handles vehicle crash detection telemetry."""
+        """Stores a vehicle crash detection event into VehicleCrashEvent.
+
+        Captures all telemetry emitted by the Sentiance crash detector: GPS
+        location at impact, accelerometer-derived magnitude and delta-V, speed,
+        confidence, severity classification, and the preceding GPS trail
+        (compressed as GZIP JSON for storage efficiency).
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed VehicleCrash JSON dict.
+
+        Returns:
+            None
+        """
         l = payload.get("location", {})
         self.cursor.execute(
             "INSERT INTO VehicleCrashEvent (sdk_source_event_id, sentiance_user_id, crash_time_epoch, latitude, longitude, accuracy, altitude, magnitude, speed_at_impact, delta_v, confidence, severity, detector_mode, preceding_locations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -585,7 +788,21 @@ class SentianceETL:
         )
 
     def process_sdk_status(self, sid, uid, payload):
-        """Monitors SDK health and permission states."""
+        """Stores an SDK health snapshot into SdkStatusHistory.
+
+        Records the operational state of the Sentiance SDK on the device at a
+        point in time: detection and start statuses, location permission level,
+        data quota consumption (WiFi / mobile / disk), and whether the SDK is
+        capable of active detection. Useful for diagnosing gaps in data coverage.
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed SDKStatus JSON dict.
+
+        Returns:
+            None
+        """
         self.cursor.execute(
             "INSERT INTO SdkStatusHistory (sdk_source_event_id, sentiance_user_id, start_status, detection_status, location_permission, precise_location_granted, is_location_available, quota_status_wifi, quota_status_mobile, quota_status_disk, can_detect, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
@@ -604,7 +821,26 @@ class SentianceETL:
         )
 
     def process_activity_history(self, sid, uid, payload):
-        """Processes high-level activity summaries."""
+        """Stores a UserActivity event into UserActivityHistory and optionally upserts a Trip.
+
+        UserActivity is a coarse-grained activity signal (IN_TRANSPORT, STATIONARY,
+        etc.) emitted by the legacy activity API. It does not carry the full
+        transport detail of DrivingInsights or Timeline events.
+
+        When activityType is IN_TRANSPORT or tripType is set, a minimal Trip record
+        is upserted using the sdk_source_event_id as the canonical transport ID
+        (since UserActivity does not provide a Sentiance transport event ID). This
+        ensures the trip is discoverable even when richer event types have not yet
+        arrived.
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed UserActivity JSON dict.
+
+        Returns:
+            None
+        """
         self.cursor.execute(
             "INSERT INTO UserActivityHistory (sdk_source_event_id, sentiance_user_id, activity_type, trip_type, stationary_latitude, stationary_longitude, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
@@ -626,7 +862,22 @@ class SentianceETL:
             self.upsert_trip(sid, uid, transport)
 
     def process_technical_event(self, sid, uid, payload):
-        """Logs technical SDK events for debugging."""
+        """Stores an internal SDK diagnostic event into TechnicalEventHistory.
+
+        TechnicalEvents are emitted by the SDK for operational observability:
+        configuration changes, detection-engine state transitions, background
+        execution signals, etc. The full payload is preserved as JSON for
+        forensic inspection without a fixed schema.
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed TechnicalEvent JSON dict containing at minimum
+                     'type' and optionally 'message'.
+
+        Returns:
+            None
+        """
         self.cursor.execute(
             "INSERT INTO TechnicalEventHistory (sdk_source_event_id, sentiance_user_id, technical_event_type, message, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, GETDATE())",
             (
@@ -639,9 +890,33 @@ class SentianceETL:
         )
 
     def run(self, batch_size=500):
-        """
-        Main execution loop. Fetches unprocessed records and routes to handlers.
-        Returns True if data was processed, False otherwise.
+        """Fetches one batch of unprocessed records from SentianceEventos and processes them.
+
+        Execution flow:
+            1. Opens a database connection.
+            2. Queries up to batch_size rows where is_processed = 0, ordered by id.
+            3. For each row:
+               a. Child DrivingInsights sub-event types (HarshEvents, PhoneEvents, etc.)
+                  are skipped if their parent DrivingInsightsTrip does not yet exist,
+                  leaving is_processed = 0 for a future retry.
+               b. Inserts a SdkSourceEvent audit row (source_time, ref, hash).
+               c. Routes to the appropriate process_* method based on tipo.
+               d. Marks the original row as is_processed = 1 and commits.
+               e. On any exception: rolls back, logs to SentianceEventos_Errors,
+                  marks the row as is_processed = -1, reconnects if the connection
+                  was lost, and continues with the next row.
+            4. Returns False if the batch contained only orphan child events
+               (all skipped), to prevent an infinite retry loop in the caller.
+
+        Args:
+            batch_size: maximum number of SentianceEventos rows to process per call.
+                        Defaults to 500.
+
+        Returns:
+            True  if at least one record was successfully processed or failed
+                  (i.e. the queue is making progress).
+            False if no rows were found or every row in the batch was an orphan
+                  child waiting for its parent (signals the caller to stop).
         """
         logger.info(f"Starting ETL Execution (Batch: {batch_size})")
         self.connect()
