@@ -589,7 +589,7 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
                             f"- ⚠️ `{_tid}` Error: {_e}"
                         )
 
-        elif _tipo == "TimelineEvents":
+        elif _tipo in ("TimelineEvents", "TimelineUpdate"):
             _events = (
                 _payload if isinstance(_payload, list) else _payload.get("events", [])
             )
@@ -598,6 +598,57 @@ def process_selection(data_grid, raw_df, json, mo, pyodbc, get_conn_str, env_sel
             _validation_nodes.append(
                 f"**TimelineEventHistory:** {'✅' if _actual_ev == _expected_ev else '❌'} (Exp: {_expected_ev}, Found: {_actual_ev})"
             )
+
+        elif _tipo in (
+            "DrivingInsightsHarshEvents",
+            "DrivingInsightsPhoneEvents",
+            "DrivingInsightsCallEvents",
+            "DrivingInsightsSpeedingEvents",
+            "DrivingInsightsWrongWayDrivingEvents",
+        ):
+            _table_map = {
+                "DrivingInsightsHarshEvents":         "DrivingInsightsHarshEvent",
+                "DrivingInsightsPhoneEvents":          "DrivingInsightsPhoneEvent",
+                "DrivingInsightsCallEvents":           "DrivingInsightsCallEvent",
+                "DrivingInsightsSpeedingEvents":       "DrivingInsightsSpeedingEvent",
+                "DrivingInsightsWrongWayDrivingEvents":"DrivingInsightsWrongWayDrivingEvent",
+            }
+            _target_table = _table_map[_tipo]
+            _transport_id = _payload.get("transportId")
+            _expected_count = len(_payload.get("events", []))
+
+            _validation_nodes.append(
+                f"**Audit (SdkSourceEvent):** {'✅' if _cursor.execute('SELECT COUNT(*) FROM SdkSourceEvent WHERE sentiance_eventos_id = ?', (int(_raw_id),)).fetchone()[0] > 0 else '❌'}"
+            )
+
+            if not _transport_id:
+                _validation_nodes.append(f"**{_target_table}:** ⚠️ No transportId in payload")
+            else:
+                try:
+                    _di_row = _cursor.execute(
+                        "SELECT driving_insights_trip_id FROM DrivingInsightsTrip "
+                        "WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
+                        (_transport_id, _row["sentianceid"]),
+                    ).fetchone()
+                    if not _di_row:
+                        _validation_nodes.append(
+                            f"**{_target_table}:** ❌ Parent DrivingInsightsTrip not found "
+                            f"(transportId: {_transport_id})"
+                        )
+                    else:
+                        _di_trip_id = _di_row[0]
+                        _actual_count = _cursor.execute(
+                            f"SELECT COUNT(*) FROM {_target_table} "
+                            f"WHERE driving_insights_trip_id = ?",
+                            (_di_trip_id,),
+                        ).fetchone()[0]
+                        _validation_nodes.append(
+                            f"**{_target_table}:** "
+                            f"{'✅' if _actual_count == _expected_count else '❌'} "
+                            f"(Exp: {_expected_count}, Found: {_actual_count})"
+                        )
+                except Exception as _ex:
+                    _validation_nodes.append(f"**{_target_table}:** ⚠️ Error: {_ex}")
 
         elif _tipo == "VehicleCrash":
             _crash_count = check_tree("VehicleCrashEvent")
