@@ -947,15 +947,6 @@ class SentianceETL:
             if not rows:
                 return False
 
-            # Define child event types that require a parent DrivingInsights record to exist
-            child_event_types = (
-                "'DrivingInsightsHarshEvents'",
-                "'DrivingInsightsPhoneEvents'",
-                "'DrivingInsightsCallEvents'",
-                "'DrivingInsightsSpeedingEvents'",
-                "'DrivingInsightsWrongWayDrivingEvents'",
-            )
-
             processed_count = 0
             for r_id, uid, r_json, tipo in rows:
                 try:
