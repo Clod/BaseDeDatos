@@ -218,11 +218,34 @@ class SentianceETL:
         return res[0] if res else None
 
     def process_driving_insights(self, sid, uid, payload):
-        """Processes safety scores and granular driving incidents."""
+        """Processes a completed DrivingInsights event into the domain model.
+
+        Processes a DrivingInsights webhook payload. Per the Sentiance SDK spec,
+        this payload contains only 'transportEvent' and 'safetyScores' — no
+        inline sub-event arrays. Sub-events (harsh driving, phone usage, speeding,
+        calls, wrong-way driving) are fetched separately via explicit SDK calls and
+        arrive as distinct SentianceEventos records (tipo = 'DrivingInsightsHarshEvents',
+        'DrivingInsightsPhoneEvents', etc.), each routed to their own process_* method.
+
+        Write order:
+            1. upsert_trip         → Trip (canonical row, shared with Timeline/UserContext)
+            2. DrivingInsightsTrip → links sdk_source_event_id to the Trip row and
+                                     stores all safety score columns.
+
+        Note: waypoints are stored exclusively in Trip (via upsert_trip) to
+        avoid duplicating GPS coordinates across child tables.
+
+        Args:
+            sid: sdk_source_event_id of the current SdkSourceEvent row.
+            uid: Sentiance user ID.
+            payload: parsed DrivingInsights JSON dict containing
+                     'transportEvent', 'safetyScores', and the sub-event arrays.
+        """
         transport = payload.get("transportEvent", {})
         scores = payload.get("safetyScores", {})
         trip_id = self.upsert_trip(sid, uid, transport)
 
+        # DrivingInsightsTrip: parent-of-safety-events, FK->Trip, no geo/waypoints
         sql = """INSERT INTO DrivingInsightsTrip (sdk_source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
                  smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
                  harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score,
@@ -250,70 +273,6 @@ class SentianceETL:
                 self.compress_data(transport.get("transportTags")),
             ),
         )
-        di_id = self.cursor.execute("SELECT @@IDENTITY").fetchone()[0]
-
-        for e in payload.get("harshDrivingEvents", []):
-            self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    sid,
-                    di_id,
-                    self.format_ts(e.get("startTime")),
-                    e.get("startTimeEpoch"),
-                    self.format_ts(e.get("endTime")),
-                    e.get("endTimeEpoch"),
-                    e.get("magnitude"),
-                    e.get("confidence"),
-                    e.get("type"),
-                    self.compress_data(e.get("waypoints")),
-                ),
-            )
-
-        for e in payload.get("phoneUsageEvents", []):
-            self.cursor.execute(
-                "INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    sid,
-                    di_id,
-                    self.format_ts(e.get("startTime")),
-                    e.get("startTimeEpoch"),
-                    self.format_ts(e.get("endTime")),
-                    e.get("endTimeEpoch"),
-                    e.get("callState"),
-                    self.compress_data(e.get("waypoints")),
-                ),
-            )
-
-        for e in payload.get("callWhileMovingEvents", []):
-            self.cursor.execute(
-                "INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    sid,
-                    di_id,
-                    self.format_ts(e.get("startTime")),
-                    e.get("startTimeEpoch"),
-                    self.format_ts(e.get("endTime")),
-                    e.get("endTimeEpoch"),
-                    e.get("minTraveledSpeedMps"),
-                    e.get("maxTraveledSpeedMps"),
-                    e.get("handsFreeState"),
-                    self.compress_data(e.get("waypoints")),
-                ),
-            )
-
-        for e in payload.get("speedingEvents", []):
-            self.cursor.execute(
-                "INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    sid,
-                    di_id,
-                    self.format_ts(e.get("startTime")),
-                    e.get("startTimeEpoch"),
-                    self.format_ts(e.get("endTime")),
-                    e.get("endTimeEpoch"),
-                    self.compress_data(e.get("waypoints")),
-                ),
-            )
 
     def process_driving_insights_harsh_events(self, sid, uid, payload):
         """Processes standalone harsh driving events fetched via getHarshDrivingEvents."""
