@@ -136,7 +136,26 @@ class SentianceETL:
             pass
 
     def upsert_trip(self, sid, uid, transport):
-        """Consolidates trip data into the central 'Trip' table."""
+        """Consolidates a finalised transport event into the central Trip table.
+
+        Provisional trips (isProvisional=True) are silently ignored: they carry
+        temporary IDs that are never reused by the final event, so storing them
+        would pollute the table with unresolvable orphan rows.
+
+        On INSERT, records creating_sdk_source_event_id so the originating ETL
+        event is permanently traceable. On UPDATE, records
+        last_updated_by_sdk_source_event_id to track the latest enriching event
+        (e.g. DrivingInsights arriving after an earlier UserContext upsert).
+
+        Args:
+            sid: sdk_source_event_id of the currently-processing SdkSourceEvent row.
+            uid: Sentiance user ID (sentiance_user_id).
+            transport: dict containing the transport event fields from the payload.
+
+        Returns:
+            trip_id (int) if the row was inserted or already existed, None otherwise.
+        """
+        # Discard provisional trips
         if transport.get("isProvisional"):
             return None
         tid = transport.get("id")
