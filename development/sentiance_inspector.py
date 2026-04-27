@@ -13,31 +13,53 @@ Sentiance Visual Regression Dashboard (Marimo Notebook)
 =======================================================
 
 DESCRIPTION:
-This is an interactive Marimo notebook designed to function as a visual
-unit testing and regression tool for the Sentiance ETL pipeline.
+Interactive browser dashboard for inspecting and validating processed
+Sentiance ETL records. Connects to a SQL Server database (local Docker or
+AWS RDS), displays a filterable grid of SentianceEventos records, and shows
+a side-by-side view of the raw JSON payload versus the expected relational
+projection for any selected record.
 
 PURPOSE/WHY:
-- Regression Testing: Allows developers to verify that the ETL correctly
-  maps complex, nested JSON payloads into the relational domain schema.
-- Debugging: Provides a clear side-by-side view of the raw input versus
-  the expected database output to easily spot missing or malformed data.
-- Accessibility: Creates a UI-driven approach to exploring the database
-  without writing complex SQL JOIN queries manually.
+- Regression Testing: Verifies that the ETL correctly maps complex, nested
+  JSON payloads into the relational domain schema.
+- Debugging: Provides a side-by-side view of the raw input versus the
+  expected database output to easily spot missing or malformed data.
+- Accessibility: Explores the database without writing manual SQL JOIN queries.
 
-WORKFLOW:
-1. Connects to the database (Local Docker or AWS RDS via .env files).
-2. Fetches a grid of recently processed records from SentianceEventos.
-3. When a record is selected, it parses the JSON on the left pane.
-4. On the right pane, it dynamically calculates expected record counts
-   (e.g., number of harsh events in the JSON) and compares them to actual
-   record counts found in the domain tables, displaying Pass/Fail indicators.
+VALIDATION RULES:
+For each event type the right pane checks expected counts (from the raw JSON)
+against actual row counts in the domain tables:
+
+  DrivingInsights             → SdkSourceEvent, DrivingInsightsTrip, Trip,
+                                HarshEvent, PhoneEvent, SpeedingEvent,
+                                CallEvent, WrongWayDrivingEvent
+
+  DrivingInsights*Events      → DrivingInsightsTrip (parent must exist),
+                                child table row count vs len(payload["events"])
+
+  UserContextUpdate /
+  requestUserContext          → UserContextHeader, ActiveSegmentDetail,
+                                ContextEventDetail, HomeHistory, WorkHistory,
+                                UpdateCriteria, Trip sync per IN_TRANSPORT
+                                event (isProvisional=false → must be in Trip;
+                                isProvisional=true → must NOT be in Trip)
+
+  TimelineEvents / TimelineUpdate → TimelineEventHistory vs len(events)
+  VehicleCrash                → VehicleCrashEvent
+  SDKStatus                   → SdkStatusHistory
+  UserActivity                → UserActivityHistory
+  TechnicalEvent              → TechnicalEventHistory
+  UserMetadata                → UserMetadata
 
 USAGE:
-To run the dashboard in your browser:
+    # Open in browser (reactive, read-only):
     marimo run development/sentiance_inspector.py
 
-To edit the notebook code interactively:
+    # Open in edit mode (modify cells interactively):
     marimo edit development/sentiance_inspector.py
+
+For headless batch validation over all records, use the companion script:
+    python development/run_inspector_batch.py --help
 
 AUTHOR: Claudio Grasso / AI Assistant
 DATE: April 2026

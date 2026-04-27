@@ -132,8 +132,15 @@ class TestProcessDrivingInsightsParams:
         # transportTags is an empty dict → falsy → None
         assert di_params[16] is None
 
-    def test_harsh_events_inserted_per_entry(self, etl_with_cursor, payload):
-        """Each harshDrivingEvents entry generates one INSERT."""
+    def test_inline_sub_events_are_not_processed(self, etl_with_cursor, payload):
+        """process_driving_insights must NOT insert DrivingInsightsHarshEvent rows.
+
+        Per the Sentiance SDK spec, the DrivingInsights payload contains only
+        'transportEvent' and 'safetyScores'. Sub-events (harsh, phone, speeding,
+        etc.) arrive as separate SentianceEventos records and are handled by their
+        own process_driving_insights_* methods. Any inline arrays that may appear
+        in test/mock payloads must be silently ignored.
+        """
         payload["harshDrivingEvents"] = [
             {
                 "startTime": "2026-04-01T10:05:00Z",
@@ -149,24 +156,7 @@ class TestProcessDrivingInsightsParams:
         etl_with_cursor.process_driving_insights(sid=1, uid="user-1", payload=payload)
         all_sqls = [c.args[0] for c in etl_with_cursor.cursor.execute.call_args_list]
         harsh_inserts = [s for s in all_sqls if "DrivingInsightsHarshEvent" in s and "INSERT" in s]
-        assert len(harsh_inserts) == 1
-
-    def test_harsh_event_type_extracted(self, etl_with_cursor, payload):
-        """The 'type' field from harshDrivingEvent maps to harsh_type column."""
-        payload["harshDrivingEvents"] = [{
-            "startTime": "2026-04-01T10:05:00Z",
-            "startTimeEpoch": 1743503100000,
-            "endTime": "2026-04-01T10:05:02Z",
-            "endTimeEpoch": 1743503102000,
-            "magnitude": 0.75,
-            "confidence": 0.90,
-            "type": "HARSH_ACCELERATION",
-            "waypoints": [],
-        }]
-        etl_with_cursor.process_driving_insights(sid=1, uid="user-1", payload=payload)
-        # Harsh event INSERT is after: MERGE, SELECT trip_id, DI INSERT, @@IDENTITY
-        harsh_params = _get_call_params(etl_with_cursor.cursor, 4)
-        assert harsh_params[8] == "HARSH_ACCELERATION"  # harsh_type
+        assert len(harsh_inserts) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -459,12 +449,21 @@ class TestProcessTimelineEventsParams:
         assert params[19] is None  # venue_significance
         assert params[20] is None  # venue_type
 
-    def test_in_transport_triggers_upsert_trip(self, etl_with_cursor, timeline_payload):
-        """Events with type=IN_TRANSPORT must also trigger upsert_trip (MERGE Trip)."""
+    def test_final_in_transport_triggers_upsert_trip(self, etl_with_cursor, timeline_payload):
+        """A final IN_TRANSPORT event (isProvisional=False) must trigger MERGE Trip."""
+        timeline_payload["events"][0]["isProvisional"] = False
         etl_with_cursor.process_timeline_events(sid=30, uid="user-11", payload=timeline_payload)
         all_sqls = [c.args[0] for c in etl_with_cursor.cursor.execute.call_args_list]
         merge_calls = [s for s in all_sqls if "MERGE Trip" in s]
         assert len(merge_calls) == 1
+
+    def test_provisional_in_transport_skips_upsert_trip(self, etl_with_cursor, timeline_payload):
+        """A provisional IN_TRANSPORT event (isProvisional=True) must NOT write to Trip."""
+        assert timeline_payload["events"][0]["isProvisional"] is True  # fixture sanity check
+        etl_with_cursor.process_timeline_events(sid=30, uid="user-11", payload=timeline_payload)
+        all_sqls = [c.args[0] for c in etl_with_cursor.cursor.execute.call_args_list]
+        merge_calls = [s for s in all_sqls if "MERGE Trip" in s]
+        assert len(merge_calls) == 0
 
     def test_list_payload_format_also_supported(self, etl_with_cursor, timeline_payload):
         """process_timeline_events accepts both {'events': [...]} and [...] directly."""
