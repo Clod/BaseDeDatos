@@ -90,6 +90,28 @@ def create_movilidad_schema():
     logger.info("Movilidad schema ready")
 
 
+def clear_movilidad():
+    conn_str = (
+        "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;"
+        "DATABASE=Movilidad;UID=sa;PWD=SentianceLocal2026!;"
+        "Encrypt=yes;TrustServerCertificate=yes"
+    )
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        logger.info("Clearing Movilidad tables...")
+        for table in [
+            "ChoqueDeVehiculo", "PerfilDeUsuario", "EventosSignificantes",
+            "Eventos", "PuntajesSecundariosTr", "PuntajesPrirmariosTr",
+            "Recorridos", "Conduccion", "Transporte", "Puntajes",
+        ]:
+            cursor.execute(f"DELETE FROM {table}")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Could not clear Movilidad (may not exist yet): {e}")
+
+
 def hydrate(json_file: str):
     logger.info(f"Loading test data from {json_file}...")
     with open(json_file, "r") as f:
@@ -135,6 +157,7 @@ def main():
     args = parser.parse_args()
     create_schema()
     create_movilidad_schema()
+    clear_movilidad()
     hydrate(args.file)
     logger.info("SUCCESS: Test dataset loaded")
 
