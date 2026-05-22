@@ -44,6 +44,10 @@ Este documento contiene la descripción técnica detallada del esquema de base d
 4. [VehicleCrashEvent](#22-vehiclecrashevent) - Detección de colisiones/choques vehiculares graves.
 5. [SdkStatusHistory](#23-sdkstatushistory) - Logs de estado del SDK y permisos móviles del usuario.
 
+### Etapa 6: Multi-tenancy
+
+1. [UserOrganization](#24-userorganization) - Mapeo usuario → organización cliente para filtrado multi-tenant.
+
 ---
 
 ## 🏗️ Detalles Técnicos por Tabla
@@ -491,3 +495,33 @@ El objeto `SdkStatus` del SDK de Sentiance expone 21 propiedades. La tabla almac
 | `isBatterySavingEnabled`           | `Boolean` | Si el modo ahorro de batería está activo.                                            |
 | `isBackgroundProcessingRestricted` | `Boolean` | Si el SO restringe el procesamiento en segundo plano para esta app.                  |
 | `isSchedulingExactAlarmsPermitted` | `Boolean` | Si se concedió el permiso de alarmas exactas (requerido en Android 12+).             |
+
+---
+
+### 24. UserOrganization
+
+Tabla de mapeo entre usuarios de Sentiance y organizaciones cliente. Permite filtrar cualquier dato de dominio (viajes, eventos, contexto) por cliente mediante un JOIN sobre `sentiance_user_id`, sin modificar el resto del schema.
+
+> **Diseño multi-tenancy:** un usuario pertenece a una sola organización activa a la vez (constraint UNIQUE sobre `sentiance_user_id`). Si el usuario cambia de organización, la fila existente se actualiza (MERGE). El campo `hasta` permite consultar el historial si se implementa en el futuro.
+
+**Cómo se popula:** el ETL intercepta eventos `UserMetadata` con `label = 'organizacion'` (case-insensitive) y ejecuta un UPSERT en esta tabla además del INSERT normal en `UserMetadata`.
+
+| Campo | Tipo | Nulabilidad | Default | Descripción |
+|-------|------|-------------|---------|-------------|
+| `user_organization_id` | `BIGINT` | NOT NULL | `IDENTITY` | PK autoincremental. |
+| `sentiance_user_id` | `VARCHAR(64)` | NOT NULL | — | ID del usuario en Sentiance. UNIQUE — un usuario = una organización activa. |
+| `organizacion` | `VARCHAR(128)` | NOT NULL | — | Nombre de la organización/cliente. Valor proveniente del campo `value` del evento `UserMetadata`. |
+| `activo` | `BIT` | NOT NULL | `1` | `1` = relación vigente. Se pone a `0` si en el futuro se implementa soft-delete. |
+| `desde` | `DATETIME2(3)` | NOT NULL | `GETDATE()` | Fecha desde la que el usuario pertenece a esta organización. |
+| `hasta` | `DATETIME2(3)` | NULL | *Ninguno* | Fecha de baja de la organización. `NULL` = vigente. |
+
+**Índice:** `IX_UserOrganization_Org (organizacion) WHERE activo = 1` — optimiza queries del tipo "todos los usuarios del cliente X".
+
+**Query típico para filtrar trips por organización:**
+```sql
+SELECT t.*
+FROM Trip t
+JOIN UserOrganization uo
+  ON uo.sentiance_user_id = t.sentiance_user_id AND uo.activo = 1
+WHERE uo.organizacion = 'ClienteX'
+```

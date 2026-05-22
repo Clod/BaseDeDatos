@@ -754,6 +754,9 @@ class SentianceETL:
         (e.g. vehicle type, driver tier, fleet ID). Multiple records with the same
         label are allowed; deduplication is the responsibility of the consumer.
 
+        Special case: when label == 'organizacion' (case-insensitive), the value
+        is also upserted into UserOrganization for multi-tenant filtering.
+
         Args:
             uid:     Sentiance user ID.
             payload: dict with 'label' (str) and 'value' (any scalar, coerced to str).
@@ -765,6 +768,28 @@ class SentianceETL:
         self.cursor.execute(
             "INSERT INTO UserMetadata (sentiance_user_id, label, value, updated_at) VALUES (?, ?, ?, GETDATE())",
             (uid, label, str(val)),
+        )
+        if label and label.lower() == "organizacion" and val:
+            self._upsert_user_organization(uid, str(val))
+
+    def _upsert_user_organization(self, uid: str, organizacion: str) -> None:
+        """Upserts the user's active organization into UserOrganization.
+
+        One user maps to one organization at a time (UNIQUE constraint on
+        sentiance_user_id). Re-sending 'organizacion' metadata updates the
+        existing row rather than inserting a duplicate.
+        """
+        self.cursor.execute(
+            """
+            MERGE UserOrganization AS target
+            USING (SELECT ? AS uid) AS src
+            ON target.sentiance_user_id = src.uid
+            WHEN MATCHED THEN
+                UPDATE SET organizacion = ?, activo = 1, hasta = NULL
+            WHEN NOT MATCHED THEN
+                INSERT (sentiance_user_id, organizacion) VALUES (?, ?)
+            """,
+            (uid, organizacion, uid, organizacion),
         )
 
     def process_crash_event(self, sid, uid, payload):

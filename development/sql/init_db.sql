@@ -417,4 +417,21 @@ BEGIN
     );
 END
 
+-- 7. Multi-tenancy
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserOrganization')
+BEGIN
+    CREATE TABLE UserOrganization (
+        user_organization_id  BIGINT IDENTITY(1,1) PRIMARY KEY,
+        sentiance_user_id     VARCHAR(64)   NOT NULL,
+        organizacion          VARCHAR(128)  NOT NULL,
+        activo                BIT           NOT NULL DEFAULT 1,
+        desde                 DATETIME2(3)  NOT NULL DEFAULT GETDATE(),
+        hasta                 DATETIME2(3)  NULL,
+        CONSTRAINT UQ_UserOrganization_User UNIQUE (sentiance_user_id)
+    );
+    CREATE INDEX IX_UserOrganization_Org
+        ON UserOrganization (organizacion)
+        WHERE activo = 1;
+END
+
 PRINT 'Full relational schema (Stage 2) successfully initialized.';
