@@ -25,6 +25,9 @@ import logging
 import os
 import sys
 
+# etl/ is one level up from scripts/; add it so movilidad_bridge is importable.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'etl'))
+
 import pyodbc
 from dotenv import load_dotenv
 
