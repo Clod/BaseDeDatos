@@ -175,20 +175,6 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SentianceEventos')
-BEGIN
-    CREATE TABLE SentianceEventos (
-        id           INT           NOT NULL IDENTITY(1,1) PRIMARY KEY,
-        sentianceid  VARCHAR(200)  NOT NULL,
-        fechahora    DATETIME      NOT NULL,
-        json         VARCHAR(MAX)  NOT NULL,
-        tipo         VARCHAR(200)  NOT NULL,
-        created_at   DATETIME      NULL,
-        procesado    BIT           NULL,
-        app_version  VARCHAR(50)   NULL
-    );
-END
-GO
 
 PRINT 'Movilidad schema (local dev) initialized successfully.';
 GO
