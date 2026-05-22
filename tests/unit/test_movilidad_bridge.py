@@ -281,6 +281,7 @@ def test_sync_one_happy_path_populates_all_movilidad_tables():
     assert "MERGE Recorridos" in executed_sql
     assert "MERGE PuntajesPrirmariosTr" in executed_sql
     assert "MERGE PuntajesSecundariosTr" in executed_sql
+    assert "MERGE Conduccion" in executed_sql
     assert "MERGE Eventos" in executed_sql
     assert "MERGE EventosSignificantes" in executed_sql
 
@@ -350,6 +351,29 @@ def test_polyline_is_passed_into_recorridos_upsert():
     import polyline as pl
     decoded = pl.decode(polyline_str)
     assert len(decoded) == 3
+
+
+def test_upsert_conduccion_merges_occupant_role():
+    """_upsert_conduccion debe pasar occupant_role como `ocupante`."""
+    bridge, *_, dst_cursor = _make_bridge()
+    trip = {"occupant_role": "DRIVER"}
+    bridge._upsert_conduccion("trip-xyz", "user-abc", trip)
+
+    call = dst_cursor.execute.call_args
+    sql, params = call.args[0], call.args[1]
+    assert "MERGE Conduccion" in sql
+    assert params == ["trip-xyz", "user-abc", "DRIVER", "user-abc", "trip-xyz", "DRIVER"]
+
+
+def test_upsert_conduccion_accepts_none_occupant():
+    """ocupante puede ser NULL (viajes sin occupant_role en el SDK)."""
+    bridge, *_, dst_cursor = _make_bridge()
+    bridge._upsert_conduccion("trip-xyz", "user-abc", {})
+
+    call = dst_cursor.execute.call_args
+    params = call.args[1]
+    assert params[2] is None
+    assert params[5] is None
 
 
 def test_exception_in_sync_one_is_caught_and_reported():

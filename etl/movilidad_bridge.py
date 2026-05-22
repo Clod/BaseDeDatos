@@ -64,15 +64,14 @@ class SyncReport:
 
 
 class MovilidadBridge:
-    """Proyecta datos consolidados en VictaTMTK hacia las 7 tablas de Movilidad.
+    """Proyecta datos consolidados en VictaTMTK hacia las tablas de Movilidad.
 
-    Las 7 tablas pobladas son: Transporte, Recorridos, PuntajesPrirmariosTr (sic),
-    PuntajesSecundariosTr, Eventos, EventosSignificantes, PerfilDeUsuario,
-    ChoqueDeVehiculo. La tabla `Conduccion` del documento de análisis no existe
-    realmente en el esquema Movilidad y queda fuera de scope.
+    Tablas pobladas: Transporte, Recorridos, PuntajesPrirmariosTr (sic),
+    PuntajesSecundariosTr, Eventos, EventosSignificantes, Conduccion,
+    PerfilDeUsuario, ChoqueDeVehiculo.
 
     Limitaciones documentadas (cloud-only en Sentiance, no disponibles vía SDK):
-        - `anticipacion` -> NULL
+        - `anticipacion` -> 0
         - `celular_fijo` -> 0 / "[]"
         - `pantalla`     -> "[]"
     """
@@ -364,6 +363,7 @@ class MovilidadBridge:
         self._upsert_puntajes_primarios(transport_id, uid, trip)
         harsh_count = self._count_harsh_events(transport_id, uid)
         self._upsert_puntajes_secundarios(transport_id, uid, trip, harsh_count)
+        self._upsert_conduccion(transport_id, uid, trip)
         eventos = self._build_eventos_payload(transport_id, uid)
         self._upsert_eventos(transport_id, uid, eventos)
         self._upsert_eventos_significantes(transport_id, uid, eventos)
@@ -600,6 +600,19 @@ class MovilidadBridge:
             ev["frenado"], ev["exceso_de_velocidad"], ev["llamados"], ev["pantalla"],
         ]
         self._exec_dst(sql, params)
+
+    def _upsert_conduccion(
+        self, viaje: str, uid: str, trip: dict[str, Any]
+    ) -> None:
+        sql = """
+        MERGE Conduccion AS target
+        USING (SELECT ? AS viaje, ? AS usuario) AS src
+        ON target.viaje = src.viaje AND target.usuario = src.usuario
+        WHEN MATCHED THEN UPDATE SET ocupante = ?
+        WHEN NOT MATCHED THEN INSERT (usuario, viaje, ocupante) VALUES (?, ?, ?);
+        """
+        ocupante = trip.get("occupant_role")
+        self._exec_dst(sql, [viaje, uid, ocupante, uid, viaje, ocupante])
 
     def _upsert_choque(self, uid: str) -> None:
         cur = self.src_conn.cursor()
