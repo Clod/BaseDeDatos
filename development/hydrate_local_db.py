@@ -43,7 +43,7 @@ def _run_sql_file(cursor, sql_file: str):
 
 
 def recreate_schema():
-    """Drop and recreate the VictaTMTK database schema from init_db.sql."""
+    """Drop and recreate the VictaTMTK and Movilidad database schemas."""
     server, username, password = "localhost", "sa", "SentianceLocal2026!"
     master_conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE=master;UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
 
@@ -72,6 +72,8 @@ def recreate_schema():
     except Exception as e:
         logger.error(f"Failed to recreate VictaTMTK schema: {e}")
         raise
+
+    recreate_movilidad_schema()
 
 
 def recreate_movilidad_schema():
@@ -103,6 +105,30 @@ def recreate_movilidad_schema():
     except Exception as e:
         logger.error(f"Failed to recreate Movilidad schema: {e}")
         raise
+
+
+def _clear_movilidad():
+    """Delete all rows from the local Movilidad database (no schema drop)."""
+    server, username, password = "localhost", "sa", "SentianceLocal2026!"
+    conn_str = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};"
+        f"DATABASE=Movilidad;UID={username};PWD={password};"
+        f"Encrypt=yes;TrustServerCertificate=yes"
+    )
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        logger.info("Clearing Movilidad tables...")
+        for table in [
+            "ChoqueDeVehiculo", "PerfilDeUsuario", "EventosSignificantes",
+            "Eventos", "PuntajesSecundariosTr", "PuntajesPrirmariosTr",
+            "Recorridos", "Transporte",
+        ]:
+            cursor.execute(f"DELETE FROM {table}")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Could not clear Movilidad (may not exist yet): {e}")
 
 
 def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
@@ -141,7 +167,7 @@ def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
         cursor = conn.cursor()
 
         if clear_first:
-            logger.info("Clearing local tables for fresh start...")
+            logger.info("Clearing VictaTMTK tables for fresh start...")
             # Delete in FK-safe order: children before parents.
             # Trip references SdkSourceEvent via FK, so Trip must go first.
             for table in [
@@ -159,6 +185,7 @@ def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
             ]:
                 cursor.execute(f"DELETE FROM {table}")
             conn.commit()
+            _clear_movilidad()
 
         logger.info(f"Inserting {len(records)} records with batch commits...")
         insert_sql = "INSERT INTO SentianceEventos (sentianceid, json, tipo, created_at, app_version, is_processed) VALUES (?, ?, ?, ?, ?, 0)"
@@ -215,24 +242,13 @@ if __name__ == "__main__":
         default=None,
         help="Limit number of records to hydrate",
     )
-    parser.add_argument(
-        "--movilidad",
-        action="store_true",
-        help="Also recreate the local Movilidad schema (for bridge integration testing)",
-    )
     args = parser.parse_args()
 
     if args.recreate_only:
-        recreate_schema()
-        if args.movilidad:
-            recreate_movilidad_schema()
+        recreate_schema()  # always includes Movilidad
         logger.info("Schema(s) recreated (no data loaded).")
     elif args.recreate:
-        recreate_schema()
-        if args.movilidad:
-            recreate_movilidad_schema()
+        recreate_schema()  # always includes Movilidad
         hydrate(args.file, clear_first=False, limit=args.limit)
     else:
-        if args.movilidad:
-            recreate_movilidad_schema()
         hydrate(args.file, clear_first=not args.no_clear, limit=args.limit)
