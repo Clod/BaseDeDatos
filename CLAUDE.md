@@ -109,6 +109,27 @@ Both `mssql` and `mssql-local` share this schema.
 - The ETL reads from `SentianceEventos` (unprocessed rows), transforms JSON payloads, and writes to the target tables above.
 - `development/sentiance_inspector.py` is a dashboard for inspecting processed vs. pending events.
 - `development/run_inspector_batch.py` runs the inspector in headless/batch mode.
+
+---
+
+## Movilidad Bridge (Temporary)
+
+`movilidad_bridge.py` projects consolidated VictaTMTK data into the legacy Movilidad schema at the end of every ETL batch. Designed to be removed once Operaciones implements its own dedicated process.
+
+**Activation:** set `ENABLE_MOVILIDAD_BRIDGE=true` plus the Movilidad credentials in `.env`:
+
+```
+ENABLE_MOVILIDAD_BRIDGE=true
+MOVILIDAD_HOST=AROCLNDSQL-DEV.ikeasistencia.com.ar
+MOVILIDAD_PORT=1533
+MOVILIDAD_DATABASE=Movilidad
+MOVILIDAD_USER=...
+MOVILIDAD_PASSWORD=...
+```
+
+**Dependency:** `polyline` (`uv pip install --python .venv/bin/python polyline`).
+
+**Removal:** see `Documentos/analisis_mapeo_movilidad.md` § 10. The bridge is self-contained in `movilidad_bridge.py` plus ~15 lines of hooks in `sentiance_etl.py`; deleting both files and reverting the hooks restores the pre-bridge behavior.
 # Project Context
 
 ## Knowledge Base

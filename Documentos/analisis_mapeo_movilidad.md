@@ -204,3 +204,66 @@ Durante el chequeo cruzado de viajes históricos obtenidos desde la nube de Sent
 *   **Motivo:** Probablemente, en ese instante temporal, las reglas de AWS IoT Core o las subscripciones MQTT no interceptaban/insertaban dichos tópicos crudos extra en la BD local, o bien provenían de un proceso que ya la Nube consumía y encapsulaba antes de la actual implementación.
 *   **Consecuencia de Negocio:** No se puede armar o retroalimentar la tabla `Eventos` de los viajes antiguos usando *únicamente* la SQL `SentianceEventos`, los JSON de las frenadas y teléfonos crudos de esa fecha **se perdieron en el esquema local**.
 *   **Estado Actual:** Esta limitación sólo aplica hacia el pasado. En los registros **nuevos** (recabados recientemente), el sistema envía y almacena exitosamente toda la familia de eventos vinculables bajo el mismo ID de viaje (`transportId`). Por ende, la AWS Lambda se deberá codificar apuntando primordialmente al tráfico en vivo (On-going y futuro) que sí cumple con la entrega en forma distribuida al IoT Core.
+
+---
+
+## 10. Plan de implementación (Bridge ETL temporal)
+
+> **Estado:** implementado en `movilidad_bridge.py`, gated por la variable `ENABLE_MOVILIDAD_BRIDGE=true`.
+
+Mientras Operaciones implementa el proceso definitivo que va a leer VictaTMTK y poblar Movilidad por su cuenta, el ETL actual (`sentiance_etl.py`) cuenta con un **bridge temporal** que proyecta los datos de VictaTMTK hacia las 7 tablas heredadas de Movilidad al final de cada batch.
+
+### Arquitectura
+
+```
+SentianceEventos (MQTT) ──► sentiance_etl.py ──► VictaTMTK (fuente de verdad)
+                                  │
+                                  └── bridge (al final del batch)
+                                        │
+                                        ▼
+                                  Movilidad (proyección heredada)
+```
+
+### Decisiones de diseño aplicadas
+
+| Tema | Decisión |
+|------|----------|
+| Aislamiento | Toda la lógica en `movilidad_bridge.py` + ~15 líneas en `sentiance_etl.py`. |
+| Fuente | Lee de **VictaTMTK** (no del JSON crudo). El día que se borre el bridge, su reemplazo natural también lee de VictaTMTK. |
+| Idempotencia | `MERGE` en SQL Server por clave `(viaje, usuario)` en cada upsert. |
+| Tolerancia a fallos | Si Movilidad está caída, log warning y se continúa. No bloquea el ETL principal. |
+| `polyline` | Codificado con la librería `polyline` de PyPI (`pip install polyline`). |
+| `ubicacion_inicio` / `ubicacion_fin` | Coordenadas `"lat,lon"` del primer/último waypoint. **No** se hace geocoding inverso. |
+| `EventosSignificantes` | Espejo idéntico de `Eventos` hasta que Operaciones defina umbrales (sección 7.3). Atención: la columna se llama `exceso_velocidad` (sin `_de_`). |
+| `anticipacion` | `NULL` (cloud-only ML, no expuesto por SDK). |
+| `celular_fijo` / `pantalla` | `0` / `"[]"` (cloud-only ML). |
+| `Conduccion` | Fuera de scope — la tabla no existe en el esquema Movilidad real. |
+
+### Variables de entorno
+
+```
+ENABLE_MOVILIDAD_BRIDGE=true        # "false" o ausente desactiva el bridge
+MOVILIDAD_HOST=AROCLNDSQL-DEV.ikeasistencia.com.ar
+MOVILIDAD_PORT=1533
+MOVILIDAD_DATABASE=Movilidad
+MOVILIDAD_USER=<usuario>
+MOVILIDAD_PASSWORD=<password>
+```
+
+### Cómo remover el bridge cuando Operaciones tenga su proceso propio
+
+1. `rm movilidad_bridge.py tests/unit/test_movilidad_bridge.py`
+2. En `sentiance_etl.py`, revertir:
+   - El bloque `try: from movilidad_bridge import MovilidadBridge ...` cerca de los imports.
+   - Las líneas en `__init__` que setean `_movilidad_enabled`, `_movilidad_bridge` y `_dirty_transport_ids`.
+   - El bloque en `run()` que captura `candidate_tid` en el dispatch.
+   - El bloque final en `run()` que llama `self._movilidad_bridge.sync_trips(...)`.
+3. Quitar la variable `ENABLE_MOVILIDAD_BRIDGE` y las `MOVILIDAD_*` del `.env`.
+
+El resto del ETL queda exactamente igual.
+
+### Limitaciones conocidas
+
+- **PerfilDeUsuario** se sincroniza con el último `UserContextHeader` por usuario; no incluye los segmentos/atributos detallados (basta para el caso de uso actual de Movilidad, pero pierde granularidad respecto al payload original).
+- **ChoqueDeVehiculo** no tiene clave natural en Movilidad: la deduplicación se hace por `(usuario, crash_time_epoch)` parseando el JSON. Es funcionalmente correcto pero no aprovecha índices.
+- El bridge **no maneja eventos huérfanos** (child sin parent). Si un `DrivingInsightsHarshEvent` llega antes que su `DrivingInsights`, el bridge no encontrará el Trip y omitirá ese `transport_id`. En el siguiente batch que toque al Trip, se re-sincroniza completo.

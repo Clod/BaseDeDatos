@@ -56,6 +56,13 @@ from dotenv import load_dotenv
 # Load database credentials from the local .env file
 load_dotenv()
 
+# Optional Movilidad bridge — temporary projection layer.
+# See movilidad_bridge.py for design notes and removal instructions.
+try:
+    from movilidad_bridge import MovilidadBridge
+except Exception:  # noqa: BLE001 — keep ETL working if bridge file is removed
+    MovilidadBridge = None  # type: ignore[assignment,misc]
+
 # Configure logging for production-grade operational monitoring
 logging.basicConfig(
     level=logging.DEBUG,
@@ -103,6 +110,13 @@ class SentianceETL:
             raise ValueError("Missing database configuration in .env")
         self.conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server},{port};DATABASE={db};UID={user};PWD={pwd};Encrypt=yes;TrustServerCertificate=yes"
         self.conn, self.cursor = None, None
+        # Bridge Movilidad (proyección heredada, temporal).
+        self._movilidad_enabled = (
+            os.getenv("ENABLE_MOVILIDAD_BRIDGE", "false").lower() == "true"
+            and MovilidadBridge is not None
+        )
+        self._movilidad_bridge = None
+        self._dirty_transport_ids: set[str] = set()
 
     def connect(self):
         """Opens a new pyodbc connection and assigns self.conn and self.cursor.
@@ -1012,6 +1026,17 @@ class SentianceETL:
                         (r_id, tipo, uid, st, ref, self.get_hash(r_json)),
                     )
                     sid = self.cursor.execute("SELECT @@IDENTITY").fetchone()[0]
+                    # Track transport_id for the optional Movilidad bridge (removable).
+                    if self._movilidad_enabled:
+                        candidate_tid = None
+                        if isinstance(p, dict):
+                            candidate_tid = (
+                                (p.get("transportEvent") or {}).get("id")
+                                if isinstance(p.get("transportEvent"), dict)
+                                else None
+                            ) or p.get("transportId")
+                        if candidate_tid:
+                            self._dirty_transport_ids.add(candidate_tid)
                     if tipo == "DrivingInsights":
                         self.process_driving_insights(sid, uid, p)
                     elif tipo == "DrivingInsightsHarshEvents":
@@ -1068,6 +1093,19 @@ class SentianceETL:
                     "(all were orphan children waiting for parent). Stopping to avoid infinite loop."
                 )
                 return False
+            # Movilidad bridge sync (proyección heredada, removible).
+            if self._movilidad_enabled and self._dirty_transport_ids:
+                try:
+                    if self._movilidad_bridge is None:
+                        self._movilidad_bridge = MovilidadBridge(self.conn)
+                    self._movilidad_bridge.sync_trips(self._dirty_transport_ids)
+                except Exception as bridge_exc:
+                    logger.warning(
+                        "MovilidadBridge: sync omitido por error no fatal: %s",
+                        bridge_exc,
+                    )
+                finally:
+                    self._dirty_transport_ids.clear()
             return True
         finally:
             self.close()
