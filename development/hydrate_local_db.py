@@ -142,8 +142,22 @@ def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
 
         if clear_first:
             logger.info("Clearing local tables for fresh start...")
-            cursor.execute("TRUNCATE TABLE SentianceEventos")
-            cursor.execute("TRUNCATE TABLE SdkSourceEvent")
+            # Delete in FK-safe order: children before parents.
+            # Trip references SdkSourceEvent via FK, so Trip must go first.
+            for table in [
+                "DrivingInsightsHarshEvent", "DrivingInsightsPhoneEvent",
+                "DrivingInsightsCallEvent", "DrivingInsightsSpeedingEvent",
+                "DrivingInsightsWrongWayDrivingEvent", "DrivingInsightsTrip",
+                "UserContextSegmentAttribute", "UserContextUpdateCriteria",
+                "UserHomeHistory", "UserWorkHistory",
+                "UserContextActiveSegmentDetail", "UserContextEventDetail",
+                "UserContextHeader", "TimelineEventHistory",
+                "UserActivityHistory", "TechnicalEventHistory",
+                "VehicleCrashEvent", "SdkStatusHistory", "UserMetadata",
+                "Trip", "SdkSourceEvent",
+                "SentianceEventos_Errors", "SentianceEventos",
+            ]:
+                cursor.execute(f"DELETE FROM {table}")
             conn.commit()
 
         logger.info(f"Inserting {len(records)} records with batch commits...")
