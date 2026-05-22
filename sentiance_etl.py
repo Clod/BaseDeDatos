@@ -115,8 +115,11 @@ class SentianceETL:
             os.getenv("ENABLE_MOVILIDAD_BRIDGE", "false").lower() == "true"
             and MovilidadBridge is not None
         )
-        self._movilidad_bridge = None
         self._dirty_transport_ids: set[str] = set()
+        if self._movilidad_enabled:
+            logger.info("MovilidadBridge: ACTIVADO — se sincronizará al final de cada batch")
+        else:
+            logger.debug("MovilidadBridge: desactivado (ENABLE_MOVILIDAD_BRIDGE != true)")
 
     def connect(self):
         """Opens a new pyodbc connection and assigns self.conn and self.cursor.
@@ -1094,18 +1097,34 @@ class SentianceETL:
                 )
                 return False
             # Movilidad bridge sync (proyección heredada, removible).
-            if self._movilidad_enabled and self._dirty_transport_ids:
-                try:
-                    if self._movilidad_bridge is None:
-                        self._movilidad_bridge = MovilidadBridge(self.conn)
-                    self._movilidad_bridge.sync_trips(self._dirty_transport_ids)
-                except Exception as bridge_exc:
-                    logger.warning(
-                        "MovilidadBridge: sync omitido por error no fatal: %s",
-                        bridge_exc,
+            if self._movilidad_enabled:
+                if self._dirty_transport_ids:
+                    logger.info(
+                        "MovilidadBridge: sincronizando %d transport_id(s): %s",
+                        len(self._dirty_transport_ids),
+                        self._dirty_transport_ids,
                     )
-                finally:
-                    self._dirty_transport_ids.clear()
+                    try:
+                        # Instanciar siempre con self.conn vigente (evita conn cerrada de runs anteriores).
+                        bridge = MovilidadBridge(self.conn)
+                        report = bridge.sync_trips(self._dirty_transport_ids)
+                        logger.info(
+                            "MovilidadBridge: sincronizados=%d omitidos=%d fallidos=%d",
+                            report.synced, report.skipped, report.failed,
+                        )
+                        if report.errors:
+                            for err in report.errors:
+                                logger.warning("MovilidadBridge error: %s", err)
+                    except Exception as bridge_exc:
+                        logger.warning(
+                            "MovilidadBridge: sync omitido por error no fatal: %s",
+                            bridge_exc,
+                            exc_info=True,
+                        )
+                    finally:
+                        self._dirty_transport_ids.clear()
+                else:
+                    logger.debug("MovilidadBridge: ningún transport_id para sincronizar en este batch")
             return True
         finally:
             self.close()

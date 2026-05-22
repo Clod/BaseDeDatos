@@ -115,7 +115,9 @@ class MovilidadBridge:
         if self._dst_conn is not None:
             return True
         try:
+            logger.debug("MovilidadBridge: conectando a Movilidad...")
             self._dst_conn = pyodbc.connect(self._dst_conn_str)
+            logger.info("MovilidadBridge: conexión a Movilidad establecida")
             return True
         except Exception as exc:
             logger.warning(
@@ -339,10 +341,11 @@ class MovilidadBridge:
     # ------------------------------------------------------------------
 
     def _sync_one(self, transport_id: str) -> bool:
+        logger.debug("MovilidadBridge: sincronizando transport_id=%s", transport_id)
         trip = self._read_trip(transport_id)
         if not trip:
-            logger.debug(
-                "MovilidadBridge: trip %s aún no en VictaTMTK; omitiendo",
+            logger.warning(
+                "MovilidadBridge: trip %s no encontrado en VictaTMTK; omitiendo",
                 transport_id,
             )
             return False
@@ -369,6 +372,9 @@ class MovilidadBridge:
 
         assert self._dst_conn is not None
         self._dst_conn.commit()
+        logger.info(
+            "MovilidadBridge: transport_id=%s sincronizado OK (uid=%s)", transport_id, uid
+        )
         return True
 
     # ------------------------------------------------------------------
