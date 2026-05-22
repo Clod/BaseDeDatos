@@ -123,6 +123,20 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Puntajes')
+BEGIN
+    CREATE TABLE Puntajes (
+        usuario         NVARCHAR(255)  NOT NULL,
+        viaje           UNIQUEIDENTIFIER NOT NULL,
+        correlacion     UNIQUEIDENTIFIER NOT NULL,
+        metrica         NVARCHAR(160)  NOT NULL,
+        puntaje         DECIMAL(5,3)   NOT NULL,
+        actualizacion   DATETIME2      NOT NULL,
+        modo_transporte NVARCHAR(80)   NOT NULL
+    );
+END
+GO
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Conduccion')
 BEGIN
     CREATE TABLE Conduccion (
