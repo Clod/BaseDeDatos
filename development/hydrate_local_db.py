@@ -122,7 +122,7 @@ def _clear_movilidad():
         for table in [
             "ChoqueDeVehiculo", "PerfilDeUsuario", "EventosSignificantes",
             "Eventos", "PuntajesSecundariosTr", "PuntajesPrirmariosTr",
-            "Recorridos", "Transporte",
+            "Recorridos", "Conduccion", "Transporte",
         ]:
             cursor.execute(f"DELETE FROM {table}")
         conn.commit()

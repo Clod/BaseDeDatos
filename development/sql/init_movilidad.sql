@@ -123,6 +123,18 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Conduccion')
+BEGIN
+    CREATE TABLE Conduccion (
+        id        INT            NOT NULL IDENTITY(1,1) PRIMARY KEY,
+        registro  DATETIME       NULL DEFAULT GETDATE(),
+        usuario   NVARCHAR(100)  NOT NULL,
+        viaje     NVARCHAR(100)  NOT NULL,
+        ocupante  VARCHAR(1000)  NULL
+    );
+END
+GO
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PerfilDeUsuario')
 BEGIN
     CREATE TABLE PerfilDeUsuario (
