@@ -4,7 +4,8 @@
 
 ETL pipeline that processes Sentiance SDK webhook payloads (JSON) and loads them into SQL Server tables. The pipeline handles timeline events, driving insights, user context, and trip data for the VictaTMTK product.
 
-**Main entry point:** `sentiance_etl.py`  
+**Main entry point:** `etl/sentiance_etl.py`  
+**Continuous pipeline:** `etl/run_full_pipeline.py`  
 **Local dev tooling:** `development/` directory  
 **Tests:** `tests/`
 
@@ -129,7 +130,9 @@ MOVILIDAD_PASSWORD=...
 
 **Dependency:** `polyline` (`uv pip install --python .venv/bin/python polyline`).
 
-**Removal:** see `Documentos/analisis_mapeo_movilidad.md` § 10. The bridge is self-contained in `movilidad_bridge.py` plus ~15 lines of hooks in `sentiance_etl.py`; deleting both files and reverting the hooks restores the pre-bridge behavior.
+**Backfill:** `python scripts/sync_movilidad.py [--uid X] [--since YYYY-MM-DD] [--dry-run]`
+
+**Removal:** see `Documentos/analisis_mapeo_movilidad.md` § 10. The bridge is self-contained in `etl/movilidad_bridge.py` plus ~15 lines of hooks in `etl/sentiance_etl.py`; deleting both files and reverting the hooks restores the pre-bridge behavior.
 # Project Context
 
 ## Knowledge Base
