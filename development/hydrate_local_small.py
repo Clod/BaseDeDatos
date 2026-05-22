@@ -132,15 +132,9 @@ def hydrate(json_file: str):
 def main():
     parser = argparse.ArgumentParser(description="Hydrate local SQL Server with test data")
     parser.add_argument("--file", default="test_small_full.json", help="JSON test data file to load")
-    parser.add_argument(
-        "--setup-movilidad",
-        action="store_true",
-        help="Also create the local Movilidad schema (for bridge integration testing)",
-    )
     args = parser.parse_args()
     create_schema()
-    if args.setup_movilidad:
-        create_movilidad_schema()
+    create_movilidad_schema()
     hydrate(args.file)
     logger.info("SUCCESS: Test dataset loaded")
 
