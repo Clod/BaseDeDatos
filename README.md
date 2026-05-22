@@ -123,16 +123,13 @@ Two hydration scripts are available depending on your needs:
 
 #### `hydrate_local_small.py` — fast, curated dataset (recommended for development)
 
-Loads a small representative test dataset (`test_small_full.json`, ~1.3 MB). Always creates the schema first. Use this for day-to-day ETL development and unit testing.
+Loads a small representative test dataset (`test_small_full.json`, ~1.3 MB). Always creates the VictaTMTK and Movilidad schemas first. Use this for day-to-day ETL development and unit testing.
 
 ```bash
 cd development
 
 # Load standard test dataset (DrivingInsights + Timeline + UserContext)
 python hydrate_local_small.py
-
-# Also initialize the local Movilidad schema (required to test the bridge)
-python hydrate_local_small.py --setup-movilidad
 
 # Load an alternate dataset (e.g. only Timeline/UserContext events)
 python hydrate_local_small.py --file test_context_timeline.json
@@ -145,17 +142,14 @@ Loads the full `sample_payloads.json.gz` dataset (~900 MB uncompressed, ~52 MB c
 ```bash
 cd development
 
-# Clear existing data and reload (default)
+# Clear existing data and reload (default) — always clears both VictaTMTK and Movilidad
 python hydrate_local_db.py
 
-# Drop and recreate schema, then load data (full reset)
+# Drop and recreate both schemas, then load data (full reset)
 python hydrate_local_db.py --recreate
 
-# Drop and recreate schema only (no data loaded — clean slate)
+# Drop and recreate both schemas only (no data loaded — clean slate)
 python hydrate_local_db.py --recreate-only
-
-# Recreate both VictaTMTK and local Movilidad schemas
-python hydrate_local_db.py --recreate-only --movilidad
 
 # Add data without clearing existing rows
 python hydrate_local_db.py --no-clear
