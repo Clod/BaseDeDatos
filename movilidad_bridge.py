@@ -473,12 +473,12 @@ class MovilidadBridge:
         ON target.viaje = src.viaje AND target.usuario = src.usuario
         WHEN MATCHED THEN UPDATE SET
             concentracion = ?, aceleracion_fuerte = ?, frenado_fuerte = ?,
-            curvas_fuertes = ?, anticipacion = NULL, celular_fijo = 0,
+            curvas_fuertes = ?, anticipacion = 0, celular_fijo = 0,
             eventos_fuertes = ?
         WHEN NOT MATCHED THEN INSERT
             (usuario, viaje, concentracion, aceleracion_fuerte, frenado_fuerte,
              curvas_fuertes, anticipacion, celular_fijo, eventos_fuertes)
-            VALUES (?, ?, ?, ?, ?, ?, NULL, 0, ?);
+            VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?);
         """
         focus = float(trip["focus"] or 0)
         h_acc = float(trip["harsh_acc"] or 0)

@@ -311,8 +311,8 @@ def test_eventos_y_significantes_son_espejo():
     assert e_params[12:20] == s_params[12:20]
 
 
-def test_secundarios_sets_anticipacion_null_and_celular_fijo_zero():
-    """Tablas con campos cloud-only deben quedar como NULL/0 segun decisión de diseño."""
+def test_secundarios_sets_anticipacion_and_celular_fijo_zero():
+    """Campos cloud-only deben quedar en 0 (NOT NULL en schema real de Movilidad)."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
     src_cursor.fetchone.side_effect = [_trip_row(), (3,), None]
     src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
@@ -324,7 +324,7 @@ def test_secundarios_sets_anticipacion_null_and_celular_fijo_zero():
         if "MERGE PuntajesSecundariosTr" in c.args[0]
     )
     sql = sec_call.args[0]
-    assert "anticipacion = NULL" in sql
+    assert "anticipacion = 0" in sql
     assert "celular_fijo = 0" in sql
     # eventos_fuertes debería pasarse como el conteo de harsh events (3)
     params = sec_call.args[1]

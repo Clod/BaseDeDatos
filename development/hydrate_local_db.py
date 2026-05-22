@@ -26,8 +26,24 @@ logging.basicConfig(
 logger = logging.getLogger("Hydrator")
 
 
+def _run_sql_file(cursor, sql_file: str):
+    """Executes a SQL file against an already-open cursor, splitting on GO."""
+    with open(sql_file, "r") as f:
+        sql_script = f.read()
+    sql_batch = ""
+    for line in sql_script.split("\n"):
+        if line.strip().upper() == "GO":
+            if sql_batch.strip():
+                cursor.execute(sql_batch)
+                sql_batch = ""
+        else:
+            sql_batch += "\n" + line
+    if sql_batch.strip():
+        cursor.execute(sql_batch)
+
+
 def recreate_schema():
-    """Drop and recreate the database schema from init_db.sql."""
+    """Drop and recreate the VictaTMTK database schema from init_db.sql."""
     server, username, password = "localhost", "sa", "SentianceLocal2026!"
     master_conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE=master;UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
 
@@ -46,34 +62,46 @@ def recreate_schema():
         """)
         logger.info("Database 'VictaTMTK' dropped.")
 
-        # Read and execute init_db.sql
         script_dir = os.path.dirname(os.path.abspath(__file__))
         sql_file = os.path.join(script_dir, "sql", "init_db.sql")
         logger.info(f"Reading schema from {sql_file}...")
+        _run_sql_file(cursor, sql_file)
 
-        with open(sql_file, "r") as f:
-            sql_script = f.read()
-
-        # Split by GO statements and execute each batch
-        sql_batch = ""
-        for line in sql_script.split("\n"):
-            if line.strip().upper() == "GO":
-                if sql_batch.strip():
-                    cursor.execute(sql_batch)
-                    conn.commit()
-                    sql_batch = ""
-            else:
-                sql_batch += "\n" + line
-
-        # Execute any remaining batch
-        if sql_batch.strip():
-            cursor.execute(sql_batch)
-            conn.commit()
-
-        logger.info("Database schema recreated successfully.")
+        logger.info("VictaTMTK schema recreated successfully.")
         conn.close()
     except Exception as e:
-        logger.error(f"Failed to recreate schema: {e}")
+        logger.error(f"Failed to recreate VictaTMTK schema: {e}")
+        raise
+
+
+def recreate_movilidad_schema():
+    """Drop and recreate the local Movilidad database schema from init_movilidad.sql."""
+    server, username, password = "localhost", "sa", "SentianceLocal2026!"
+    master_conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE=master;UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
+
+    try:
+        logger.info("Recreating local Movilidad database...")
+        conn = pyodbc.connect(master_conn_str, autocommit=True)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            IF EXISTS (SELECT * FROM sys.databases WHERE name = 'Movilidad')
+            BEGIN
+                ALTER DATABASE Movilidad SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE Movilidad;
+            END
+        """)
+        logger.info("Database 'Movilidad' dropped.")
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        sql_file = os.path.join(script_dir, "sql", "init_movilidad.sql")
+        logger.info(f"Reading schema from {sql_file}...")
+        _run_sql_file(cursor, sql_file)
+
+        logger.info("Movilidad schema recreated successfully.")
+        conn.close()
+    except Exception as e:
+        logger.error(f"Failed to recreate Movilidad schema: {e}")
         raise
 
 
@@ -173,13 +201,24 @@ if __name__ == "__main__":
         default=None,
         help="Limit number of records to hydrate",
     )
+    parser.add_argument(
+        "--movilidad",
+        action="store_true",
+        help="Also recreate the local Movilidad schema (for bridge integration testing)",
+    )
     args = parser.parse_args()
 
     if args.recreate_only:
         recreate_schema()
-        logger.info("Schema recreated (no data loaded).")
+        if args.movilidad:
+            recreate_movilidad_schema()
+        logger.info("Schema(s) recreated (no data loaded).")
     elif args.recreate:
         recreate_schema()
+        if args.movilidad:
+            recreate_movilidad_schema()
         hydrate(args.file, clear_first=False, limit=args.limit)
     else:
+        if args.movilidad:
+            recreate_movilidad_schema()
         hydrate(args.file, clear_first=not args.no_clear, limit=args.limit)

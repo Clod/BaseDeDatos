@@ -50,28 +50,44 @@ def drop_database():
     logger.info("Database dropped (skipped - keeping existing data)")
 
 
+def _run_sql_file(cursor, sql_file: str):
+    """Executes a SQL file against an already-open autocommit cursor, splitting on GO."""
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(script_dir, "sql", sql_file)
+    with open(path, "r") as f:
+        sql_script = f.read()
+    sql_batch = ""
+    for line in sql_script.split("\n"):
+        if line.strip().upper() == "GO":
+            if sql_batch.strip():
+                cursor.execute(sql_batch)
+                sql_batch = ""
+        else:
+            sql_batch += "\n" + line
+    if sql_batch.strip():
+        cursor.execute(sql_batch)
+
+
 def create_schema():
-    logger.info("Creating schema...")
-    # Connect to master to create database first (if not exists)
+    logger.info("Creating VictaTMTK schema...")
     conn = get_master_connection()
     cursor = conn.cursor()
     cursor.execute(
         "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'VictaTMTK') CREATE DATABASE VictaTMTK"
     )
-    conn.commit()
+    _run_sql_file(cursor, "init_db.sql")
     conn.close()
+    logger.info("VictaTMTK schema ready")
 
-    # Now connect to database and create schema
-    conn = get_connection()
+
+def create_movilidad_schema():
+    logger.info("Creating local Movilidad schema...")
+    conn = get_master_connection()
     cursor = conn.cursor()
-    with open("sql/init_db.sql", "r") as f:
-        schema = f.read()
-    for stmt in schema.split("GO"):
-        if stmt.strip():
-            cursor.execute(stmt)
-    conn.commit()
+    _run_sql_file(cursor, "init_movilidad.sql")
     conn.close()
-    logger.info("Schema created")
+    logger.info("Movilidad schema ready")
 
 
 def hydrate(json_file: str):
@@ -116,7 +132,15 @@ def hydrate(json_file: str):
 def main():
     parser = argparse.ArgumentParser(description="Hydrate local SQL Server with test data")
     parser.add_argument("--file", default="test_small_full.json", help="JSON test data file to load")
+    parser.add_argument(
+        "--setup-movilidad",
+        action="store_true",
+        help="Also create the local Movilidad schema (for bridge integration testing)",
+    )
     args = parser.parse_args()
+    create_schema()
+    if args.setup_movilidad:
+        create_movilidad_schema()
     hydrate(args.file)
     logger.info("SUCCESS: Test dataset loaded")
 
