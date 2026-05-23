@@ -161,15 +161,29 @@ python hydrate_local_db.py --limit 500
 python hydrate_local_db.py --file my_payloads.json.gz
 ```
 
-### 3. Update `.env` to point to local DB
+### 3. Configure `.env` for local development
+
+Create or update `.env` in the project root. For a full local setup (VictaTMTK + Movilidad bridge), use:
 
 ```
+# VictaTMTK — local Docker instance
 DB_SERVER=localhost
 DB_PORT=1433
 DB_USER=sa
 DB_PASSWORD=SentianceLocal2026!
 DB_NAME=VictaTMTK
+
+# Movilidad bridge — same Docker instance, different database
+ENABLE_MOVILIDAD_BRIDGE=true
+MOVILIDAD_HOST=localhost
+MOVILIDAD_PORT=1433
+MOVILIDAD_DATABASE=Movilidad
+MOVILIDAD_USER=sa
+MOVILIDAD_PASSWORD=SentianceLocal2026!
 ```
+
+> **Important:** if `ENABLE_MOVILIDAD_BRIDGE` is missing or not `true`, the bridge is silently
+> disabled. Movilidad will be empty even after a successful ETL run.
 
 ### 4. Run the ETL locally
 
@@ -191,31 +205,181 @@ python development/run_inspector_batch.py
 
 ## Movilidad Bridge (Temporary)
 
-Projects processed trips from VictaTMTK into the legacy Movilidad schema at the end of each ETL batch. Gated by an env flag; designed to be removed once Operaciones implements its own pipeline.
+Projects processed trips from VictaTMTK into the legacy Movilidad schema at the end of each ETL batch. Gated by `ENABLE_MOVILIDAD_BRIDGE`; designed to be removed once Operaciones implements its own pipeline.
 
-### Activate
+The bridge is entirely self-contained in `etl/movilidad_bridge.py`. If the Movilidad host is unreachable, the bridge logs a warning and the ETL continues normally — it never breaks the main pipeline.
 
-Add to `.env`:
+### Tables populated
+
+| Movilidad table | Source in VictaTMTK |
+|-----------------|---------------------|
+| `Transporte` | `Trip` |
+| `Recorridos` | `Trip.waypoints_json` |
+| `PuntajesPrirmariosTr` | `DrivingInsightsTrip` |
+| `PuntajesSecundariosTr` | `DrivingInsightsTrip` + `DrivingInsightsHarshEvent` |
+| `Conduccion` | `Trip.occupant_role` |
+| `Eventos` | All child event tables |
+| `EventosSignificantes` | Mirror of `Eventos` (significant events only) |
+| `PerfilDeUsuario` | `UserContextHeader` (latest snapshot per user) |
+| `ChoqueDeVehiculo` | `VehicleCrashEvent` |
+
+### When does the bridge run?
+
+The bridge fires **automatically** at the end of each ETL batch, but only when the batch
+processed at least one new `DrivingInsights` event. This means:
+
+- If you run the ETL on a fresh queue → bridge syncs those trips automatically.
+- If you run the ETL on a queue that was **already processed** → `_dirty_transport_ids` is
+  empty → bridge is not called → Movilidad stays empty.
+- If `ENABLE_MOVILIDAD_BRIDGE` is not `true` in `.env` → bridge is disabled entirely.
+
+### `.env` for production (AWS RDS → Movilidad on-prem)
 
 ```
 ENABLE_MOVILIDAD_BRIDGE=true
-MOVILIDAD_HOST=<host>
-MOVILIDAD_PORT=<port>
+MOVILIDAD_HOST=AROCLNDSQL-DEV.ikeasistencia.com.ar
+MOVILIDAD_PORT=1533
 MOVILIDAD_DATABASE=Movilidad
 MOVILIDAD_USER=<user>
 MOVILIDAD_PASSWORD=<password>
 ```
 
-### Backfill already-processed trips
+### `.env` for local development (Docker)
 
-Use when the bridge was activated after the ETL had already processed historical records:
+```
+ENABLE_MOVILIDAD_BRIDGE=true
+MOVILIDAD_HOST=localhost
+MOVILIDAD_PORT=1433
+MOVILIDAD_DATABASE=Movilidad
+MOVILIDAD_USER=sa
+MOVILIDAD_PASSWORD=SentianceLocal2026!
+```
+
+---
+
+## Processing Everything, Including Movilidad
+
+### Complete local workflow from scratch
 
 ```bash
-python scripts/sync_movilidad.py                    # all trips
-python scripts/sync_movilidad.py --uid <user_id>    # one user
-python scripts/sync_movilidad.py --since 2026-05-01 # from a date
-python scripts/sync_movilidad.py --dry-run          # preview only
+# 1. Start Docker
+cd development && docker-compose up -d && cd ..
+
+# 2. Create schemas and load test data
+python development/hydrate_local_small.py
+
+# 3. Ensure .env has both VictaTMTK and Movilidad settings (see above)
+
+# 4. Run the ETL — bridge fires automatically at the end of the batch
+python etl/sentiance_etl.py
+
+# 5. Verify Movilidad was populated
 ```
+
+After step 4, all these Movilidad tables should have data:
+`Transporte`, `Recorridos`, `PuntajesPrirmariosTr`, `PuntajesSecundariosTr`,
+`Conduccion`, `Eventos`, `EventosSignificantes`.
+
+### Verify Movilidad data (via MCP or any SQL client)
+
+```sql
+SELECT 'Transporte'          AS tabla, COUNT(*) AS filas FROM Movilidad.dbo.Transporte          UNION ALL
+SELECT 'Recorridos',                   COUNT(*)          FROM Movilidad.dbo.Recorridos           UNION ALL
+SELECT 'PuntajesPrirmariosTr',         COUNT(*)          FROM Movilidad.dbo.PuntajesPrirmariosTr UNION ALL
+SELECT 'PuntajesSecundariosTr',        COUNT(*)          FROM Movilidad.dbo.PuntajesSecundariosTr UNION ALL
+SELECT 'Conduccion',                   COUNT(*)          FROM Movilidad.dbo.Conduccion           UNION ALL
+SELECT 'Eventos',                      COUNT(*)          FROM Movilidad.dbo.Eventos              UNION ALL
+SELECT 'EventosSignificantes',         COUNT(*)          FROM Movilidad.dbo.EventosSignificantes;
+```
+
+---
+
+## Reprocessing and Backfill
+
+Use `scripts/sync_movilidad.py` in any of these situations:
+
+- The bridge was added or enabled after the ETL already processed historical records.
+- Movilidad was cleared and needs to be rebuilt from VictaTMTK data.
+- You want to re-sync specific users or a date range after a schema change.
+- The bridge failed mid-run and left Movilidad partially populated.
+
+The script reads directly from the `Trip` table in VictaTMTK — it does not care whether
+events in `SentianceEventos` are processed or not.
+
+### Usage
+
+```bash
+# Sync all trips in VictaTMTK to Movilidad
+python scripts/sync_movilidad.py
+
+# Sync only trips for a specific user
+python scripts/sync_movilidad.py --uid <sentiance_user_id>
+
+# Sync only trips that started on or after a date
+python scripts/sync_movilidad.py --since 2026-05-01
+
+# Combine filters
+python scripts/sync_movilidad.py --uid abc123 --since 2026-04-01
+
+# Preview what would be synced without writing anything
+python scripts/sync_movilidad.py --dry-run
+
+# Process in smaller chunks (default: 50 trips per batch)
+python scripts/sync_movilidad.py --batch-size 20
+```
+
+### Full reset of Movilidad + resync
+
+If you need to rebuild Movilidad from scratch (e.g. after a schema change):
+
+```bash
+# 1. Clear and recreate Movilidad schema only (leaves VictaTMTK untouched)
+python development/hydrate_local_db.py --recreate-only
+
+# 2. Resync all trips from VictaTMTK
+python scripts/sync_movilidad.py
+```
+
+Or for a complete reset of both databases:
+
+```bash
+# 1. Drop and recreate both schemas, reload all test data
+python development/hydrate_local_db.py --recreate
+
+# 2. Run ETL — bridge fires automatically
+python etl/run_full_pipeline.py
+```
+
+### Why is Movilidad still empty after running the ETL?
+
+**Check 1: Is the bridge enabled?**
+
+The `.env` must contain `ENABLE_MOVILIDAD_BRIDGE=true`. If that variable is absent or set to
+any other value, the bridge is silently skipped. The ETL log will print:
+```
+MovilidadBridge: desactivado (ENABLE_MOVILIDAD_BRIDGE != true)
+```
+
+**Check 2: Were the events already processed?**
+
+The bridge only runs when the current ETL batch processed new `DrivingInsights` events.
+If all events in `SentianceEventos` have `is_processed = 1`, the ETL exits early (nothing
+to do) and the bridge is never called. Check with:
+
+```sql
+SELECT tipo, COUNT(*) AS total, SUM(CAST(is_processed AS INT)) AS processed
+FROM VictaTMTK.dbo.SentianceEventos
+GROUP BY tipo
+ORDER BY tipo;
+```
+
+If `DrivingInsights` rows are all processed, use `sync_movilidad.py` to backfill.
+
+**Check 3: Is the Movilidad connection correct?**
+
+If the bridge is enabled but the host is wrong or the Docker container is not running, the
+bridge logs a warning and continues silently. Run `scripts/sync_movilidad.py` manually —
+it will raise a clear error if the connection fails.
 
 See `Documentos/analisis_mapeo_movilidad.md` § 10 for removal instructions.
 
