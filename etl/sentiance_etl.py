@@ -1162,8 +1162,8 @@ if __name__ == "__main__":
     etl = SentianceETL()
     for i in range(max_iterations):
         if not etl.run(batch_size=1000):
-            print(f"No more records to process after {i + 1} iterations")
+            logger.info("No more records to process after %d iterations", i + 1)
             break
     else:
-        print(f"Reached max iterations ({max_iterations})")
-    print("ETL completed")
+        logger.info("Reached max iterations (%d)", max_iterations)
+    logger.info("ETL completed")
