@@ -13,6 +13,7 @@ USAGE:
 import argparse
 import json
 import logging
+import os
 import pyodbc
 
 logging.basicConfig(
@@ -153,7 +154,8 @@ def hydrate(json_file: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Hydrate local SQL Server with test data")
-    parser.add_argument("--file", default="test_small_full.json", help="JSON test data file to load")
+    _default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_small_full.json")
+    parser.add_argument("--file", default=_default_file, help="JSON test data file to load")
     args = parser.parse_args()
     create_schema()
     create_movilidad_schema()
