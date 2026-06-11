@@ -318,12 +318,13 @@ class TestProcessCrashEventParams:
 class TestProcessSdkStatusParams:
 
     @pytest.fixture
-    def payload(self):
+    def status_object(self):
+        """The SdkStatus object itself (the contents of the 'sdkStatus' key)."""
         return {
             "startStatus": "STARTED",
             "detectionStatus": "ENABLED_AND_DETECTING",
             "locationPermission": "ALWAYS",
-            "isPreciseLocationPermGranted": True,
+            "isPreciseLocationAuthorizationGranted": True,
             "isLocationAvailable": True,
             "wifiQuotaStatus": "SUFFICIENT",
             "mobileQuotaStatus": "SUFFICIENT",
@@ -331,7 +332,22 @@ class TestProcessSdkStatusParams:
             "canDetect": True,
         }
 
-    def test_status_fields_extracted(self, etl_with_cursor, payload):
+    @pytest.fixture
+    def payload(self, status_object):
+        """Production wraps the status under 'sdkStatus' with device metadata."""
+        return {
+            "appVersion": "1.1.17",
+            "applicationId": "com.IkeArgentina.IkeMovilidad",
+            "modelName": "SM-A065M",
+            "manufacturer": "samsung",
+            "osName": "Android",
+            "osVersion": "16",
+            "sentianceUserId": "69fcd998d4eb91adc3a0f3bd",
+            "sdkStatus": status_object,
+        }
+
+    def test_status_fields_extracted_from_wrapper(self, etl_with_cursor, payload):
+        """Status fields come from the nested 'sdkStatus' object, not the root."""
         etl_with_cursor.process_sdk_status(sid=20, uid="user-6", payload=payload)
         params = _get_call_params(etl_with_cursor.cursor, 0)
         assert params[2] == "STARTED"
@@ -346,17 +362,27 @@ class TestProcessSdkStatusParams:
         assert params[6] == 1   # is_location_available (True → 1)
         assert params[10] == 1  # can_detect (True → 1)
 
+    def test_unwrapped_payload_still_supported(self, etl_with_cursor, status_object):
+        """A status object sent directly at the root (no wrapper) still works."""
+        etl_with_cursor.process_sdk_status(sid=22, uid="user-8", payload=status_object)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "STARTED"
+        assert params[3] == "ENABLED_AND_DETECTING"
+        assert params[5] == 1   # precise_location_granted
+
     def test_false_booleans_coerced_to_zero(self, etl_with_cursor):
         payload = {
-            "startStatus": "STOPPED",
-            "detectionStatus": "DISABLED",
-            "locationPermission": "NEVER",
-            "isPreciseLocationPermGranted": False,
-            "isLocationAvailable": False,
-            "wifiQuotaStatus": "EXCEEDED",
-            "mobileQuotaStatus": "EXCEEDED",
-            "diskQuotaStatus": "EXCEEDED",
-            "canDetect": False,
+            "sdkStatus": {
+                "startStatus": "STOPPED",
+                "detectionStatus": "DISABLED",
+                "locationPermission": "NEVER",
+                "isPreciseLocationAuthorizationGranted": False,
+                "isLocationAvailable": False,
+                "wifiQuotaStatus": "EXCEEDED",
+                "mobileQuotaStatus": "EXCEEDED",
+                "diskQuotaStatus": "EXCEEDED",
+                "canDetect": False,
+            }
         }
         etl_with_cursor.process_sdk_status(sid=21, uid="user-7", payload=payload)
         params = _get_call_params(etl_with_cursor.cursor, 0)
@@ -472,3 +498,74 @@ class TestProcessTimelineEventsParams:
         all_sqls = [c.args[0] for c in etl_with_cursor.cursor.execute.call_args_list]
         timeline_inserts = [s for s in all_sqls if "TimelineEventHistory" in s and "INSERT" in s]
         assert len(timeline_inserts) == 1
+
+    def test_timeline_update_wrapper_inserts_single_event(self, etl_with_cursor):
+        """TimelineUpdate listener payload {'source', 'event': {...}} → one row.
+
+        This is the production shape (confirmed against VictaTMTK.SentianceEventos).
+        Before the fix, the handler looked only for an 'events' key and inserted
+        nothing, silently dropping every TimelineUpdate.
+        """
+        payload = {
+            "source": "listener",
+            "event": {
+                "id": "41837891-8643-4822-90e7-4fe6b427deca",
+                "type": "STATIONARY",
+                "startTime": "2026-06-11T17:11:34.293-0300",
+                "startTimeEpoch": 1781208694293,
+                "lastUpdateTime": "2026-06-11T17:14:27.357-0300",
+                "lastUpdateTimeEpoch": 1781208867357,
+                "isProvisional": False,
+                "location": {"latitude": -34.55095, "longitude": -58.47929, "accuracy": 6},
+                "venue": {"type": "LEISURE_PARK", "significance": "POINT_OF_INTEREST"},
+            },
+        }
+        etl_with_cursor.process_timeline_events(sid=32, uid="user-13", payload=payload)
+        all_sqls = [c.args[0] for c in etl_with_cursor.cursor.execute.call_args_list]
+        inserts = [s for s in all_sqls if "TimelineEventHistory" in s and "INSERT" in s]
+        assert len(inserts) == 1
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "41837891-8643-4822-90e7-4fe6b427deca"  # event_id
+        assert params[3] == "STATIONARY"                            # event_type
+        assert params[20] == "LEISURE_PARK"                         # venue_type
+
+
+# ---------------------------------------------------------------------------
+# process_driving_insights_call_events
+# ---------------------------------------------------------------------------
+
+class TestProcessCallEventsParams:
+    """
+    process_driving_insights_call_events() triggers:
+      Call 0: SELECT driving_insights_trip_id (parent lookup; mock returns truthy)
+      Call 1: INSERT INTO DrivingInsightsCallEvent
+    """
+
+    @pytest.fixture
+    def payload(self):
+        return {
+            "transportId": "c48220ce-f638-489d-843d-87421285de09",
+            "events": [
+                {
+                    "startTime": "2026-04-01T10:05:00.000Z",
+                    "startTimeEpoch": 1743502800000,
+                    "endTime": "2026-04-01T10:06:00.000Z",
+                    "endTimeEpoch": 1743502860000,
+                    "minTraveledSpeedInMps": 4.71,
+                    "maxTraveledSpeedInMps": 13.19,
+                    "handsFreeState": "HANDS_FREE",
+                    "waypoints": [],
+                }
+            ],
+        }
+
+    def test_traveled_speeds_extracted(self, etl_with_cursor, payload):
+        """min/max speeds use the SDK's '...InMps' field names (not '...Mps')."""
+        etl_with_cursor.process_driving_insights_call_events(sid=40, uid="user-14", payload=payload)
+        # Call 0 = parent SELECT, Call 1 = INSERT
+        params = _get_call_params(etl_with_cursor.cursor, 1)
+        # params: sid, di_trip_id, start_time, start_time_epoch, end_time,
+        #         end_time_epoch, min_speed, max_speed, hands_free_state, waypoints
+        assert params[6] == 4.71          # min_traveled_speed_mps
+        assert params[7] == 13.19         # max_traveled_speed_mps
+        assert params[8] == "HANDS_FREE"  # hands_free_state

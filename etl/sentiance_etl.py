@@ -500,8 +500,8 @@ class SentianceETL:
                     e.get("startTimeEpoch"),
                     self.format_ts(e.get("endTime")),
                     e.get("endTimeEpoch"),
-                    e.get("minTraveledSpeedMps"),
-                    e.get("maxTraveledSpeedMps"),
+                    e.get("minTraveledSpeedInMps"),
+                    e.get("maxTraveledSpeedInMps"),
                     e.get("handsFreeState"),
                     self.compress_data(e.get("waypoints")),
                 ),
@@ -700,23 +700,32 @@ class SentianceETL:
     def process_timeline_events(self, sid, uid, payload):
         """Stores a historical activity timeline into TimelineEventHistory.
 
-        Handles two payload shapes accepted by the SDK:
-          - Object:  {"events": [...]}  (TimelineEvents / TimelineUpdate webhooks)
-          - Array:   [...]              (direct list of events, some integration variants)
+        Handles the payload shapes accepted by the SDK:
+          - Wrapper: {"source": ..., "event": {...}}  (TimelineUpdate listener —
+                     emits ONE event per invocation; this is the production shape)
+          - Object:  {"events": [...]}                (TimelineEvents batch)
+          - Array:   [...]                            (direct list of events)
 
-        Each event in the array is inserted as one TimelineEventHistory row. Any
-        event with type IN_TRANSPORT or a non-null transportMode is also upserted
-        into Trip via upsert_trip (provisional events are discarded there).
+        Each event is inserted as one TimelineEventHistory row. Any event with
+        type IN_TRANSPORT or a non-null transportMode is also upserted into Trip
+        via upsert_trip (provisional events are discarded there).
 
         Args:
             sid:     sdk_source_event_id of the current SdkSourceEvent row.
             uid:     Sentiance user ID.
-            payload: parsed JSON — either a dict with an 'events' key or a list.
+            payload: parsed JSON — a dict with an 'event' key (single), a dict
+                     with an 'events' key (batch), or a list of events.
 
         Returns:
             None
         """
-        events = payload if isinstance(payload, list) else payload.get("events", [])
+        if isinstance(payload, list):
+            events = payload
+        elif isinstance(payload.get("event"), dict):
+            # TimelineUpdate listener: {"source": ..., "event": {...}} — single event.
+            events = [payload["event"]]
+        else:
+            events = payload.get("events", [])
         for e in events:
             self.cursor.execute(
                 "INSERT INTO TimelineEventHistory (sdk_source_event_id, sentiance_user_id, event_id, event_type, start_time, start_time_epoch, last_update_time, last_update_time_epoch, end_time, end_time_epoch, duration_in_seconds, is_provisional, transport_mode, distance_meters, occupant_role, transport_tags_json, location_latitude, location_longitude, location_accuracy, venue_significance, venue_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
@@ -837,28 +846,34 @@ class SentianceETL:
         data quota consumption (WiFi / mobile / disk), and whether the SDK is
         capable of active detection. Useful for diagnosing gaps in data coverage.
 
+        Payload shape: production wraps the SDK status object under a "sdkStatus"
+        key, alongside device metadata (appVersion, model, OS, etc.). Older or
+        manually-built payloads may send the status object directly at the root,
+        so we fall back to the payload itself when "sdkStatus" is absent.
+
         Args:
             sid:     sdk_source_event_id of the current SdkSourceEvent row.
             uid:     Sentiance user ID.
-            payload: parsed SDKStatus JSON dict.
+            payload: parsed SDKStatus JSON dict (with or without the wrapper).
 
         Returns:
             None
         """
+        status = payload.get("sdkStatus") or payload
         self.cursor.execute(
             "INSERT INTO SdkStatusHistory (sdk_source_event_id, sentiance_user_id, start_status, detection_status, location_permission, precise_location_granted, is_location_available, quota_status_wifi, quota_status_mobile, quota_status_disk, can_detect, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())",
             (
                 sid,
                 uid,
-                payload.get("startStatus"),
-                payload.get("detectionStatus"),
-                payload.get("locationPermission"),
-                1 if payload.get("isPreciseLocationPermGranted") else 0,
-                1 if payload.get("isLocationAvailable") else 0,
-                payload.get("wifiQuotaStatus"),
-                payload.get("mobileQuotaStatus"),
-                payload.get("diskQuotaStatus"),
-                1 if payload.get("canDetect") else 0,
+                status.get("startStatus"),
+                status.get("detectionStatus"),
+                status.get("locationPermission"),
+                1 if status.get("isPreciseLocationAuthorizationGranted") else 0,
+                1 if status.get("isLocationAvailable") else 0,
+                status.get("wifiQuotaStatus"),
+                status.get("mobileQuotaStatus"),
+                status.get("diskQuotaStatus"),
+                1 if status.get("canDetect") else 0,
             ),
         )
 
@@ -1035,20 +1050,24 @@ class SentianceETL:
                             # Don't update is_processed - leave as 0 for retry
                             continue
 
+                    # Pick a representative object to derive the audit row's
+                    # source_time / source_event_ref, across payload shapes:
+                    #   DrivingInsights -> {"transportEvent": {...}}
+                    #   TimelineUpdate  -> {"event": {...}}
+                    #   TimelineEvents  -> [ {...}, ... ]
+                    #   other           -> {...} at the root
+                    if isinstance(p, list):
+                        head = p[0] if p else {}
+                    elif isinstance(p, dict):
+                        head = p.get("transportEvent") or p.get("event") or p
+                        if not isinstance(head, dict):
+                            head = p
+                    else:
+                        head = {}
                     st = self.format_ts(
-                        p.get("transportEvent", {}).get("startTime")
-                        or (
-                            p[0].get("startTime") if isinstance(p, list) and p else None
-                        )
-                        or p.get("startTime")
-                        or datetime.now().isoformat()
+                        head.get("startTime") or datetime.now().isoformat()
                     )
-                    ref = (
-                        p.get("transportEvent", {}).get("id")
-                        or (p[0].get("id") if isinstance(p, list) and p else None)
-                        or p.get("id")
-                        or str(r_id)
-                    )
+                    ref = head.get("id") or str(r_id)
                     self.cursor.execute(
                         "INSERT INTO SdkSourceEvent (sentiance_eventos_id, record_type, sentiance_user_id, source_time, source_event_ref, payload_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())",
                         (r_id, tipo, uid, st, ref, self.get_hash(r_json)),

@@ -118,7 +118,7 @@ Cada elemento del array genera **una fila** en `DrivingInsightsHarshEvent`.
 | `endTime`           | `string`              | `DrivingInsightsHarshEvent` | `end_time`              | ISO 8601 |
 | `endTimeEpoch`      | `number`              | `DrivingInsightsHarshEvent` | `end_time_epoch`        | UTC en ms |
 | `magnitude`         | `number`              | `DrivingInsightsHarshEvent` | `magnitude`             | Fuerza G máxima detectada |
-| `confidence`        | `number`              | `DrivingInsightsHarshEvent` | `confidence`            | Confianza [0,1] |
+| `confidence`        | `number`              | `DrivingInsightsHarshEvent` | `confidence`            | Confianza 0–100 (entero), almacenada sin normalizar |
 | `type`              | `HarshDrivingEventType` | `DrivingInsightsHarshEvent` | `harsh_type`          | `"ACCELERATION"`, `"BRAKING"`, `"TURN"` |
 | `waypoints`         | `Waypoint[]`          | `DrivingInsightsHarshEvent` | `waypoints_json`        | Array serializado VARBINARY(MAX) |
 
@@ -493,7 +493,7 @@ El payload es un **array de objetos `Event`**. Cada elemento genera **una fila**
 | `magnitude`               | `number`          | `VehicleCrashEvent` | `magnitude`                 | Fuerza G detectada |
 | `speedAtImpact`           | `number`          | `VehicleCrashEvent` | `speed_at_impact`           | Velocidad al impacto en m/s |
 | `deltaV`                  | `number`          | `VehicleCrashEvent` | `delta_v`                   | Cambio de velocidad en m/s |
-| `confidence`              | `number`          | `VehicleCrashEvent` | `confidence`                | Confianza de la detección [0,1] |
+| `confidence`              | `number`          | `VehicleCrashEvent` | `confidence`                | Confianza de la detección 0–100 (entero) |
 | `severity`                | `string`          | `VehicleCrashEvent` | `severity`                  | `"LOW"`, `"MEDIUM"`, `"HIGH"` |
 | `detectorMode`            | `string`          | `VehicleCrashEvent` | `detector_mode`             | `"CAR"`, `"DRIVE"` |
 | `precedingLocations`      | `GeoLocation[]`   | `VehicleCrashEvent` | `preceding_locations_json`  | Array de ubicaciones previas, serializado VARBINARY(MAX) |

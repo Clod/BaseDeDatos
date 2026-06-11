@@ -178,7 +178,7 @@ Registro individualizado de maniobras bruscas (aceleración, frenado o giros agr
 | `end_time`                 | `DATETIME2(3)`   | NULL                  | *Ninguno*         | Fecha y hora de cese de la fuerza inercial anómala.                                                                                                          |
 | `end_time_epoch`           | `BIGINT`         | NULL                  | *Ninguno*         | Timestamp Unix del fin de la maniobra en milisegundos.                                                                                                       |
 | `magnitude`                | `NUMERIC(6,3)`   | NULL                  | *Ninguno*         | Magnitud de aceleración (expresada en m/s²).                                                                                                                 |
-| `confidence`               | `NUMERIC(5,3)`   | NULL                  | *Ninguno*         | Probabilidad matemática de que el evento sea real (0.000 a 1.000). El SDK de Sentiance devuelve este valor como `int` (0–100); se almacena dividido por 100. |
+| `confidence`               | `NUMERIC(6,3)`   | NULL                  | *Ninguno*         | Confianza de la maniobra. El SDK de Sentiance devuelve este valor como `int` (0–100) y se almacena tal cual (sin normalizar). Se recomienda filtrar eventos con `confidence < 50`. |
 | `harsh_type`               | `VARCHAR(32)`    | NULL                  | *Ninguno*         | Categoría de la maniobra (`ACCELERATION`, `BRAKING`, `TURN`).                                                                                                |
 | `waypoints_json`           | `VARBINARY(MAX)` | NULL                  | *Ninguno*         | Ubicación geográfica exacta de la maniobra en formato binario estructurado.                                                                                  |
 
@@ -453,7 +453,7 @@ Tabla de alta criticidad operativa destinada a albergar registros detallados de 
 | `magnitude`                | `NUMERIC(6,3)`   | NULL                  | *Ninguno*         | Magnitud de impacto físico de la colisión en fuerzas inerciales (G).            |
 | `speed_at_impact`          | `NUMERIC(7,2)`   | NULL                  | *Ninguno*         | Velocidad estimada del vehículo al momento del impacto en m/s.                  |
 | `delta_v`                  | `NUMERIC(7,2)`   | NULL                  | *Ninguno*         | Variación neta de velocidad instantánea experimentada en la colisión (Delta V). |
-| `confidence`               | `NUMERIC(5,3)`   | NULL                  | *Ninguno*         | Factor de confianza matemática sobre la veracidad de la colisión (0 a 1).       |
+| `confidence`               | `NUMERIC(6,3)`   | NULL                  | *Ninguno*         | Factor de confianza sobre la veracidad de la colisión. Entero 0–100 (se recomienda filtrar `< 50`). |
 | `severity`                 | `VARCHAR(32)`    | NULL                  | *Ninguno*         | Gravedad cualitativa asignada al impacto (ej. `MINOR`, `MODERATE`, `SEVERE`).   |
 | `detector_mode`            | `VARCHAR(32)`    | NULL                  | *Ninguno*         | Algoritmo que lo gatilló (ej. `HIGH_G_ACCELEROMETER`, `IMPACT_FUSION`).         |
 | `preceding_locations_json` | `VARBINARY(MAX)` | NULL                  | *Ninguno*         | Trayectoria y coordenadas inmediatas previas al impacto (JSON en binario).      |
