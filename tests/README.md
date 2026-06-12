@@ -389,21 +389,19 @@ where the SDK sends an explicit `null` for the venue field.
 
 ---
 
-## Future: Regression Tests
+## Regression Tests (implemented 2026-06-11)
 
-The current suite covers **stateless transformation logic only** (Phases 1 & 2).
-
-The planned Phase 3–5 regression tests will use:
-- A local **Docker SQL Server** (`development/docker-compose.yml`)
-- The `development/hydrate_local_db.py` script to load fixture data
-- **Golden-file snapshots** comparing DB state against frozen JSON files
-
-See `etl_testing_strategy.md` in the AI artifacts for the full regression test
-design.
-
-To run regression tests (once implemented):
+The unit suite covers **stateless transformation logic only**. End-to-end
+behavior is covered by the **golden-snapshot regression suite** in
+`tests/regression/`: a frozen corpus of 166 real production events is run
+through the real ETL against the local Docker SQL Server, and the resulting
+state of all 24 tables is compared byte-for-byte against blessed golden files.
+It also includes idempotency, orphan-ordering, and ~25 structural invariants.
 
 ```bash
-# Requires Docker running and local DB initialized
-.venv/bin/python3 -m pytest tests/regression/ -v -m regression
+# Requires Docker DB running; DROPS the local VictaTMTK database
+.venv/bin/python3 -m pytest tests/regression --run-regression
 ```
+
+Philosophy, procedures (blessing, corpus top-up, LLM audit) and the findings
+log live in **`tests/regression/README.md`**.

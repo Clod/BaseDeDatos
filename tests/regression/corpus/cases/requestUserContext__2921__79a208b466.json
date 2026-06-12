@@ -1,0 +1,13 @@
+{
+ "id": 2921,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"LATE_MORNING\", \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 16, \"longitude\": -58.60309, \"latitude\": -34.68488}}, \"events\": [{\"type\": \"OFF_THE_GRID\", \"lastUpdateTime\": \"2026-04-08T09:42:53.240-0300\", \"id\": \"73987983-f63a-4067-851c-9d9d7f1d4adc\", \"lastUpdateTimeEpoch\": 1775652173240, \"startTimeEpoch\": 1775652172810, \"isProvisional\": false, \"startTime\": \"2026-04-08T09:42:52.810-0300\"}, {\"startTimeEpoch\": 1775645992560, \"endTime\": \"2026-04-08T09:42:52.810-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1775652172810, \"location\": {\"accuracy\": 16, \"longitude\": -58.60309, \"latitude\": -34.68488}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 16, \"longitude\": -58.60309, \"latitude\": -34.68488}}, \"lastUpdateTime\": \"2026-04-08T10:13:37.414-0300\", \"lastUpdateTimeEpoch\": 1775654017414, \"durationInSeconds\": 6180, \"id\": \"0dd57af9-eb97-45b9-b437-aaafbe021a5e\", \"isProvisional\": false, \"startTime\": \"2026-04-08T07:59:52.560-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "79a208b466",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-08 10:39:55",
+  "app_version": "1.1.17-beta21"
+ }
+}

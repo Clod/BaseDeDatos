@@ -1,0 +1,13 @@
+{
+ "id": 37,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "UserContextUpdate",
+ "json": "{\"criteria\": [\"CURRENT_EVENT\"], \"userContext\": {\"semanticTime\": \"LATE_MORNING\", \"lastKnownLocation\": {\"accuracy\": 20, \"longitude\": -58.59904, \"latitude\": -34.68734}, \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 17, \"longitude\": -58.60322, \"latitude\": -34.68493}}, \"events\": [{\"waypoints\": [], \"transportMode\": \"CAR\", \"type\": \"IN_TRANSPORT\", \"transportTags\": {}, \"occupantRole\": \"UNAVAILABLE\", \"lastUpdateTime\": \"2026-04-15T11:16:10.400-0300\", \"id\": \"a0af1de3-2054-42d1-823f-0f57f1a1f2fc\", \"lastUpdateTimeEpoch\": 1776262570400, \"startTimeEpoch\": 1776262369214, \"isProvisional\": true, \"startTime\": \"2026-04-15T11:12:49.214-0300\"}, {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"BUS\", \"startTimeEpoch\": 1776261307214, \"endTime\": \"2026-04-15T11:12:49.214-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-04-15T11:16:10.400-0300\", \"endTimeEpoch\": 1776262369214, \"lastUpdateTimeEpoch\": 1776262570400, \"durationInSeconds\": 1062, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"3a15e3e4-a96c-4da0-8bc5-b8513d965870\", \"isProvisional\": true, \"startTime\": \"2026-04-15T10:55:07.214-0300\"}, {\"startTimeEpoch\": 1776259970438, \"endTime\": \"2026-04-15T10:55:07.214-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1776261307214, \"location\": {\"accuracy\": 10, \"longitude\": -58.55743, \"latitude\": -34.67611}, \"venue\": {\"type\": \"RESTO_MID\", \"significance\": \"POINT_OF_INTEREST\"}, \"lastUpdateTime\": \"2026-04-15T10:58:31.184-0300\", \"lastUpdateTimeEpoch\": 1776261511184, \"durationInSeconds\": 1336, \"id\": \"905a9356-e5b9-4583-8a81-750fbef2f4db\", \"isProvisional\": false, \"startTime\": \"2026-04-15T10:32:50.438-0300\"}]}}",
+ "meta": {
+  "role": "representative",
+  "shape": "3cc44ea004",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-15 11:16:12",
+  "app_version": "1.1.17-beta25b"
+ }
+}

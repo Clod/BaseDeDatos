@@ -996,7 +996,9 @@ class SentianceETL:
                 "'UserActivity'",
                 "'TimelineUpdate'",
             )
-            query = f"SELECT TOP {batch_size} id, sentianceid, json, tipo FROM SentianceEventos WHERE is_processed = 0 AND tipo IN ({','.join(types)})"
+            # ORDER BY id: the docstring's "ordered by id" contract, and the
+            # determinism the regression snapshot suite depends on.
+            query = f"SELECT TOP {batch_size} id, sentianceid, json, tipo FROM SentianceEventos WHERE is_processed = 0 AND tipo IN ({','.join(types)}) ORDER BY id"
             logger.debug(f"Query: {query}")
             self.cursor.execute(query)
             rows = self.cursor.fetchall()

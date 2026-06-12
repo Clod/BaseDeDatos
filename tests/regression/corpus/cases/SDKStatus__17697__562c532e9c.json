@@ -1,0 +1,13 @@
+{
+ "id": 17697,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "SDKStatus",
+ "json": "{\"sdkStatus\": {\"canMonitorGeofences\": true, \"userExists\": true, \"wifiQuotaStatus\": \"OK\", \"mobileQuotaStatus\": \"OK\", \"isSchedulingExactAlarmsPermitted\": true, \"isBatterySavingEnabled\": false, \"startStatus\": \"STARTED\", \"isGyroPresent\": true, \"isPreciseLocationAuthorizationGranted\": true, \"isBatteryOptimizationEnabled\": false, \"isLocationAvailable\": true, \"isAccelPresent\": true, \"locationSetting\": \"OK\", \"isBackgroundProcessingRestricted\": false, \"isAirplaneModeEnabled\": false, \"isGpsPresent\": true, \"isActivityRecognitionPermGranted\": true, \"locationPermission\": \"ALWAYS\", \"isRemoteEnabled\": true, \"isGooglePlayServicesMissing\": false, \"canDetect\": true, \"diskQuotaStatus\": \"OK\", \"detectionStatus\": \"ENABLED_AND_DETECTING\"}, \"appVersion\": \"1.1.17-Beta1\", \"buildNumber\": \"9\", \"applicationId\": \"com.IkeArgentina.IkeMovilidad\", \"modelName\": \"SM-A366E\", \"modelId\": null, \"manufacturer\": \"samsung\", \"brand\": \"samsung\", \"osName\": \"samsung/a36xqnsxx/a36xq:16/BP2A.250605.031.A3/A366EXXU5BYK5_OXE5BYK5:user/release-keys\", \"osVersion\": \"16\", \"apiLevel\": 36, \"sentianceCoreVersion\": \"6.21.0\", \"sentianceUserId\": \"6996f737336ca008000000bf\", \"idSentianceTrail\": null, \"locationServicesEnabled\": true, \"enabled_android_location_providers\": [\"gps\", \"network\", \"passive\"]}",
+ "meta": {
+  "role": "representative",
+  "shape": "562c532e9c",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-20 10:55:57",
+  "app_version": "1.1.17-Beta1"
+ }
+}

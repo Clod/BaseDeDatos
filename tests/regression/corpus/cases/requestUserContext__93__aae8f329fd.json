@@ -1,0 +1,13 @@
+{
+ "id": 93,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"MORNING\", \"lastKnownLocation\": {\"accuracy\": 5, \"longitude\": -58.56436, \"latitude\": -34.67606}, \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 8, \"longitude\": -58.60307, \"latitude\": -34.685}}, \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 8, \"longitude\": -58.60307, \"latitude\": -34.685}, \"lastUpdateTime\": \"2026-04-15T08:29:57.615-0300\", \"id\": \"058e3fff-deaa-4b4d-b9cd-866b03f52a1e\", \"lastUpdateTimeEpoch\": 1776252597615, \"startTimeEpoch\": 1776250775977, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 8, \"longitude\": -58.60307, \"latitude\": -34.685}}, \"isProvisional\": false, \"startTime\": \"2026-04-15T07:59:35.977-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "aae8f329fd",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-15 08:42:50",
+  "app_version": "1.1.17-beta25b"
+ }
+}

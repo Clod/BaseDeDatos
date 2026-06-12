@@ -1,0 +1,13 @@
+{
+ "id": 46500,
+ "sentianceid": "6980bacfbfdfd0080000fc6c",
+ "tipo": "TimelineUpdate",
+ "json": "{\"source\": \"listener\", \"event\": {\"startTimeEpoch\": 1776202523721, \"endTime\": \"2026-04-14T20:56:13.268-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1776210973268, \"location\": {\"accuracy\": 10, \"longitude\": -58.42083, \"latitude\": -34.60234}, \"venue\": {\"type\": \"SHOP_LONG\", \"significance\": \"POINT_OF_INTEREST\"}, \"lastUpdateTime\": \"2026-04-14T20:59:34.294-0300\", \"lastUpdateTimeEpoch\": 1776211174294, \"durationInSeconds\": 8449, \"id\": \"c39ca416-d484-47a8-a8c2-8863de963612\", \"isProvisional\": false, \"startTime\": \"2026-04-14T18:35:23.721-0300\"}}",
+ "meta": {
+  "role": "representative",
+  "shape": "23f72924ce",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-04-14T20:59:37",
+  "app_version": "1.1.17-beta25"
+ }
+}

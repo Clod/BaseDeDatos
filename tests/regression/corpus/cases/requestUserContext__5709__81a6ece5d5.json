@@ -1,0 +1,13 @@
+{
+ "id": 5709,
+ "sentianceid": "69cc04cb1ef0ac08000003a7",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"EVENING\", \"activeSegments\": [], \"events\": [{\"location\": {\"accuracy\": 8, \"longitude\": -58.45202134400609, \"latitude\": -34.55235456010442}, \"startTimeEpoch\": 1774989574562, \"venue\": {\"significance\": \"UNKNOWN\", \"type\": \"UNKNOWN\"}, \"id\": \"8F621F1E-009F-4518-8A4D-C360E658D2C9\", \"lastUpdateTime\": \"2026-03-31T17:39:44.156Z\", \"lastUpdateTimeEpoch\": 1774989584156, \"startTime\": \"2026-03-31T17:39:34.563Z\", \"type\": \"STATIONARY\"}], \"lastKnownLocation\": {\"accuracy\": 8, \"longitude\": -58.45179512160093, \"latitude\": -34.55220968213074}}",
+ "meta": {
+  "role": "representative",
+  "shape": "81a6ece5d5",
+  "source": "sample_payloads.json",
+  "created_at": "2026-03-31 17:39:45",
+  "app_version": "1.1.17"
+ }
+}

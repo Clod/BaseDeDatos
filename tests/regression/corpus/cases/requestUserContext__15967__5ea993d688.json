@@ -1,0 +1,13 @@
+{
+ "id": 15967,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"NIGHT\", \"lastKnownLocation\": {\"accuracy\": 11, \"longitude\": -58.60303, \"latitude\": -34.68503}, \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 11, \"longitude\": -58.60314, \"latitude\": -34.68492}}, \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 11, \"longitude\": -58.60314, \"latitude\": -34.68492}, \"lastUpdateTime\": \"2026-02-28T00:17:06.680-0300\", \"id\": \"2b8472a1-5065-4590-ac4e-8c5a9ba47625\", \"lastUpdateTimeEpoch\": 1772248626680, \"startTimeEpoch\": 1772248502526, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 11, \"longitude\": -58.60314, \"latitude\": -34.68492}}, \"isProvisional\": false, \"startTime\": \"2026-02-28T00:15:02.526-0300\"}, {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"UNKNOWN\", \"startTimeEpoch\": 1772248502525, \"endTime\": \"2026-02-28T00:15:02.526-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-02-28T00:17:04.387-0300\", \"endTimeEpoch\": 1772248502526, \"lastUpdateTimeEpoch\": 1772248624387, \"durationInSeconds\": 0, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"027bf9b5-0748-481e-8950-3c645ef2a24a\", \"isProvisional\": false, \"startTime\": \"2026-02-28T00:15:02.525-0300\"}, {\"startTimeEpoch\": 1772239579870, \"endTime\": \"2026-02-28T00:15:02.525-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1772248502525, \"location\": {\"accuracy\": 9, \"longitude\": -58.60583, \"latitude\": -34.67939}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"lastUpdateTime\": \"2026-02-28T00:17:07.614-0300\", \"lastUpdateTimeEpoch\": 1772248627614, \"durationInSeconds\": 8922, \"id\": \"c085761b-62b0-49f2-86f7-e04d8b2a714e\", \"isProvisional\": false, \"startTime\": \"2026-02-27T21:46:19.870-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "5ea993d688",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-28 09:34:13",
+  "app_version": "1.1.17-beta7"
+ }
+}

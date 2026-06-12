@@ -1,0 +1,13 @@
+{
+ "id": 16178,
+ "sentianceid": "699f3596e5ed6f080000083c",
+ "tipo": "UserContextUpdate",
+ "json": "{\"criteria\": [\"CURRENT_EVENT\"], \"userContext\": {\"lastKnownLocation\": {\"accuracy\": 40, \"longitude\": -58.45455, \"latitude\": -34.5623}, \"activeSegments\": [], \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 40, \"longitude\": -58.45455, \"latitude\": -34.5623}, \"lastUpdateTime\": \"2026-02-27T12:50:20.636-0300\", \"id\": \"80c77437-c928-475e-8166-80c56b5ee4a0\", \"lastUpdateTimeEpoch\": 1772207420636, \"startTimeEpoch\": 1772207307939, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"isProvisional\": false, \"startTime\": \"2026-02-27T12:48:27.939-0300\"}, {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"UNKNOWN\", \"startTimeEpoch\": 1772207307938, \"endTime\": \"2026-02-27T12:48:27.939-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-02-27T12:50:20.636-0300\", \"endTimeEpoch\": 1772207307939, \"lastUpdateTimeEpoch\": 1772207420636, \"durationInSeconds\": 0, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"d821af52-003c-420c-ac78-613d48919909\", \"isProvisional\": false, \"startTime\": \"2026-02-27T12:48:27.938-0300\"}, {\"startTimeEpoch\": 1772206207688, \"endTime\": \"2026-02-27T12:48:27.938-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1772207307938, \"location\": {\"accuracy\": 5, \"longitude\": -58.45438, \"latitude\": -34.5623}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"HOME\", \"location\": {\"accuracy\": 5, \"longitude\": -58.45438, \"latitude\": -34.5623}}, \"lastUpdateTime\": \"2026-02-27T12:32:20.346-0300\", \"lastUpdateTimeEpoch\": 1772206340346, \"durationInSeconds\": 1100, \"id\": \"78a4f98c-e4fa-4956-a3ac-2bb991c58cb9\", \"isProvisional\": false, \"startTime\": \"2026-02-27T12:30:07.688-0300\"}], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 24, \"longitude\": -58.45484, \"latitude\": -34.56145}}, \"semanticTime\": \"LATE_MORNING\", \"home\": {\"type\": \"UNKNOWN\", \"significance\": \"HOME\", \"location\": {\"accuracy\": 5, \"longitude\": -58.45438, \"latitude\": -34.5623}}}}",
+ "meta": {
+  "role": "representative",
+  "shape": "45cf365fd7",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-27 13:23:42",
+  "app_version": "1.1.17-beta6"
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "id": 50002502,
+ "sentianceid": "68f1442c9202f7080000ce0c",
+ "tipo": "fcm_token",
+ "json": "{\"token\":\"c7hayaMmQ6-gjuX1SKdcIL:APA91bHOt0_OwMYUExS5QgKGVwlpAYMemDhxcNjRovb6CYVUk2gqK2kRcNUCE7g6vgw9t_PLuHviyPOxyFUsHOFZ7aJ9Uaqa3sShIoAIjZiYUfSIy-RPasc\",\"userId\":\"68f1442c9202f7080000ce0c\",\"email\":\"BAZAN HERNAN DANIEL\"}",
+ "meta": {
+  "role": "negative",
+  "shape": "c90d5ae97a",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2025-10-28T16:47:16",
+  "app_version": "",
+  "source_record_id": 2502
+ }
+}

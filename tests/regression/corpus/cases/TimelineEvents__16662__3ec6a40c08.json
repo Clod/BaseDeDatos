@@ -1,0 +1,13 @@
+{
+ "id": 16662,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "TimelineEvents",
+ "json": "{\"eventsId\": [\"03c1a554-d6d6-42f7-94cf-a7b1e193a22c\", \"3c1a0019-65cf-4918-a086-776ebce38899\"], \"events\": [{\"waypoints\": [], \"transportMode\": \"MOTORCYCLE\", \"type\": \"IN_TRANSPORT\", \"transportTags\": {}, \"occupantRole\": \"UNAVAILABLE\", \"lastUpdateTime\": \"2026-02-25T07:29:15.404-0300\", \"id\": \"03c1a554-d6d6-42f7-94cf-a7b1e193a22c\", \"lastUpdateTimeEpoch\": 1772015355404, \"startTimeEpoch\": 1772015154284, \"isProvisional\": true, \"startTime\": \"2026-02-25T07:25:54.284-0300\"}, {\"startTimeEpoch\": 1772013782630, \"endTime\": \"2026-02-25T07:25:54.284-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1772015154284, \"location\": {\"accuracy\": 12, \"longitude\": -58.60315, \"latitude\": -34.68492}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 12, \"longitude\": -58.60315, \"latitude\": -34.68492}}, \"lastUpdateTime\": \"2026-02-25T07:29:15.908-0300\", \"lastUpdateTimeEpoch\": 1772015355908, \"durationInSeconds\": 1371, \"id\": \"3c1a0019-65cf-4918-a086-776ebce38899\", \"isProvisional\": false, \"startTime\": \"2026-02-25T07:03:02.630-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "3ec6a40c08",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-25 14:47:20",
+  "app_version": "1.1.17-beta6"
+ }
+}

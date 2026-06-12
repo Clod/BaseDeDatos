@@ -1,0 +1,13 @@
+{
+ "id": 17849,
+ "sentianceid": "6980bacfbfdfd0080000fc6c",
+ "tipo": "SDKStatus",
+ "json": "{\"sdkStatus\": {\"canMonitorGeofences\": true, \"userExists\": true, \"wifiQuotaStatus\": \"OK\", \"mobileQuotaStatus\": \"OK\", \"isSchedulingExactAlarmsPermitted\": false, \"isBatterySavingEnabled\": false, \"startStatus\": \"STARTED\", \"isGyroPresent\": true, \"isPreciseLocationAuthorizationGranted\": true, \"isBatteryOptimizationEnabled\": true, \"isLocationAvailable\": true, \"isAccelPresent\": true, \"locationSetting\": \"OK\", \"isBackgroundProcessingRestricted\": false, \"isAirplaneModeEnabled\": false, \"isGpsPresent\": true, \"isActivityRecognitionPermGranted\": true, \"locationPermission\": \"ALWAYS\", \"isRemoteEnabled\": true, \"isGooglePlayServicesMissing\": false, \"canDetect\": true, \"diskQuotaStatus\": \"OK\", \"detectionStatus\": \"ENABLED_AND_DETECTING\"}, \"appOpenAt\": 1771531521281}",
+ "meta": {
+  "role": "representative",
+  "shape": "7a6f809537",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-19 17:05:22",
+  "app_version": "1.1.16-beta7"
+ }
+}

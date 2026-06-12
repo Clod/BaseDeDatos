@@ -1,0 +1,13 @@
+{
+ "id": 707,
+ "sentianceid": "69b9a915fa48e3f5706c9178",
+ "tipo": "VehicleCrash",
+ "json": "{\"deltaV\": 0, \"precedingLocations\": [], \"confidence\": 0, \"magnitude\": 0, \"time\": 1776116649696, \"location\": null, \"speedAtImpact\": 0, \"severity\": \"HIGH\", \"detectorMode\": \"UNKNOWN\"}",
+ "meta": {
+  "role": "representative",
+  "shape": "f759c28823",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-13 18:44:09",
+  "app_version": "1.1.17"
+ }
+}

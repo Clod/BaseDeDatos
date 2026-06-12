@@ -1,0 +1,13 @@
+{
+ "id": 11,
+ "sentianceid": "69a59ce853d7a40700000060",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"LUNCH\", \"lastKnownLocation\": {\"accuracy\": 11, \"longitude\": -58.39658, \"latitude\": -34.76975}, \"activeSegments\": [], \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 6, \"longitude\": -58.39662, \"latitude\": -34.76968}, \"lastUpdateTime\": \"2026-04-01T11:48:26.291-0300\", \"id\": \"c16cbd47-1302-4698-b322-a7d5d44d7c79\", \"lastUpdateTimeEpoch\": 1775054906291, \"startTimeEpoch\": 1775054793108, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"isProvisional\": false, \"startTime\": \"2026-04-01T11:46:33.108-0300\"}, {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"UNKNOWN\", \"startTimeEpoch\": 1775054793107, \"endTime\": \"2026-04-01T11:46:33.108-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-04-01T11:48:26.291-0300\", \"endTimeEpoch\": 1775054793108, \"lastUpdateTimeEpoch\": 1775054906291, \"durationInSeconds\": 0, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"7c810251-4a9b-41a4-8224-eaf3b53690f9\", \"isProvisional\": false, \"startTime\": \"2026-04-01T11:46:33.107-0300\"}, {\"startTimeEpoch\": 1775053382381, \"endTime\": \"2026-04-01T11:46:33.107-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1775054793107, \"location\": {\"accuracy\": 12, \"longitude\": -58.39035, \"latitude\": -34.7789}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"lastUpdateTime\": \"2026-04-01T11:48:26.263-0300\", \"lastUpdateTimeEpoch\": 1775054906263, \"durationInSeconds\": 1410, \"id\": \"d790b465-34e4-4ae0-ae49-365b9ec571de\", \"isProvisional\": false, \"startTime\": \"2026-04-01T11:23:02.381-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "f5424b30bb",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-15 12:53:04",
+  "app_version": "1.1.17"
+ }
+}

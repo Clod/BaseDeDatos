@@ -1,0 +1,13 @@
+{
+ "id": 29098,
+ "sentianceid": "6980bacfbfdfd0080000fc6c",
+ "tipo": "DrivingInsightsPhoneEvents",
+ "json": "{\"transportId\": \"6c51591a-cec9-4225-bbd3-f137cfdc2bc8\", \"events\": [{\"callState\": \"NO_CALL\", \"waypoints\": [{\"isSynthetic\": true, \"hasUnlimitedSpeedLimit\": false, \"longitude\": -58.509812290666666, \"accuracy\": -1, \"isSpeedLimitInfoSet\": false, \"timestamp\": 1772411090907, \"latitude\": -34.54013}, {\"isSynthetic\": true, \"hasUnlimitedSpeedLimit\": false, \"longitude\": -58.509810957333336, \"accuracy\": -1, \"isSpeedLimitInfoSet\": false, \"timestamp\": 1772411092907, \"latitude\": -34.54013}], \"endTimeEpoch\": 1772411092907, \"endTime\": \"2026-03-01T21:24:52.907-0300\", \"startTimeEpoch\": 1772411090907, \"startTime\": \"2026-03-01T21:24:50.907-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "7f1405f0ab",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-03-02T08:21:55",
+  "app_version": "1.1.17-beta7"
+ }
+}

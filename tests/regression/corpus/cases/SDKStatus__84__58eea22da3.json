@@ -1,0 +1,13 @@
+{
+ "id": 84,
+ "sentianceid": "69a616b0e0b30808000006cb",
+ "tipo": "SDKStatus",
+ "json": "{\"sdkStatus\": {\"backgroundRefreshStatus\": \"AVAILABLE\", \"detectionStatus\": \"ENABLED_AND_DETECTING\", \"isPreciseLocationAuthorizationGranted\": true, \"isGpsPresent\": true, \"canDetect\": true, \"isAccelPresent\": true, \"isLocationAvailable\": true, \"isGyroPresent\": true, \"wifiQuotaStatus\": \"OK\", \"userExists\": true, \"mobileQuotaStatus\": \"OK\", \"isBatterySavingEnabled\": false, \"isActivityRecognitionPermGranted\": false, \"isRemoteEnabled\": true, \"locationPermission\": \"ALWAYS\", \"diskQuotaStatus\": \"OK\", \"canMonitorGeofences\": true, \"startStatus\": \"STARTED\"}, \"appOpenAt\": 1776254029907}",
+ "meta": {
+  "role": "representative",
+  "shape": "58eea22da3",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-15 08:53:51",
+  "app_version": "1.1.17"
+ }
+}

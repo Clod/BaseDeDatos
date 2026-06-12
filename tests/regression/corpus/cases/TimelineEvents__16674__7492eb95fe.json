@@ -1,0 +1,13 @@
+{
+ "id": 16674,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "TimelineEvents",
+ "json": "{\"eventsId\": [\"2c79a2c7-b839-4d5a-9ca6-c24207332347\", \"fd9e90b3-2cb2-423a-84a5-e11d736d65b1\", \"2e7348af-0315-4cfd-a6ee-131a512d6bc0\"], \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 22, \"longitude\": -58.60316, \"latitude\": -34.68493}, \"lastUpdateTime\": \"2026-02-24T20:41:59.500-0300\", \"id\": \"2c79a2c7-b839-4d5a-9ca6-c24207332347\", \"lastUpdateTimeEpoch\": 1771976519500, \"startTimeEpoch\": 1771976405680, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"isProvisional\": false, \"startTime\": \"2026-02-24T20:40:05.680-0300\"}, {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"UNKNOWN\", \"startTimeEpoch\": 1771976405679, \"endTime\": \"2026-02-24T20:40:05.680-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-02-24T20:41:59.500-0300\", \"endTimeEpoch\": 1771976405680, \"lastUpdateTimeEpoch\": 1771976519500, \"durationInSeconds\": 0, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"fd9e90b3-2cb2-423a-84a5-e11d736d65b1\", \"isProvisional\": false, \"startTime\": \"2026-02-24T20:40:05.679-0300\"}, {\"startTimeEpoch\": 1771976037830, \"endTime\": \"2026-02-24T20:40:05.679-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1771976405679, \"location\": {\"accuracy\": 5, \"longitude\": -58.60369, \"latitude\": -34.6873}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"lastUpdateTime\": \"2026-02-24T20:42:01.617-0300\", \"lastUpdateTimeEpoch\": 1771976521617, \"durationInSeconds\": 367, \"id\": \"2e7348af-0315-4cfd-a6ee-131a512d6bc0\", \"isProvisional\": false, \"startTime\": \"2026-02-24T20:33:57.830-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "7492eb95fe",
+  "source": "sample_payloads.json",
+  "created_at": "2026-02-25 14:47:14",
+  "app_version": "1.1.17-beta6"
+ }
+}

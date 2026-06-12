@@ -10,6 +10,22 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 
+def pytest_addoption(parser):
+    """Command-line flags for the regression suite (tests/regression/)."""
+    parser.addoption(
+        "--run-regression",
+        action="store_true",
+        default=False,
+        help="Run the golden-snapshot regression suite (DROPS the local Docker DB).",
+    )
+    parser.addoption(
+        "--bless",
+        action="store_true",
+        default=False,
+        help="Accept the current pipeline output as the new golden snapshot.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fixture: etl
 #   Returns a SentianceETL instance with all DB env vars stubbed out.

@@ -1,0 +1,13 @@
+{
+ "id": 45623,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "TimelineUpdate",
+ "json": "{\"source\": \"catchup\", \"event\": {\"type\": \"OFF_THE_GRID\", \"lastUpdateTime\": \"2026-04-11T19:03:03.038-0300\", \"id\": \"e06475ca-3842-4a6d-a318-581e2adf8cdc\", \"lastUpdateTimeEpoch\": 1775944983038, \"startTimeEpoch\": 1775944791176, \"isProvisional\": false, \"startTime\": \"2026-04-11T18:59:51.176-0300\"}}",
+ "meta": {
+  "role": "representative",
+  "shape": "0a78e74184",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-04-13T09:48:49",
+  "app_version": "1.1.17-beta25"
+ }
+}

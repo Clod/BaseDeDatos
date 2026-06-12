@@ -1,0 +1,13 @@
+{
+ "id": 346,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "VehicleCrash",
+ "json": "{\"detectorMode\": \"TWO_WHEELER\", \"precedingLocations\": [], \"confidence\": 0, \"deltaV\": 0, \"severity\": \"HIGH\", \"speedAtImpact\": 0, \"magnitude\": 0, \"location\": {\"provider\": \"fused\", \"altitude\": 49.20000076293945, \"latitude\": -34.6849075, \"accuracy\": 100, \"longitude\": -58.6031929, \"timestamp\": 1776193358276}, \"time\": 1776193358276}",
+ "meta": {
+  "role": "representative",
+  "shape": "cdabce39f8",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-14 16:02:38",
+  "app_version": "1.1.17-beta25b"
+ }
+}

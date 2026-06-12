@@ -1,0 +1,13 @@
+{
+ "id": 106,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "UserContextUpdate",
+ "json": "{\"criteria\": [\"CURRENT_EVENT\"], \"userContext\": {\"semanticTime\": \"MORNING\", \"lastKnownLocation\": {\"accuracy\": 8, \"longitude\": -58.60307, \"latitude\": -34.685}, \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 12, \"longitude\": -58.60311, \"latitude\": -34.68499}}, \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 8, \"longitude\": -58.60307, \"latitude\": -34.685}, \"lastUpdateTime\": \"2026-04-15T08:01:38.951-0300\", \"id\": \"058e3fff-deaa-4b4d-b9cd-866b03f52a1e\", \"lastUpdateTimeEpoch\": 1776250898951, \"startTimeEpoch\": 1776250775977, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"UNKNOWN\"}, \"isProvisional\": false, \"startTime\": \"2026-04-15T07:59:35.977-0300\"}, {\"type\": \"OFF_THE_GRID\", \"lastUpdateTime\": \"2026-04-15T08:01:38.951-0300\", \"endTimeEpoch\": 1776250775977, \"endTime\": \"2026-04-15T07:59:35.977-0300\", \"lastUpdateTimeEpoch\": 1776250898951, \"durationInSeconds\": 30377, \"id\": \"3cb29f6b-2031-4d05-ae12-3b3d9ae5ff66\", \"startTimeEpoch\": 1776220398586, \"isProvisional\": false, \"startTime\": \"2026-04-14T23:33:18.586-0300\"}]}}",
+ "meta": {
+  "role": "representative",
+  "shape": "da3b29b8d4",
+  "source": "sample_payloads.json",
+  "created_at": "2026-04-15 08:01:40",
+  "app_version": "1.1.17-beta25b"
+ }
+}

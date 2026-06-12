@@ -7,7 +7,12 @@ ETL pipeline that processes Sentiance SDK webhook payloads (JSON) and loads them
 **Main entry point:** `etl/sentiance_etl.py`  
 **Continuous pipeline:** `etl/run_full_pipeline.py`  
 **Local dev tooling:** `development/` directory  
-**Tests:** `tests/`
+**Tests:** `tests/` — unit suite (`tests/unit/`, no DB) plus the
+golden-snapshot regression suite (`tests/regression/`, requires the local
+Docker DB and the `--run-regression` flag; it DROPS the local VictaTMTK).
+Philosophy, blessing/top-up procedures, and the findings log:
+`tests/regression/README.md`. The regression harness refuses to run against
+anything but localhost — keep it that way.
 
 ---
 

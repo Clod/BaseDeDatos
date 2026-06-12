@@ -1,0 +1,13 @@
+{
+ "id": 8518,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\": \"NIGHT\", \"lastKnownLocation\": {\"accuracy\": 5, \"longitude\": -58.60307, \"latitude\": -34.68492}, \"activeSegments\": [], \"work\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 6, \"longitude\": -58.60313, \"latitude\": -34.68488}}, \"events\": [{\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 12, \"longitude\": -58.63921, \"latitude\": -34.69296}, \"lastUpdateTime\": \"2026-03-23T20:05:24.134-0300\", \"id\": \"6ca2e2ed-8e45-40c3-a44b-366f212d57ca\", \"lastUpdateTimeEpoch\": 1774307124134, \"startTimeEpoch\": 1774302003473, \"venue\": {\"type\": \"EDUCATION_PARENTS\", \"significance\": \"POINT_OF_INTEREST\"}, \"isProvisional\": false, \"startTime\": \"2026-03-23T18:40:03.473-0300\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "3708db87cf",
+  "source": "sample_payloads.json",
+  "created_at": "2026-03-23 20:20:23",
+  "app_version": "1.1.17-beta21"
+ }
+}

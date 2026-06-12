@@ -1,0 +1,13 @@
+{
+ "id": 50196,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "TimelineUpdate",
+ "json": "{\"source\": \"listener\", \"event\": {\"startTimeEpoch\": 1776984799675, \"endTime\": \"2026-04-23T20:03:22.211-0300\", \"type\": \"STATIONARY\", \"endTimeEpoch\": 1776985402211, \"location\": {\"accuracy\": 7, \"longitude\": -58.60308, \"latitude\": -34.68499}, \"venue\": {\"type\": \"UNKNOWN\", \"significance\": \"WORK\", \"location\": {\"accuracy\": 7, \"longitude\": -58.60308, \"latitude\": -34.68499}}, \"lastUpdateTime\": \"2026-04-23T20:06:42.853-0300\", \"lastUpdateTimeEpoch\": 1776985602853, \"durationInSeconds\": 602, \"id\": \"7462f075-4fee-4cac-b831-9f3ea64ae8fe\", \"isProvisional\": false, \"startTime\": \"2026-04-23T19:53:19.675-0300\"}}",
+ "meta": {
+  "role": "representative",
+  "shape": "0ea6df1abd",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-04-23T20:06:48",
+  "app_version": "1.1.17-beta26b"
+ }
+}

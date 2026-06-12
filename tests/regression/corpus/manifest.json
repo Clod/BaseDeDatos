@@ -1,0 +1,73 @@
+{
+  "built_at": "2026-06-11",
+  "sources_in_order": [
+    "sample_payloads.json",
+    "prod_topup_2026-06-11.json"
+  ],
+  "total_cases": 166,
+  "tipos": {
+    "CRASH": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "DebugLog": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "DrivingInsights": {
+      "cases": 34,
+      "shapes": 32
+    },
+    "DrivingInsightsCallEvents": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "DrivingInsightsHarshEvents": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "DrivingInsightsPhoneEvents": {
+      "cases": 2,
+      "shapes": 2
+    },
+    "DrivingInsightsSpeedingEvents": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "SDKStatus": {
+      "cases": 7,
+      "shapes": 7
+    },
+    "TimelineEvents": {
+      "cases": 6,
+      "shapes": 6
+    },
+    "TimelineUpdate": {
+      "cases": 6,
+      "shapes": 6
+    },
+    "UserContextUpdate": {
+      "cases": 34,
+      "shapes": 34
+    },
+    "VehicleCrash": {
+      "cases": 2,
+      "shapes": 2
+    },
+    "fcm_token": {
+      "cases": 1,
+      "shapes": 1
+    },
+    "requestUserContext": {
+      "cases": 69,
+      "shapes": 69
+    }
+  },
+  "routed_tipos_without_coverage": [
+    "DrivingInsightsWrongWayDrivingEvents",
+    "TechnicalEvent",
+    "UserActivity",
+    "UserMetadata"
+  ],
+  "policy": "No synthetic data. Gaps close only by topping up from production as real traffic accumulates (README.md, 'Topping up the corpus')."
+}

@@ -1,0 +1,13 @@
+{
+ "id": 51583,
+ "sentianceid": "6996f737336ca008000000bf",
+ "tipo": "TimelineUpdate",
+ "json": "{\"source\": \"listener\", \"event\": {\"type\": \"STATIONARY\", \"location\": {\"accuracy\": 7, \"longitude\": -58.59251, \"latitude\": -34.6982}, \"lastUpdateTime\": \"2026-04-26T19:07:24.777-0300\", \"id\": \"64eeccf3-6dec-4aae-94bc-e1aecf1d5376\", \"lastUpdateTimeEpoch\": 1777241244777, \"startTimeEpoch\": 1777241129112, \"venue\": {\"type\": \"TRAVEL_BUS\", \"significance\": \"POINT_OF_INTEREST\"}, \"isProvisional\": false, \"startTime\": \"2026-04-26T19:05:29.112-0300\"}}",
+ "meta": {
+  "role": "representative",
+  "shape": "64495c14ab",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-04-26T19:07:25",
+  "app_version": "1.1.17-beta26b"
+ }
+}

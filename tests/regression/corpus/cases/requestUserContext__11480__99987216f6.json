@@ -1,0 +1,13 @@
+{
+ "id": 11480,
+ "sentianceid": "6920f2f794e73e0800012788",
+ "tipo": "requestUserContext",
+ "json": "{\"semanticTime\":\"AFTERNOON\",\"activeSegments\":[],\"events\":[{\"type\":\"OFF_THE_GRID\",\"lastUpdateTime\":\"2025-11-30T01:28:30.229-0400\",\"id\":\"1c3293f3-b272-4122-95c6-80ccfc984026\",\"lastUpdateTimeEpoch\":1764480510229,\"startTimeEpoch\":1764480509523,\"isProvisional\":false,\"startTime\":\"2025-11-30T01:28:29.523-0400\"},{\"startTimeEpoch\":1764477471614,\"endTime\":\"2025-11-30T01:28:29.523-0400\",\"type\":\"STATIONARY\",\"endTimeEpoch\":1764480509523,\"location\":{\"accuracy\":12,\"longitude\":-70.047070000000005,\"latitude\":12.57058},\"venue\":{\"type\":\"LEISURE_BEACH\",\"significance\":\"POINT_OF_INTEREST\"},\"lastUpdateTime\":\"2025-11-30T02:17:02.014-0400\",\"lastUpdateTimeEpoch\":1764483422014,\"durationInSeconds\":3037,\"id\":\"3181d48f-8c29-4cfd-b999-81939e930264\",\"isProvisional\":false,\"startTime\":\"2025-11-30T00:37:51.614-0400\"}]}",
+ "meta": {
+  "role": "representative",
+  "shape": "99987216f6",
+  "source": "sample_payloads.json",
+  "created_at": "2026-03-16 15:39:20",
+  "app_version": ""
+ }
+}

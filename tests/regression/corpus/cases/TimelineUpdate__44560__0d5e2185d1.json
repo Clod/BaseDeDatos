@@ -1,0 +1,13 @@
+{
+ "id": 44560,
+ "sentianceid": "699f3596e5ed6f080000083c",
+ "tipo": "TimelineUpdate",
+ "json": "{\"source\": \"catchup\", \"event\": {\"transportTags\": {}, \"waypoints\": [], \"transportMode\": \"UNKNOWN\", \"startTimeEpoch\": 1773162241304, \"endTime\": \"2026-03-10T14:04:01.305-0300\", \"type\": \"IN_TRANSPORT\", \"lastUpdateTime\": \"2026-03-10T14:05:57.627-0300\", \"endTimeEpoch\": 1773162241305, \"lastUpdateTimeEpoch\": 1773162357627, \"durationInSeconds\": 0, \"occupantRole\": \"UNAVAILABLE\", \"id\": \"44f99af0-a05c-4090-801f-840113f28d4c\", \"isProvisional\": false, \"startTime\": \"2026-03-10T14:04:01.304-0300\"}}",
+ "meta": {
+  "role": "representative",
+  "shape": "0d5e2185d1",
+  "source": "prod_topup_2026-06-11.json",
+  "created_at": "2026-04-11T13:06:01",
+  "app_version": "1.1.17-beta24"
+ }
+}
