@@ -63,7 +63,7 @@ Tabla de aterrizaje cruda donde se insertan los payloads JSON de eventos recibid
 | `json`         | `NVARCHAR(MAX)` | NULL                  | *Ninguno*         | Payload original del evento JSON completo en formato de texto.                                             |
 | `tipo`         | `VARCHAR(32)`   | NULL                  | *Ninguno*         | Tipo de evento recibido (ej. `UserContextUpdate`, `DrivingInsights, DrivingInsightsSpeedingEvents, etc.`). |
 | `created_at`   | `DATETIME2(3)`  | NULL                  | `GETDATE()`       | Marca de tiempo exacta en que se persistió el registro en la base de datos local.                          |
-| `is_processed` | `BIT`           | NULL                  | `0`               | Flag técnico que indica si el procesamiento relacional de este evento finalizó.                            |
+| `is_processed` | `SMALLINT`      | NULL                  | `0`               | Flag tri-estado: `0` pendiente, `1` procesado OK, `-1` error permanente.                                  |
 | `procesado`    | `BIT`           | NULL                  | `0`               | Flag secundario para compatibilidad de estados del pipeline de extracción (Legacy).                        |
 | `app_version`  | `VARCHAR(32)`   | NULL                  | *Ninguno*         | Versión de la app cliente que transmitió el evento (extraída del header o payload).                        |
 

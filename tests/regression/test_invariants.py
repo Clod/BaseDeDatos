@@ -76,22 +76,11 @@ INVARIANTS += [
         "SELECT TOP 5 s.* FROM SdkSourceEvent s LEFT JOIN SentianceEventos e "
         "ON e.id = s.sentiance_eventos_id WHERE e.id IS NULL",
     ),
-    pytest.param(
+    (
         "SentianceEventos: every processed row has an SdkSourceEvent audit trail",
         "SELECT TOP 5 e.id, e.tipo FROM SentianceEventos e "
         "WHERE e.is_processed = 1 AND NOT EXISTS "
         "(SELECT 1 FROM SdkSourceEvent s WHERE s.sentiance_eventos_id = e.id)",
-        marks=pytest.mark.xfail(
-            strict=True,
-            reason=(
-                "KNOWN BUG (found by this suite, 2026-06-11): is_processed is "
-                "BIT in init_db.sql AND migrate_prod_stage2.sql, so the ETL's "
-                "failure marker -1 is stored as 1 — failed rows are "
-                "indistinguishable from successes (corpus case 707, a "
-                "VehicleCrash with location:null, demonstrates it). Fix the "
-                "column type to SMALLINT, re-bless, then remove this marker."
-            ),
-        ),
     ),
     (
         "Trip: provisional trips are never stored",

@@ -347,8 +347,9 @@ no `SdkSourceEvent`. Root cause: the ETL treats `is_processed` as tri-state
 stores any nonzero value in a BIT as 1 ⇒ every failed row and every
 transportId-less orphan is recorded as *successfully processed*. Forensics
 then depend entirely on `SentianceEventos_Errors`, and reprocessing-by-flag is
-impossible. **Status: OPEN** — tracked as `xfail(strict=True)` in
-`test_invariants.py`. Fix: `SMALLINT` in both SQL files, re-bless, drop marker.
+impossible. **Status: FIXED (2026-06-17)** — `SMALLINT` in both SQL files, `xfail` marker
+removed from `test_invariants.py`, data dictionary updated. Re-bless required
+after recreating the local DB.
 
 ### 2026-06-11 — `process_crash_event` crashes on `location: null`
 

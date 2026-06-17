@@ -93,7 +93,7 @@ IF NOT EXISTS (
 )
 BEGIN
     ALTER TABLE dbo.SentianceEventos
-        ADD is_processed BIT NOT NULL
+        ADD is_processed SMALLINT NOT NULL
             CONSTRAINT DF_SentianceEventos_is_processed DEFAULT 0;
     PRINT '  Added SentianceEventos.is_processed (existing rows defaulted to 0).';
 END

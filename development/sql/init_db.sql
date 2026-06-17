@@ -28,7 +28,7 @@ BEGIN
         json NVARCHAR(MAX),
         tipo VARCHAR(32),
         created_at DATETIME2(3) DEFAULT GETDATE(),
-        is_processed BIT DEFAULT 0,
+        is_processed SMALLINT DEFAULT 0,
         procesado BIT DEFAULT 0,
         app_version VARCHAR(32)
     );
