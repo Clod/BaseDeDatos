@@ -1,6 +1,6 @@
 # BaseDeDatos — Sentiance SDK ETL Pipeline
 
-ETL pipeline that processes Sentiance SDK webhook payloads delivered via AWS IoT MQTT and loads them into a SQL Server relational model (VictaTMTK). Handles driving insights, timeline events, user context, crash detection, and SDK status for the VictaTMTK product.
+ETL pipeline that processes Sentiance SDK webhook payloads sent by the mobile app via REST and loads them into a SQL Server relational model (VictaTMTK). Handles driving insights, timeline events, user context, crash detection, and SDK status for the VictaTMTK product.
 
 ---
 
@@ -8,7 +8,7 @@ ETL pipeline that processes Sentiance SDK webhook payloads delivered via AWS IoT
 
 ```
 Mobile App (Sentiance SDK)
-        │  MQTT / AWS IoT Core
+        │  REST (webhook payloads)
         ▼
 SentianceEventos        ← raw payload queue (SQL Server)
         │
