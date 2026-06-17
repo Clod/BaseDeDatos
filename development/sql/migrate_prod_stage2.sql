@@ -19,7 +19,7 @@ STATE VERIFIED AGAINST PROD RDS (2026-06-11):
     VehicleCrashEvent, UserOrganization, etc.).
   - `SentianceEventos` exists (landing zone, 67,342 rows) but has NO
     `is_processed` column — only the legacy `procesado` BIT, which is owned by
-    other routines (Entregable §3.1.1) and MUST NOT be touched.
+    other routines (DisenoBaseDeDatos §3.1.1) and MUST NOT be touched.
   - `SentianceEventos_Errors` already matches the Stage-2 layout — no change.
   - `SentianceEventos.json` is VARCHAR(MAX) (no truncation risk); `id` is INT
     (capacity note only — the ETL does not require BIGINT).
@@ -145,7 +145,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_CrashEvent_user' AND obj
 GO
 
 -------------------------------------------------------------------------------
--- STEP 2B: Analytic + FK-join indexes (Entregable §3.7).
+-- STEP 2B: Analytic + FK-join indexes (DisenoBaseDeDatos §3.7).
 --
 --   These serve business queries and audit JOINs, not the ETL write path. They
 --   may optionally be created AFTER the initial backlog load to speed the bulk
@@ -258,7 +258,7 @@ NOTES / DECISIONS (read before running)
 ===============================================================================
 
 1. UNIQUE index on Trip — DEFERRED, not applied here.
-   Entregable §3.7-7 recommends a UNIQUE index on Trip(canonical_transport_event_id).
+   DisenoBaseDeDatos §3.7-7 recommends a UNIQUE index on Trip(canonical_transport_event_id).
    Two corrections:
      a) The ETL's MERGE keys on the PAIR (canonical_transport_event_id,
         sentiance_user_id), not canonical alone — a unique index must be on the
@@ -273,19 +273,19 @@ NOTES / DECISIONS (read before running)
     backlog run produces no unique violations before relying on it.)
 
 2. UNIQUE index on UserContextActiveSegmentDetail — INTENTIONALLY OMITTED.
-   Entregable §3.7-8 recommends UNIQUE(sentiance_user_id, segment_id). This is
+   DisenoBaseDeDatos §3.7-8 recommends UNIQUE(sentiance_user_id, segment_id). This is
    INCOMPATIBLE with the current ETL: process_user_context does a plain INSERT
    (not a MERGE) for active segments, and the same user re-lists the same active
    segment on every context update. A unique index would reject those repeats
    and send rows to SentianceEventos_Errors. Only add it if the ETL is changed
    to upsert this table.
 
-3. CHECK constraints (Entregable §3.8.2, e.g. chk_criteria_code with
+3. CHECK constraints (DisenoBaseDeDatos §3.8.2, e.g. chk_criteria_code with
    'MANUAL_REQUEST') are NOT created here — optional hardening, out of scope for
    go-live. If added later, chk_criteria_code MUST include 'MANUAL_REQUEST'
    (the ETL inserts it for requestUserContext).
 
-4. FK ON DELETE/UPDATE policies (Entregable §3.8.1) are not added; init_db.sql's
+4. FK ON DELETE/UPDATE policies (DisenoBaseDeDatos §3.8.1) are not added; init_db.sql's
    existing FKs on Trip suffice for launch.
 ===============================================================================
 */

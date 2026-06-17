@@ -9,7 +9,7 @@ It handles 15+ different data points including safety scores, mobility segments,
 historical timelines, and crash detection.
 
 PURPOSE/WHY:
-- Compliance: Mirrors the 'Entregable.md' and 'MapeoSDK_BD.md' specifications.
+- Compliance: Mirrors the 'DisenoBaseDeDatos.md' and 'MapeoSDK_BD.md' specifications.
 - Analytics: Enables SQL-based analysis of driving behavior and user mobility.
 - Efficiency: Implements GZIP compression for volumetric data (waypoints).
 - Robustness: Captures and isolates processing failures in a forensic shadow table.

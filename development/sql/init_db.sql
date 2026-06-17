@@ -1,7 +1,7 @@
 /*
 VictaTMTK - Complete Database Schema (Sentiance 2026)
 =====================================================
-Ref: Entregable.md & MapeoSDK_BD.md
+Ref: DisenoBaseDeDatos.md & MapeoSDK_BD.md
 */
 
 USE master;
