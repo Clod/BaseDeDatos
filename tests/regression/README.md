@@ -353,14 +353,13 @@ after recreating the local DB.
 
 ### 2026-06-11 — `process_crash_event` crashes on `location: null`
 
-Corpus case 707 (real VehicleCrash payload with `"location": null`) raises
+Corpus case 707 (real VehicleCrash payload with `"location": null`) raised
 `AttributeError` at `sentiance_etl.py:820` — `payload.get("location", {})`
-returns `None` when the key is present-but-null. Same bug class as the
-`venue: null` fix already applied to `process_user_context` /
-`process_timeline_events` (see `tests/README.md`). The golden files currently
-encode the buggy behavior (row in `SentianceEventos_Errors`, no
-`VehicleCrashEvent` row). **Status: OPEN** — fix with the `(payload.get("location")
-or {})` idiom, re-bless, and watch the diff show the crash row appearing.
+returned `None` when the key is present-but-null. **Status: FIXED (2026-06-17)**
+— changed to `payload.get("location") or {}`, same idiom already used in
+`process_user_context` / `process_timeline_events`. Unit test added in
+`test_param_extraction.py::TestProcessCrashEventParams::test_null_location_does_not_crash`.
+Golden snapshot re-blessed: case 707 now produces a `VehicleCrashEvent` row.
 
 ### 2026-06-11 — production sends `UserActivityUpdate`, ETL routes `UserActivity`
 

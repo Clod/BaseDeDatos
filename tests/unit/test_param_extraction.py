@@ -310,6 +310,13 @@ class TestProcessCrashEventParams:
         assert params[3] is None  # latitude
         assert params[4] is None  # longitude
 
+    def test_null_location_does_not_crash(self, etl_with_cursor):
+        payload = {"time": 999, "location": None}
+        etl_with_cursor.process_crash_event(sid=12, uid="user-6", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[3] is None  # latitude
+        assert params[4] is None  # longitude
+
 
 # ---------------------------------------------------------------------------
 # process_sdk_status

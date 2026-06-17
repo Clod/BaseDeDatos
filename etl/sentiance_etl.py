@@ -817,7 +817,7 @@ class SentianceETL:
         Returns:
             None
         """
-        l = payload.get("location", {})
+        l = payload.get("location") or {}
         self.cursor.execute(
             "INSERT INTO VehicleCrashEvent (sdk_source_event_id, sentiance_user_id, crash_time_epoch, latitude, longitude, accuracy, altitude, magnitude, speed_at_impact, delta_v, confidence, severity, detector_mode, preceding_locations_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
