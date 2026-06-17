@@ -388,6 +388,169 @@ Todos los tests son puramente unitarios (no requieren base de datos). Cubren rut
 
 ---
 
+## Ejecución en Producción (AWS Lambda)
+
+Los registros llegan continuamente a `SentianceEventos` vía REST. El mecanismo de disparo recomendado es una **regla programada de EventBridge** que invoca la Lambda periódicamente. `run_full_pipeline.py` ya itera hasta vaciar la cola, por lo que la Lambda solo necesita ser disparada con frecuencia suficiente.
+
+### Configuración de EventBridge
+
+Crear una regla programada en la consola de AWS o vía CLI:
+
+```bash
+# Cada 1 minuto (latencia máxima ~60 segundos)
+aws events put-rule \
+  --name etl-sentiance-trigger \
+  --schedule-expression "rate(1 minute)" \
+  --state ENABLED
+
+# Cada 5 minutos (si la latencia es aceptable)
+aws events put-rule \
+  --name etl-sentiance-trigger \
+  --schedule-expression "rate(5 minutes)" \
+  --state ENABLED
+```
+
+### Concurrencia reservada = 1 (obligatorio)
+
+Evita que dos instancias de la Lambda procesen las mismas filas simultáneamente si una ejecución anterior todavía está corriendo cuando llega el siguiente disparo:
+
+```bash
+aws lambda put-function-concurrency \
+  --function-name nombre-de-tu-lambda \
+  --reserved-concurrent-executions 1
+```
+
+### Timeout de Lambda
+
+Configurar el timeout al **máximo de 15 minutos** para dar margen cuando la cola tenga registros acumulados.
+
+---
+
+### Consideración crítica: `pyodbc` en Lambda
+
+`pyodbc` requiere el driver ODBC de Microsoft (`msodbcsql18`) instalado a nivel de sistema operativo, que no está disponible en el runtime estándar de Lambda. Hay dos opciones:
+
+---
+
+#### Opción A — Container Image (recomendado)
+
+Empaquetar la Lambda como imagen Docker. Más fácil de mantener: las dependencias del sistema se instalan igual que en cualquier entorno Linux.
+
+**`Dockerfile`:**
+
+```dockerfile
+FROM public.ecr.aws/lambda/python:3.12
+
+# Instalar el driver ODBC de Microsoft
+RUN dnf install -y https://packages.microsoft.com/rhel/9/prod/msodbcsql18-18.*.rpm \
+    unixODBC-devel && \
+    dnf clean all
+
+# Instalar dependencias Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar el código del ETL
+COPY etl/ ./etl/
+
+# Handler de entrada de la Lambda
+CMD ["etl.lambda_handler.handler"]
+```
+
+**Handler (`etl/lambda_handler.py`):**
+
+```python
+from etl.run_full_pipeline import run_pipeline
+
+def handler(event, context):
+    run_pipeline()
+    return {"status": "ok"}
+```
+
+**Build y deploy:**
+
+```bash
+# Build y push a ECR
+aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
+docker build -t etl-sentiance .
+docker tag etl-sentiance:latest <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+docker push <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+
+# Crear o actualizar la Lambda apuntando a la imagen
+aws lambda update-function-code \
+  --function-name nombre-de-tu-lambda \
+  --image-uri <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+```
+
+**Ventajas:** entorno reproducible, sin surpresas de compatibilidad, fácil de testear localmente con `docker run`.  
+**Desventajas:** build más lento, imagen más pesada (~200–400 MB), requiere un repositorio ECR.
+
+---
+
+#### Opción B — Lambda Layer con driver ODBC
+
+Empaquetar el driver ODBC como un Lambda Layer. La Lambda usa el runtime estándar de Python y carga el driver desde el layer en `/opt`.
+
+**Pasos:**
+
+1. Compilar o descargar el driver para Amazon Linux 2023:
+
+```bash
+# En una instancia EC2 Amazon Linux 2023 (o contenedor equivalente)
+dnf install -y msodbcsql18 unixODBC-devel
+
+mkdir -p /tmp/layer/lib /tmp/layer/opt/microsoft/msodbcsql18
+cp /usr/lib64/libodbc*.so* /tmp/layer/lib/
+cp -r /opt/microsoft/msodbcsql18 /tmp/layer/opt/microsoft/
+
+cd /tmp && zip -r odbc-layer.zip layer/
+```
+
+2. Publicar el layer:
+
+```bash
+aws lambda publish-layer-version \
+  --layer-name msodbcsql18-amzn2023 \
+  --zip-file fileb:///tmp/odbc-layer.zip \
+  --compatible-runtimes python3.12
+```
+
+3. Agregar el layer a la Lambda y configurar las variables de entorno necesarias:
+
+```bash
+aws lambda update-function-configuration \
+  --function-name nombre-de-tu-lambda \
+  --layers arn:aws:lambda:<region>:<account>:layer:msodbcsql18-amzn2023:1 \
+  --environment "Variables={ODBCINI=/opt/layer/odbcinst.ini,ODBCSYSINI=/opt/layer}"
+```
+
+**Ventajas:** despliegue más rápido, sin ECR, funciona con CI/CD estándar de Lambda.  
+**Desventajas:** más frágil (las rutas de `.so` dependen de la versión exacta del driver y del runtime), hay que re-empaquetar si cambia el runtime o el driver.
+
+---
+
+### Resumen comparativo
+
+| Criterio | Container Image (A) | Lambda Layer (B) |
+|---|---|---|
+| Complejidad inicial | Media (requiere ECR + Dockerfile) | Alta (compilar `.so` manualmente) |
+| Mantenimiento a largo plazo | Bajo | Alto (frágil ante actualizaciones) |
+| Tiempo de cold start | Mayor (~1–3 s extra) | Menor |
+| Testeable localmente | Sí (`docker run`) | Difícil |
+| Recomendado para este proyecto | ✅ Sí | Solo si hay restricciones de infraestructura |
+
+---
+
+## Tests
+
+```bash
+.venv/bin/pytest tests/ -q
+```
+
+Todos los tests son puramente unitarios (no requieren base de datos). Cubren ruteo ETL, formateo de timestamps, compresión GZIP, hashing SHA-256, extracción de parámetros SQL y el bridge Movilidad.
+
+---
+
 ## Lectura Adicional
 
 - `CLAUDE.md` — configuración de servidores MCP, referencia completa del esquema VictaTMTK, contexto para el asistente de IA
