@@ -1,105 +1,105 @@
-# BaseDeDatos — Sentiance SDK ETL Pipeline
+# BaseDeDatos — Pipeline ETL del SDK de Sentiance
 
-ETL pipeline that processes Sentiance SDK webhook payloads sent by the mobile app via REST and loads them into a SQL Server relational model (VictaTMTK). Handles driving insights, timeline events, user context, crash detection, and SDK status for the VictaTMTK product.
+Pipeline ETL que procesa los payloads webhook del SDK de Sentiance enviados por la aplicación móvil vía REST y los carga en un modelo relacional SQL Server (VictaTMTK). Maneja eventos de conducción, eventos de línea de tiempo, contexto de usuario, detección de choques y estado del SDK para el producto VictaTMTK.
 
 ---
 
-## Architecture
+## Arquitectura
 
 ```
-Mobile App (Sentiance SDK)
-        │  REST (webhook payloads)
+Aplicación Móvil (SDK Sentiance)
+        │  REST (payloads webhook)
         ▼
-SentianceEventos        ← raw payload queue (SQL Server)
+SentianceEventos        ← cola de payloads crudos (SQL Server)
         │
         ▼
-etl/sentiance_etl.py    ← main ETL engine
+etl/sentiance_etl.py    ← motor ETL principal
   ├─ DrivingInsights     → Trip, DrivingInsightsTrip
-  ├─ Harsh/Phone/Call/Speeding/WrongWay events → child event tables
-  ├─ UserContext         → UserContextHeader + 6 child tables
+  ├─ Harsh/Phone/Call/Speeding/WrongWay events → tablas de eventos hijo
+  ├─ UserContext         → UserContextHeader + 6 tablas hijo
   ├─ TimelineEvents      → TimelineEventHistory
   ├─ VehicleCrash        → VehicleCrashEvent
   └─ SDKStatus           → SdkStatusHistory
         │
-        │  optional (ENABLE_MOVILIDAD_BRIDGE=true)
+        │  opcional (ENABLE_MOVILIDAD_BRIDGE=true)
         ▼
-etl/movilidad_bridge.py → Movilidad legacy schema
+etl/movilidad_bridge.py → esquema heredado Movilidad
 ```
 
 ---
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
-etl/                        Production ETL code
-  sentiance_etl.py          Main engine — reads SentianceEventos, writes domain tables
-  run_full_pipeline.py      Orchestrator — loops until queue is empty
-  movilidad_bridge.py       Temporary bridge to Movilidad legacy schema
+etl/                        Código ETL de producción
+  sentiance_etl.py          Motor principal — lee SentianceEventos, escribe tablas de dominio
+  run_full_pipeline.py      Orquestador — itera hasta vaciar la cola
+  movilidad_bridge.py       Bridge temporal hacia el esquema heredado Movilidad
 
 scripts/
-  sync_movilidad.py         Backfill utility — syncs existing trips to Movilidad
+  sync_movilidad.py         Utilidad de backfill — sincroniza viajes existentes a Movilidad
 
-development/                Local development tooling
-  docker-compose.yml        Local SQL Server (Azure SQL Edge, ARM64-compatible)
-  hydrate_local_db.py       Load large payload dataset into local DB
-  hydrate_local_small.py    Load small curated test dataset (fast, recommended)
-  sentiance_inspector.py    Marimo visual dashboard for ETL validation
-  run_inspector_batch.py    Headless batch validator (CI-friendly)
-  sql/init_db.sql           VictaTMTK schema DDL
-  sql/init_movilidad.sql    Movilidad local schema DDL
+development/                Herramientas de desarrollo local
+  docker-compose.yml        SQL Server local (Azure SQL Edge, compatible con ARM64)
+  hydrate_local_db.py       Carga el dataset completo de payloads en la BD local
+  hydrate_local_small.py    Carga un dataset curado pequeño (rápido, recomendado)
+  sentiance_inspector.py    Dashboard visual Marimo para validación del ETL
+  run_inspector_batch.py    Validador batch sin interfaz (compatible con CI)
+  sql/init_db.sql           DDL del esquema VictaTMTK
+  sql/init_movilidad.sql    DDL del esquema Movilidad local
 
-tests/                      Unit test suite (114 tests, no DB required)
-Documentos/                 Reference docs and data dictionaries
-  DiccionarioDatos.md       Complete VictaTMTK data dictionary
-  analisis_mapeo_movilidad.md  Movilidad ↔ SDK field mapping analysis
-  schemas.json              Movilidad schema reference (production export)
+tests/                      Suite de tests unitarios (no requiere base de datos)
+Documentos/                 Documentación de referencia y diccionarios de datos
+  DiccionarioDatos.md       Diccionario de datos completo de VictaTMTK
+  analisis_mapeo_movilidad.md  Análisis de mapeo de campos SDK ↔ Movilidad
+  schemas.json              Referencia del esquema Movilidad (exportación de producción)
 ```
 
 ---
 
-## Setup
+## Configuración
 
-### Prerequisites
+### Requisitos previos
 
 - Python 3.10+
 - `brew install unixodbc` (macOS)
-- [Microsoft ODBC Driver 18 for SQL Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for local DB)
-- `uv` (recommended) or `pip`
+- [Microsoft ODBC Driver 18 para SQL Server](https://learn.microsoft.com/es-es/sql/connect/odbc/download-odbc-driver-for-sql-server)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (para la BD local)
+- `uv` (recomendado) o `pip`
 
-### Install Python dependencies
+### Instalar dependencias Python
 
 ```bash
 uv pip install --python .venv/bin/python -r requirements.txt
 ```
 
-### Configure `.env`
+### Configurar `.env`
 
 ```
 DB_SERVER=<host>
-DB_PORT=<port>
-DB_USER=<user>
-DB_PASSWORD=<password>
+DB_PORT=<puerto>
+DB_USER=<usuario>
+DB_PASSWORD=<contraseña>
 DB_NAME=VictaTMTK
 ```
 
-Copy `.env.rds` as a starting point for production, or use the local credentials below for development.
+Copiar `.env.rds` como punto de partida para producción, o usar las credenciales locales indicadas más abajo para desarrollo.
 
 ---
 
-## Running the ETL
+## Ejecutar el ETL
 
-### Single batch (up to 1000 records)
+### Batch único (hasta 1000 registros)
 
-Processes one batch from `SentianceEventos` and exits. Useful for testing.
+Procesa un batch de `SentianceEventos` y termina. Útil para pruebas.
 
 ```bash
 python etl/sentiance_etl.py
 ```
 
-### Continuous pipeline (runs until queue is empty)
+### Pipeline continuo (corre hasta vaciar la cola)
 
-Loops until all `is_processed = 0` records are handled. Use this in production or for bulk historical loads.
+Itera hasta procesar todos los registros con `is_processed = 0`. Usar en producción o para cargas históricas masivas.
 
 ```bash
 python etl/run_full_pipeline.py
@@ -107,73 +107,73 @@ python etl/run_full_pipeline.py
 
 ---
 
-## Local Development Workflow
+## Flujo de Desarrollo Local
 
-### 1. Start local SQL Server
+### 1. Iniciar SQL Server local
 
 ```bash
 cd development && docker-compose up -d
 ```
 
-Local connection: `localhost:1433 / sa / SentianceLocal2026!`
+Conexión local: `localhost:1433 / sa / SentianceLocal2026!`
 
-### 2. Load test data
+### 2. Cargar datos de prueba
 
-Two hydration scripts are available depending on your needs:
+Hay dos scripts de hidratación según la necesidad:
 
-#### `hydrate_local_small.py` — fast, curated dataset (recommended for development)
+#### `hydrate_local_small.py` — dataset curado pequeño (recomendado para desarrollo)
 
-Loads a small representative test dataset (`test_small_full.json`, ~1.3 MB). Always creates the VictaTMTK and Movilidad schemas first. Use this for day-to-day ETL development and unit testing.
+Carga un dataset de prueba representativo (`test_small_full.json`, ~1,3 MB). Siempre crea primero los esquemas VictaTMTK y Movilidad. Usar para desarrollo ETL diario y tests unitarios.
 
 ```bash
 cd development
 
-# Load standard test dataset (DrivingInsights + Timeline + UserContext)
+# Cargar dataset de prueba estándar (DrivingInsights + Timeline + UserContext)
 python hydrate_local_small.py
 
-# Load an alternate dataset (e.g. only Timeline/UserContext events)
+# Cargar un dataset alternativo (ej. solo eventos Timeline/UserContext)
 python hydrate_local_small.py --file test_context_timeline.json
 ```
 
-#### `hydrate_local_db.py` — full dataset loader
+#### `hydrate_local_db.py` — cargador del dataset completo
 
-Loads the full `sample_payloads.json.gz` dataset (~900 MB uncompressed, ~52 MB compressed). Use when you need production-scale data volumes or want to test specific edge cases not covered by the small dataset.
+Carga el dataset completo `sample_payloads.json.gz` (~900 MB descomprimido, ~52 MB comprimido). Usar cuando se necesitan volúmenes de datos de escala productiva o probar casos borde no cubiertos por el dataset pequeño.
 
 ```bash
 cd development
 
-# Clear existing data and reload (default) — always clears both VictaTMTK and Movilidad
+# Limpiar datos existentes y recargar (por defecto) — limpia VictaTMTK y Movilidad
 python hydrate_local_db.py
 
-# Drop and recreate both schemas, then load data (full reset)
+# Eliminar y recrear ambos esquemas, luego cargar datos (reset completo)
 python hydrate_local_db.py --recreate
 
-# Drop and recreate both schemas only (no data loaded — clean slate)
+# Eliminar y recrear ambos esquemas sin cargar datos (pizarrón en blanco)
 python hydrate_local_db.py --recreate-only
 
-# Add data without clearing existing rows
+# Agregar datos sin limpiar los existentes
 python hydrate_local_db.py --no-clear
 
-# Load only first N records
+# Cargar solo los primeros N registros
 python hydrate_local_db.py --limit 500
 
-# Load from a specific file
-python hydrate_local_db.py --file my_payloads.json.gz
+# Cargar desde un archivo específico
+python hydrate_local_db.py --file mis_payloads.json.gz
 ```
 
-### 3. Configure `.env` for local development
+### 3. Configurar `.env` para desarrollo local
 
-Create or update `.env` in the project root. For a full local setup (VictaTMTK + Movilidad bridge), use:
+Crear o actualizar `.env` en la raíz del proyecto. Para un setup local completo (VictaTMTK + bridge Movilidad):
 
 ```
-# VictaTMTK — local Docker instance
+# VictaTMTK — instancia Docker local
 DB_SERVER=localhost
 DB_PORT=1433
 DB_USER=sa
 DB_PASSWORD=SentianceLocal2026!
 DB_NAME=VictaTMTK
 
-# Movilidad bridge — same Docker instance, different database
+# Bridge Movilidad — misma instancia Docker, base de datos diferente
 ENABLE_MOVILIDAD_BRIDGE=true
 MOVILIDAD_HOST=localhost
 MOVILIDAD_PORT=1433
@@ -182,69 +182,67 @@ MOVILIDAD_USER=sa
 MOVILIDAD_PASSWORD=SentianceLocal2026!
 ```
 
-> **Important:** if `ENABLE_MOVILIDAD_BRIDGE` is missing or not `true`, the bridge is silently
-> disabled. Movilidad will be empty even after a successful ETL run.
+> **Importante:** si `ENABLE_MOVILIDAD_BRIDGE` no está presente o no es `true`, el bridge se
+> deshabilita silenciosamente. Movilidad quedará vacía incluso tras una ejecución ETL exitosa.
 
-### 4. Run the ETL locally
+### 4. Ejecutar el ETL localmente
 
 ```bash
 python etl/sentiance_etl.py
 ```
 
-### 5. Validate results with the inspector
+### 5. Validar resultados con el inspector
 
 ```bash
-# Interactive visual dashboard
+# Dashboard visual interactivo
 .venv/bin/marimo run development/sentiance_inspector.py
 
-# Headless batch validator (outputs pass/fail per record)
+# Validador batch sin interfaz (muestra pass/fail por registro)
 python development/run_inspector_batch.py
 ```
 
 ---
 
-## Movilidad Bridge (Temporary)
+## Bridge Movilidad (Temporal)
 
-Projects processed trips from VictaTMTK into the legacy Movilidad schema at the end of each ETL batch. Gated by `ENABLE_MOVILIDAD_BRIDGE`; designed to be removed once Operaciones implements its own pipeline.
+Proyecta los viajes procesados de VictaTMTK hacia el esquema heredado Movilidad al final de cada batch ETL. Controlado por `ENABLE_MOVILIDAD_BRIDGE`; diseñado para ser eliminado una vez que Operaciones implemente su propio pipeline.
 
-The bridge is entirely self-contained in `etl/movilidad_bridge.py`. If the Movilidad host is unreachable, the bridge logs a warning and the ETL continues normally — it never breaks the main pipeline.
+El bridge está completamente autocontenido en `etl/movilidad_bridge.py`. Si el host de Movilidad no es alcanzable, el bridge registra una advertencia y el ETL continúa normalmente — nunca interrumpe el pipeline principal.
 
-### Tables populated
+### Tablas que se populan
 
-| Movilidad table | Source in VictaTMTK |
+| Tabla Movilidad | Fuente en VictaTMTK |
 |-----------------|---------------------|
 | `Transporte` | `Trip` |
 | `Recorridos` | `Trip.waypoints_json` |
 | `PuntajesPrirmariosTr` | `DrivingInsightsTrip` |
 | `PuntajesSecundariosTr` | `DrivingInsightsTrip` + `DrivingInsightsHarshEvent` |
 | `Conduccion` | `Trip.occupant_role` |
-| `Eventos` | All child event tables |
-| `EventosSignificantes` | Mirror of `Eventos` (significant events only) |
-| `PerfilDeUsuario` | `UserContextHeader` (latest snapshot per user) |
+| `Eventos` | Todas las tablas de eventos hijo |
+| `EventosSignificantes` | Espejo de `Eventos` (solo eventos significativos) |
+| `PerfilDeUsuario` | `UserContextHeader` (último snapshot por usuario) |
 | `ChoqueDeVehiculo` | `VehicleCrashEvent` |
 
-### When does the bridge run?
+### ¿Cuándo se ejecuta el bridge?
 
-The bridge fires **automatically** at the end of each ETL batch, but only when the batch
-processed at least one new `DrivingInsights` event. This means:
+El bridge se dispara **automáticamente** al final de cada batch ETL, pero solo cuando el batch procesó al menos un nuevo evento `DrivingInsights`. Esto significa:
 
-- If you run the ETL on a fresh queue → bridge syncs those trips automatically.
-- If you run the ETL on a queue that was **already processed** → `_dirty_transport_ids` is
-  empty → bridge is not called → Movilidad stays empty.
-- If `ENABLE_MOVILIDAD_BRIDGE` is not `true` in `.env` → bridge is disabled entirely.
+- Si se ejecuta el ETL con una cola nueva → el bridge sincroniza esos viajes automáticamente.
+- Si se ejecuta el ETL sobre una cola **ya procesada** → `_dirty_transport_ids` está vacío → el bridge no se llama → Movilidad queda vacía.
+- Si `ENABLE_MOVILIDAD_BRIDGE` no es `true` en `.env` → el bridge está desactivado por completo.
 
-### `.env` for production (AWS RDS → Movilidad on-prem)
+### `.env` para producción (AWS RDS → Movilidad on-prem)
 
 ```
 ENABLE_MOVILIDAD_BRIDGE=true
 MOVILIDAD_HOST=AROCLNDSQL-DEV.ikeasistencia.com.ar
 MOVILIDAD_PORT=1533
 MOVILIDAD_DATABASE=Movilidad
-MOVILIDAD_USER=<user>
-MOVILIDAD_PASSWORD=<password>
+MOVILIDAD_USER=<usuario>
+MOVILIDAD_PASSWORD=<contraseña>
 ```
 
-### `.env` for local development (Docker)
+### `.env` para desarrollo local (Docker)
 
 ```
 ENABLE_MOVILIDAD_BRIDGE=true
@@ -257,30 +255,30 @@ MOVILIDAD_PASSWORD=SentianceLocal2026!
 
 ---
 
-## Processing Everything, Including Movilidad
+## Procesamiento Completo Incluyendo Movilidad
 
-### Complete local workflow from scratch
+### Flujo local completo desde cero
 
 ```bash
-# 1. Start Docker
+# 1. Iniciar Docker
 cd development && docker-compose up -d && cd ..
 
-# 2. Create schemas and load test data
+# 2. Crear esquemas y cargar datos de prueba
 python development/hydrate_local_small.py
 
-# 3. Ensure .env has both VictaTMTK and Movilidad settings (see above)
+# 3. Asegurarse de que .env tenga la configuración de VictaTMTK y Movilidad (ver arriba)
 
-# 4. Run the ETL — bridge fires automatically at the end of the batch
+# 4. Ejecutar el ETL — el bridge se dispara automáticamente al final del batch
 python etl/sentiance_etl.py
 
-# 5. Verify Movilidad was populated
+# 5. Verificar que Movilidad fue populada
 ```
 
-After step 4, all these Movilidad tables should have data:
+Tras el paso 4, estas tablas de Movilidad deberían tener datos:
 `Transporte`, `Recorridos`, `PuntajesPrirmariosTr`, `PuntajesSecundariosTr`,
 `Conduccion`, `Eventos`, `EventosSignificantes`.
 
-### Verify Movilidad data (via MCP or any SQL client)
+### Verificar datos en Movilidad (vía MCP o cualquier cliente SQL)
 
 ```sql
 SELECT 'Transporte'          AS tabla, COUNT(*) AS filas FROM Movilidad.dbo.Transporte          UNION ALL
@@ -294,94 +292,89 @@ SELECT 'EventosSignificantes',         COUNT(*)          FROM Movilidad.dbo.Even
 
 ---
 
-## Reprocessing and Backfill
+## Reprocesamiento y Backfill
 
-Use `scripts/sync_movilidad.py` in any of these situations:
+Usar `scripts/sync_movilidad.py` en cualquiera de estas situaciones:
 
-- The bridge was added or enabled after the ETL already processed historical records.
-- Movilidad was cleared and needs to be rebuilt from VictaTMTK data.
-- You want to re-sync specific users or a date range after a schema change.
-- The bridge failed mid-run and left Movilidad partially populated.
+- El bridge fue agregado o habilitado después de que el ETL ya procesó registros históricos.
+- Movilidad fue vaciada y necesita reconstruirse desde los datos de VictaTMTK.
+- Se desea re-sincronizar usuarios específicos o un rango de fechas tras un cambio de esquema.
+- El bridge falló a mitad de ejecución y dejó Movilidad parcialmente populada.
 
-The script reads directly from the `Trip` table in VictaTMTK — it does not care whether
-events in `SentianceEventos` are processed or not.
+El script lee directamente desde la tabla `Trip` en VictaTMTK — no importa si los eventos en `SentianceEventos` están procesados o no.
 
-### Usage
+### Uso
 
 ```bash
-# Sync all trips in VictaTMTK to Movilidad
+# Sincronizar todos los viajes de VictaTMTK a Movilidad
 python scripts/sync_movilidad.py
 
-# Sync only trips for a specific user
+# Sincronizar solo los viajes de un usuario específico
 python scripts/sync_movilidad.py --uid <sentiance_user_id>
 
-# Sync only trips that started on or after a date
+# Sincronizar solo viajes que iniciaron a partir de una fecha
 python scripts/sync_movilidad.py --since 2026-05-01
 
-# Combine filters
+# Combinar filtros
 python scripts/sync_movilidad.py --uid abc123 --since 2026-04-01
 
-# Preview what would be synced without writing anything
+# Vista previa de lo que se sincronizaría sin escribir nada
 python scripts/sync_movilidad.py --dry-run
 
-# Process in smaller chunks (default: 50 trips per batch)
+# Procesar en bloques más pequeños (por defecto: 50 viajes por batch)
 python scripts/sync_movilidad.py --batch-size 20
 ```
 
-### Full reset of Movilidad + resync
+### Reset completo de Movilidad + resincronización
 
-If you need to rebuild Movilidad from scratch (e.g. after a schema change):
+Si se necesita reconstruir Movilidad desde cero (ej. tras un cambio de esquema):
 
 ```bash
-# 1. Clear and recreate Movilidad schema only (leaves VictaTMTK untouched)
+# 1. Limpiar y recrear solo el esquema Movilidad (deja VictaTMTK intacto)
 python development/hydrate_local_db.py --recreate-only
 
-# 2. Resync all trips from VictaTMTK
+# 2. Resincronizar todos los viajes desde VictaTMTK
 python scripts/sync_movilidad.py
 ```
 
-Or for a complete reset of both databases:
+O para un reset completo de ambas bases de datos:
 
 ```bash
-# 1. Drop and recreate both schemas, reload all test data
+# 1. Eliminar y recrear ambos esquemas, recargar todos los datos de prueba
 python development/hydrate_local_db.py --recreate
 
-# 2. Run ETL — bridge fires automatically
+# 2. Ejecutar ETL — el bridge se dispara automáticamente
 python etl/run_full_pipeline.py
 ```
 
-### Why is Movilidad still empty after running the ETL?
+### ¿Por qué Movilidad sigue vacía después de ejecutar el ETL?
 
-**Check 1: Is the bridge enabled?**
+**Verificación 1: ¿Está habilitado el bridge?**
 
-The `.env` must contain `ENABLE_MOVILIDAD_BRIDGE=true`. If that variable is absent or set to
-any other value, the bridge is silently skipped. The ETL log will print:
+El `.env` debe contener `ENABLE_MOVILIDAD_BRIDGE=true`. Si esa variable está ausente o tiene cualquier otro valor, el bridge se omite silenciosamente. El log del ETL mostrará:
 ```
 MovilidadBridge: desactivado (ENABLE_MOVILIDAD_BRIDGE != true)
 ```
 
-**Check 2: Were the events already processed?**
+**Verificación 2: ¿Los eventos ya estaban procesados?**
 
-The bridge only runs when the current ETL batch processed new `DrivingInsights` events.
-If all events in `SentianceEventos` have `is_processed = 1`, the ETL exits early (nothing
-to do) and the bridge is never called. Check with:
+El bridge solo se ejecuta cuando el batch ETL actual procesó nuevos eventos `DrivingInsights`.
+Si todos los eventos en `SentianceEventos` tienen `is_processed = 1`, el ETL termina temprano (sin trabajo pendiente) y el bridge nunca se llama. Verificar con:
 
 ```sql
-SELECT tipo, COUNT(*) AS total, SUM(CAST(is_processed AS INT)) AS processed
+SELECT tipo, COUNT(*) AS total, SUM(CAST(is_processed AS INT)) AS procesados
 FROM VictaTMTK.dbo.SentianceEventos
 GROUP BY tipo
 ORDER BY tipo;
 ```
 
-If `DrivingInsights` rows are all processed, use `sync_movilidad.py` to backfill.
+Si las filas de `DrivingInsights` están todas procesadas, usar `sync_movilidad.py` para el backfill.
 
-**Check 3: Is the Movilidad connection correct?**
+**Verificación 3: ¿Es correcta la conexión a Movilidad?**
 
-If the bridge is enabled but the host is wrong or the Docker container is not running, the
-bridge logs a warning and continues silently. Run `scripts/sync_movilidad.py` manually —
-it will raise a clear error if the connection fails.
+Si el bridge está habilitado pero el host es incorrecto o el contenedor Docker no está corriendo, el bridge registra una advertencia y continúa silenciosamente. Ejecutar `scripts/sync_movilidad.py` manualmente — levantará un error claro si la conexión falla.
 
-See `Documentos/analisis_mapeo_movilidad.md` § 10 for removal instructions.
+Ver `Documentos/analisis_mapeo_movilidad.md` § 10 para instrucciones de eliminación del bridge.
 
 ---
 
@@ -391,13 +384,14 @@ See `Documentos/analisis_mapeo_movilidad.md` § 10 for removal instructions.
 .venv/bin/pytest tests/ -q
 ```
 
-All tests are pure-unit (no database required). Covers ETL routing, timestamp formatting, GZIP compression, SHA-256 hashing, SQL parameter extraction, and the Movilidad bridge.
+Todos los tests son puramente unitarios (no requieren base de datos). Cubren ruteo ETL, formateo de timestamps, compresión GZIP, hashing SHA-256, extracción de parámetros SQL y el bridge Movilidad.
 
 ---
 
-## Further Reading
+## Lectura Adicional
 
-- `CLAUDE.md` — MCP server configuration, full VictaTMTK schema reference, AI assistant context
-- `Documentos/DiccionarioDatos.md` — complete data dictionary for all 23 tables
-- `Documentos/analisis_mapeo_movilidad.md` — Sentiance SDK ↔ Movilidad field mapping
-- `development/README.md` — Docker setup and local SQL Server details
+- `CLAUDE.md` — configuración de servidores MCP, referencia completa del esquema VictaTMTK, contexto para el asistente de IA
+- `README_ENG.md` — versión en inglés de este documento
+- `Documentos/DiccionarioDatos.md` — diccionario de datos completo para las 23 tablas
+- `Documentos/analisis_mapeo_movilidad.md` — mapeo de campos SDK Sentiance ↔ Movilidad
+- `development/README.md` — configuración de Docker y detalles del SQL Server local
