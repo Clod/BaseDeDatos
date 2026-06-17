@@ -1,195 +1,196 @@
-# Golden-Snapshot Regression Suite
+# Suite de Regresión Golden-Snapshot
 
-> **TL;DR** — A frozen corpus of 166 real production events is run through the
-> real ETL against the local Docker DB; the resulting state of all 24 tables is
-> compared byte-for-byte against blessed golden files. Empty diff = pass.
-> Non-empty diff = a regression or an intentional change you must review and
-> re-bless. Nobody ever re-checks results by hand again; humans (and LLMs)
-> only ever look at *changes*.
+> **TL;DR** — Un corpus congelado de 170 eventos reales de producción se ejecuta a través
+> del ETL real contra la BD Docker local; el estado resultante de las 24 tablas se compara
+> byte a byte contra archivos golden bendecidos. Diff vacío = pasa.
+> Diff no vacío = regresión o cambio intencional que hay que revisar y volver a bendecir.
+> Nadie vuelve a verificar resultados a mano; los humanos (y los LLMs) solo miran *cambios*.
 
 ```bash
-# The one command (requires Docker DB up; DROPS the local VictaTMTK):
+# El único comando (requiere BD Docker levantada; ELIMINA el VictaTMTK local):
 .venv/bin/python3 -m pytest tests/regression --run-regression
 ```
 
 ---
 
-## Table of Contents
+## Tabla de Contenidos
 
-1. [Philosophy](#1-philosophy)
-2. [How it works](#2-how-it-works)
-3. [Quick start](#3-quick-start)
-4. [The corpus](#4-the-corpus)
-5. [Procedures](#5-procedures)
-6. [The invariant suite](#6-the-invariant-suite)
-7. [The determinism contract](#7-the-determinism-contract)
-8. [Findings log](#8-findings-log)
-9. [Limits and FAQ](#9-limits-and-faq)
-
----
-
-## 1. Philosophy
-
-The ETL is **deterministic**: for a fixed set of input events there is exactly
-one correct database state. That single fact dictates the whole design.
-
-**Principle 1 — Diff beats judgment.** Because the correct output is exactly
-specifiable, the right verification tool is a byte comparison, not an opinion.
-A diff catches a swapped lat/lon, a column off by one, a timestamp truncated
-at 22 instead of 23 characters — every time, in milliseconds, for free. No
-human re-reading and no LLM judge does that reliably. LLMs are reserved for
-the two places where judgment is genuinely needed (see Principle 4).
-
-**Principle 2 — 100% real data, selected by structure.** Every corpus case is
-an unmodified production event. Cases are *not* hand-picked: a payload's
-**structural shape** (the set of its JSON key paths, including which fields
-arrived as explicit `null`) is fingerprinted, and the corpus keeps exactly one
-representative per shape per event type. Two payloads with the same shape
-exercise identical code paths (every `.get()` resolves the same way), so this
-gives full structural coverage with ~1% of the volume: 18,556 sampled events
-collapse to ~150 shapes.
-
-**Principle 3 — No synthetic data; gaps close themselves.** Four routed event
-types have never occurred in production (see §4). We do **not** fabricate
-payloads for them — a fabricated payload tests our guess, not the SDK. The
-gap is documented in `corpus/manifest.json`, and as real users feed the
-database, the top-up procedure (§5.4) harvests real representatives. Coverage
-honesty over coverage theater.
-
-**Principle 4 — The blessing is the only judgment call.** Declaring "this
-output is correct" happens once per behavior change, in a reviewed git diff of
-`golden/`. The *initial* blessing is the only large one, and that is where an
-LLM audit (§5.5) earns its keep: cross-checking input payloads against golden
-rows against the mapping spec, so a human only adjudicates discrepancies. After
-blessing, the LLM is never in the loop again — the suite is pure diff.
-
-**Principle 5 — Two layers, different jobs.** The golden snapshot pins exact
-behavior *for the corpus*. The invariant suite (§6) asserts structural truths
-that must hold for *any* data — it already caught a production-bound schema
-bug on its first run (§8). Invariants also run read-only against production.
+1. [Filosofía](#1-filosofía)
+2. [Cómo Funciona](#2-cómo-funciona)
+3. [Inicio Rápido](#3-inicio-rápido)
+4. [El Corpus](#4-el-corpus)
+5. [Procedimientos](#5-procedimientos)
+6. [La Suite de Invariantes](#6-la-suite-de-invariantes)
+7. [El Contrato de Determinismo](#7-el-contrato-de-determinismo)
+8. [Registro de Hallazgos](#8-registro-de-hallazgos)
+9. [Límites y FAQ](#9-límites-y-faq)
 
 ---
 
-## 2. How it works
+## 1. Filosofía
+
+El ETL es **determinista**: para un conjunto fijo de eventos de entrada existe exactamente
+un estado de base de datos correcto. Ese único hecho dicta todo el diseño.
+
+**Principio 1 — El diff supera al juicio.** Dado que la salida correcta es exactamente
+especificable, la herramienta de verificación adecuada es una comparación byte a byte, no
+una opinión. Un diff detecta un lat/lon invertido, una columna desfasada en uno, un
+timestamp truncado en 22 en lugar de 23 caracteres — siempre, en milisegundos, gratis. Ni
+releer a mano ni un juez LLM lo hace de forma confiable. Los LLMs están reservados para
+los dos lugares donde el juicio realmente es necesario (ver Principio 4).
+
+**Principio 2 — 100% datos reales, seleccionados por estructura.** Cada caso del corpus
+es un evento de producción sin modificar. Los casos *no* se eligen a mano: la **forma
+estructural** de un payload (el conjunto de rutas de claves JSON, incluyendo qué campos
+llegaron como `null` explícito) se convierte en una huella digital, y el corpus conserva
+exactamente un representante por forma por tipo de evento. Dos payloads con la misma forma
+ejercen rutas de código idénticas (cada `.get()` se resuelve igual), por lo que esto da
+cobertura estructural completa con ~1% del volumen: 18.556 eventos muestreados se reducen
+a ~150 formas.
+
+**Principio 3 — Sin datos sintéticos; los gaps se cierran solos.** Cuatro tipos de
+eventos enrutados nunca han ocurrido en producción (ver §4). **No** fabricamos payloads
+para ellos — un payload fabricado testea nuestra suposición, no el SDK. El gap está
+documentado en `corpus/manifest.json`, y a medida que usuarios reales alimentan la base de
+datos, el procedimiento de top-up (§5.4) cosecha representantes reales. Honestidad de
+cobertura por encima del teatro de cobertura.
+
+**Principio 4 — El blessing es el único juicio.** Declarar "esta salida es correcta"
+ocurre una vez por cambio de comportamiento, en un diff de git revisado de `golden/`. El
+*blessing inicial* es el único grande, y es ahí donde una auditoría LLM (§5.5) justifica
+su existencia: verifica inputs contra filas golden contra la especificación de mapeo, para
+que un humano solo resuelva discrepancias. Después del blessing, el LLM nunca vuelve a
+intervenir — la suite es diff puro.
+
+**Principio 5 — Dos capas, trabajos distintos.** El golden snapshot fija el comportamiento
+exacto *para el corpus*. La suite de invariantes (§6) afirma verdades estructurales que
+deben cumplirse para *cualquier* dato — ya detectó un bug de esquema en su primera
+ejecución (§8). Los invariantes también corren en modo solo lectura contra producción.
+
+---
+
+## 2. Cómo Funciona
 
 ```
-corpus/cases/*.json ──┐  (166 frozen real events, loaded with their ids)
+corpus/cases/*.json ──┐  (170 eventos reales congelados, cargados con sus ids)
                       ▼
         ┌──────────────────────────────┐
-        │ 1. DROP + recreate VictaTMTK │   development/sql/init_db.sql
-        │ 2. INSERT corpus into        │   identity seeds reset ⇒
-        │    SentianceEventos          │   deterministic downstream ids
-        │ 3. etl.run() until drained   │   real SentianceETL, bridge OFF
-        │ 4. dump all 24 tables        │   snapshot_lib.py normalization
-        │ 5. etl.run() once more       │   must be a strict no-op
+        │ 1. DROP + recrear VictaTMTK  │   development/sql/init_db.sql
+        │ 2. INSERT corpus en          │   seeds de identity reseteados ⇒
+        │    SentianceEventos          │   ids downstream deterministas
+        │ 3. etl.run() hasta vaciar    │   SentianceETL real, bridge OFF
+        │ 4. volcar las 24 tablas      │   normalización snapshot_lib.py
+        │ 5. etl.run() una vez más     │   debe ser estrictamente no-op
         └──────────────────────────────┘
                       ▼
-   current dump  ⟷  golden/*.jsonl   (committed, reviewed, blessed)
-        plus: invariant queries, orphan-ordering scenario
+   volcado actual  ⟷  golden/*.jsonl   (commiteado, revisado, bendecido)
+        más: consultas de invariantes, escenario de ordenamiento de huérfanos
 ```
 
-| File | Role |
+| Archivo | Rol |
 |---|---|
-| `corpus/cases/*.json` | Frozen input events (one file per case, committed) |
-| `corpus/manifest.json` | Coverage summary + documented gaps + source order |
-| `corpus/sources/*.json` | Raw production pulls feeding the builder (committed) |
-| `corpus_builder.py` | Shape-fingerprint selection + parent pairing |
-| `fetch_topup.py` | Read-only production fetcher for corpus top-ups |
-| `snapshot_lib.py` | Canonical dump: normalization rules + table list + diff |
-| `harness.py` | DB lifecycle (localhost-only guard, schema reset, loader) |
-| `conftest.py` | The session pipeline fixture; dumps frozen before tests run |
-| `test_snapshot.py` | Golden comparison + terminal-state check; `--bless` |
-| `test_idempotency.py` | Second pass over drained queue must change nothing |
-| `test_orphan_ordering.py` | Child-before-parent must park, then complete |
-| `test_invariants.py` | Structural truths + snapshot-coverage drift check |
-| `golden/*.jsonl` | One canonical JSONL per table — the blessed state |
-| `prompts/blessing_audit.md` | LLM prompt for auditing a blessing |
-| `audits/` | Output reports of LLM blessing audits |
+| `corpus/cases/*.json` | Eventos de entrada congelados (un archivo por caso, commiteado) |
+| `corpus/manifest.json` | Resumen de cobertura + gaps documentados + orden de fuentes |
+| `corpus/sources/*.json` | Pulls crudos de producción que alimentan el builder (commiteados) |
+| `corpus_builder.py` | Selección por huella de forma + emparejamiento de padres |
+| `fetch_topup.py` | Fetcher de producción solo lectura para top-ups del corpus |
+| `snapshot_lib.py` | Volcado canónico: reglas de normalización + lista de tablas + diff |
+| `harness.py` | Ciclo de vida de BD (guardia solo-localhost, reset de esquema, cargador) |
+| `conftest.py` | El fixture de pipeline de sesión; congela volcados antes de correr tests |
+| `test_snapshot.py` | Comparación golden + verificación de estado terminal; `--bless` |
+| `test_idempotency.py` | Un segundo pass sobre la cola vaciada no debe cambiar nada |
+| `test_orphan_ordering.py` | Hijo-antes-que-padre debe esperar, luego completarse |
+| `test_invariants.py` | Verdades estructurales + verificación de drift de cobertura del snapshot |
+| `golden/*.jsonl` | Un JSONL canónico por tabla — el estado bendecido |
+| `prompts/blessing_audit.md` | Prompt LLM para auditar un blessing |
+| `audits/` | Informes de resultado de auditorías LLM de blessing |
 
 ---
 
-## 3. Quick start
+## 3. Inicio Rápido
 
 ```bash
-# 0. Prerequisites: local Docker DB running
+# 0. Requisito previo: BD Docker local en ejecución
 cd development && docker-compose up -d && cd ..
 
-# 1. Run the suite (DROPS and rebuilds the local VictaTMTK!)
+# 1. Ejecutar la suite (¡ELIMINA y reconstruye el VictaTMTK local!)
 .venv/bin/python3 -m pytest tests/regression --run-regression
 
-# 2. Plain `pytest` stays safe: without --run-regression everything is skipped,
-#    so unit tests and CI keep working untouched.
-.venv/bin/python3 -m pytest            # unit suite + skipped regression
+# 2. El `pytest` simple es seguro: sin --run-regression todo se omite,
+#    por lo que los tests unitarios y CI siguen funcionando sin cambios.
+.venv/bin/python3 -m pytest            # suite unitaria + regresión omitida
 ```
 
-Runtime: ~11 seconds for the full cycle (schema reset, 166 events, 24-table
-dump, double run, 25 invariants).
+Tiempo de ejecución: ~11 segundos para el ciclo completo (reset de esquema, 170 eventos, volcado de 24 tablas, doble ejecución, 25 invariantes).
 
-> ⚠️ The suite **destroys local dev data** in VictaTMTK. If you keep state in
-> the local DB, re-hydrate afterwards (`development/hydrate_local_db.py` /
+> ⚠️ La suite **destruye los datos de desarrollo local** en VictaTMTK. Si se mantiene estado
+> en la BD local, rehidratar después (`development/hydrate_local_db.py` /
 > `hydrate_local_small.py`).
 
 ---
 
-## 4. The corpus
+## 4. El Corpus
 
-**Provenance.** Two committed sources, consumed in this order (order matters —
-see id-collision note in `corpus_builder.load_sources`):
+**Procedencia.** Dos fuentes commiteadas, consumidas en este orden (el orden importa —
+ver nota sobre colisión de ids en `corpus_builder.load_sources`):
 
-1. `development/sample_payloads.json` — 18,556 events (prod rows from the
-   Oct 2025 – Feb 2026 window, ids renumbered 1–18556 by the export).
-   *Not committed* (gitignored, 60 MB) — but the selected cases are.
-2. `corpus/sources/prod_topup_2026-06-11.json` — 21 targeted production rows
-   (true prod ids): the DrivingInsights child events with their shared
-   parents, TimelineUpdate shape representatives, and the negative cases.
+1. `development/sample_payloads.json` — 18.556 eventos (filas de prod de la ventana
+   Oct 2025 – Feb 2026, ids renumerados 1–18556 por el export).
+   *No commiteado* (en gitignore, 60 MB) — pero los casos seleccionados sí lo están.
+2. `corpus/sources/prod_topup_2026-06-11.json` — 21 filas de producción específicas
+   (ids reales de prod): los eventos hijo de DrivingInsights con sus padres compartidos,
+   representantes de forma de TimelineUpdate y los casos negativos.
+3. `corpus/sources/prod_topup_2026-06-17.json` — 4 filas de producción para
+   `UserActivityUpdate` (3 formas: UNKNOWN, STATIONARY, TRIP).
 
-**Selection.** `corpus_builder.py` keeps the lowest-id representative of every
-`(tipo, shape)` pair, then force-includes the parent `DrivingInsights` for
-every selected child event (a child without its parent would sit parked as an
-orphan and its handler would never execute).
+**Selección.** `corpus_builder.py` conserva el representante de id más bajo de cada par
+`(tipo, forma)`, luego incluye forzosamente el `DrivingInsights` padre de cada evento hijo
+seleccionado (un hijo sin su padre quedaría estacionado como huérfano y su handler nunca
+se ejecutaría).
 
-**Current coverage (166 cases, 164 shapes):**
+**Cobertura actual (170 casos, 168 formas):**
 
-| Tipo | Cases | Notes |
+| Tipo | Casos | Notas |
 |---|---|---|
-| requestUserContext | 69 | every structural shape in sample |
+| requestUserContext | 69 | cada forma estructural en el sample |
 | UserContextUpdate | 34 | |
-| DrivingInsights | 34 | 32 shapes + 2 forced parents |
+| DrivingInsights | 34 | 32 formas + 2 padres forzados |
 | SDKStatus | 7 | |
-| TimelineEvents | 6 | legacy type (35 rows ever in prod) |
-| TimelineUpdate | 6 | STATIONARY / OFF_THE_GRID / IN_TRANSPORT shapes |
-| VehicleCrash | 2 | incl. the `location: null` shape (real crash-path bug) |
+| TimelineEvents | 6 | tipo legacy (35 filas en toda la prod) |
+| TimelineUpdate | 6 | formas STATIONARY / OFF_THE_GRID / IN_TRANSPORT |
+| VehicleCrash | 2 | incl. la forma `location: null` (bug real de ruta de crash) |
+| UserActivityUpdate | 4 | 3 formas: UNKNOWN, STATIONARY, TRIP |
 | DrivingInsightsPhoneEvents | 2 | |
 | DrivingInsightsHarshEvents | 1 | |
 | DrivingInsightsSpeedingEvents | 1 | |
-| DrivingInsightsCallEvents | 1 | only 2 such events exist in all of prod |
-| DebugLog / CRASH / fcm_token | 3 | **negative cases** — must stay untouched |
+| DrivingInsightsCallEvents | 1 | solo 2 eventos así en toda la prod |
+| DebugLog / CRASH / fcm_token | 3 | **casos negativos** — deben quedar intactos |
 
-**Documented gaps** (`manifest.json → routed_tipos_without_coverage`):
+**Gaps documentados** (`manifest.json → routed_tipos_without_coverage`):
 `DrivingInsightsWrongWayDrivingEvents`, `TechnicalEvent`, `UserActivity`,
-`UserMetadata` — zero occurrences in production as of 2026-06-11. Policy: wait
-for real traffic, then §5.4. **Do not write synthetic payloads for them.**
+`UserMetadata` — cero ocurrencias en producción al 2026-06-11. Política: esperar
+tráfico real, luego §5.4. **No escribir payloads sintéticos para ellos.**
 
-**Negative cases** are real unrouted events (including a `CRASH` row whose
-payload is the literal string `Array` — an upstream serialization bug worth
-keeping). The golden files prove the ETL leaves them at `is_processed = 0`
-with no audit row, and an invariant enforces it for any data.
+**Los casos negativos** son eventos no enrutados reales (incluyendo una fila `CRASH` cuyo
+payload es el string literal `Array` — un bug de serialización upstream que vale conservar).
+Los archivos golden prueban que el ETL los deja en `is_processed = 0` sin fila de auditoría,
+y un invariante lo hace cumplir para cualquier dato.
 
 ---
 
-## 5. Procedures
+## 5. Procedimientos
 
-### 5.1 Running the suite
+### 5.1 Ejecutar la Suite
 
 ```bash
 .venv/bin/python3 -m pytest tests/regression --run-regression
 ```
 
-Add `-q` for terse output, `-k snapshot` to run only the golden comparison.
+Agregar `-q` para salida concisa, `-k snapshot` para ejecutar solo la comparación golden.
 
-### 5.2 Interpreting a failure
+### 5.2 Interpretar un Fallo
 
-A snapshot failure prints a unified diff per table, e.g.:
+Un fallo de snapshot imprime un diff unificado por tabla, por ejemplo:
 
 ```
 --- golden/Trip.jsonl
@@ -198,205 +199,205 @@ A snapshot failure prints a unified diff per table, e.g.:
 +{"trip_id": 12, ..., "distance_meters": null, ...}
 ```
 
-Ask, in order:
+Preguntar, en orden:
 
-1. **Did I intend to change this?** If no → it is a regression. The diff tells
-   you the table, the row, and the field; fix the code and re-run.
-2. **If yes** → is the new value *correct* per `Documentos/MapeoSDK_BD.md`?
-   Verify the affected rows (the LLM audit prompt §5.5 can help for large
-   diffs), then re-bless (§5.3).
-3. **Id-shift noise?** If you edited the corpus, identity values shift and the
-   diff is large but mechanical — expected; re-bless after reviewing a sample.
+1. **¿Pretendía hacer este cambio?** Si no → es una regresión. El diff indica la tabla,
+   la fila y el campo; corregir el código y volver a ejecutar.
+2. **Si sí** → ¿es el nuevo valor *correcto* según `Documentos/MapeoSDK_BD.md`?
+   Verificar las filas afectadas (el prompt de auditoría LLM §5.5 puede ayudar para diffs
+   grandes), luego volver a bendecir (§5.3).
+3. **¿Ruido de desplazamiento de ids?** Si se editó el corpus, los valores de identity
+   se desplazan y el diff es grande pero mecánico — esperado; volver a bendecir tras
+   revisar una muestra.
 
-An **idempotency failure** means a second pass mutated data: look for a MERGE
-that updates non-idempotently or a row reprocessed despite its flag.
-An **invariant failure** is independent of the corpus — read the offending
-rows in the assertion message; these are almost always real bugs.
+Un **fallo de idempotencia** significa que un segundo pass mutó datos: buscar un MERGE
+que actualiza de forma no idempotente o una fila reprocesada a pesar de su flag.
+Un **fallo de invariante** es independiente del corpus — leer las filas infractoras en el
+mensaje de aserción; casi siempre son bugs reales.
 
-### 5.3 Re-blessing (accepting new behavior)
+### 5.3 Volver a Bendecir (Aceptar Nuevo Comportamiento)
 
 ```bash
 .venv/bin/python3 -m pytest tests/regression --run-regression --bless
-git diff tests/regression/golden/        # REVIEW THIS — it IS the change
+git diff tests/regression/golden/        # REVISAR ESTO — ES el cambio
 git add tests/regression/golden && git commit
 ```
 
-The git diff of `golden/` is the reviewable artifact of the behavior change —
-treat it with the same seriousness as the code diff that caused it. Never
-bless with a dirty working tree mixing unrelated changes.
+El diff de git de `golden/` es el artefacto revisable del cambio de comportamiento —
+tratarlo con la misma seriedad que el diff de código que lo causó. Nunca bendecir con
+un árbol de trabajo sucio mezclando cambios no relacionados.
 
-### 5.4 Topping up the corpus (when production gains new traffic)
+### 5.4 Top-up del Corpus (Cuando Producción Gana Nuevo Tráfico)
 
-Run this when: a gap tipo starts appearing in production, a new event type is
-added to the ETL, or the SDK starts sending new payload shapes.
+Ejecutar cuando: un tipo gap empieza a aparecer en producción, se agrega un nuevo tipo de
+evento al ETL, o el SDK empieza a enviar nuevas formas de payload.
 
 ```bash
-# 1. Survey what production has now (read-only; via MCP in a Claude session
-#    or any SQL client):
+# 1. Explorar qué tiene producción ahora (solo lectura; vía MCP en una sesión
+#    de Claude o cualquier cliente SQL):
 #    SELECT tipo, COUNT(*) FROM SentianceEventos GROUP BY tipo
 
-# 2. Harvest real representatives (read-only, needs .env.rds):
+# 2. Cosechar representantes reales (solo lectura, necesita .env.rds):
 .venv/bin/python3 tests/regression/fetch_topup.py \
     --sample-tipo UserMetadata --candidates 12 --max-len 20000
-#    ...or explicit rows (children need their parent — survey first):
+#    ...o filas explícitas (los hijos necesitan su padre — explorar primero):
 .venv/bin/python3 tests/regression/fetch_topup.py --ids 81234 81235
 
-# 3. If the new rows are NEWER than snapshot_lib.CORPUS_EPOCH, bump the epoch
-#    constant first (fetch_topup refuses otherwise — see §7).
+# 3. Si las nuevas filas son MÁS NUEVAS que snapshot_lib.CORPUS_EPOCH, primero
+#    incrementar la constante de epoch (fetch_topup la rechaza de lo contrario — ver §7).
 
-# 4. Rebuild the corpus (source order matters, keep it as in manifest.json):
+# 4. Reconstruir el corpus (el orden de fuentes importa, mantenerlo como en manifest.json):
 .venv/bin/python3 tests/regression/corpus_builder.py \
     --sources development/sample_payloads.json \
               tests/regression/corpus/sources/*.json
 
-# 5. Re-bless (§5.3) and audit the NEW cases only (§5.5).
+# 5. Volver a bendecir (§5.3) y auditar SOLO los casos nuevos (§5.5).
 ```
 
-### 5.5 LLM blessing audit
+### 5.5 Auditoría LLM del Blessing
 
-The golden files assert *stability*, not *correctness* — the initial blessing
-(or new corpus cases) must be audited once against the mapping spec. Open a
-Claude Code session in this repo and run the prompt:
+Los archivos golden afirman *estabilidad*, no *corrección* — el blessing inicial (o nuevos
+casos del corpus) debe auditarse una vez contra la especificación de mapeo. Abrir una sesión
+de Claude Code en este repositorio y ejecutar el prompt:
 
 ```
 Follow the instructions in tests/regression/prompts/blessing_audit.md.
 Audit scope: <all cases | tipo=X | case ids ...>
 ```
 
-The audit writes `tests/regression/audits/audit_<date>.md` with a per-case
-verdict table (PASS / FAIL / QUESTION). A human resolves every FAIL/QUESTION:
-either the ETL is wrong (fix code, re-bless) or the golden is right (record
-the resolution in the audit file). A blessing is *trusted* once its audit has
-no open items.
+La auditoría escribe `tests/regression/audits/audit_<fecha>.md` con una tabla de veredicto
+por caso (PASS / FAIL / QUESTION). Un humano resuelve cada FAIL/QUESTION: el ETL está mal
+(corregir código, volver a bendecir) o el golden está bien (registrar la resolución en el
+archivo de auditoría). Un blessing se *confía* una vez que su auditoría no tiene ítems
+abiertos.
 
-### 5.6 Adding a new event type to the ETL — checklist
+### 5.6 Agregar un Nuevo Tipo de Evento al ETL — Checklist
 
-- [ ] Route added in `run()` + handler implemented (+ unit tests)
-- [ ] Real production examples harvested via `fetch_topup.py` (§5.4)
-- [ ] Snapshot covers any new table (`snapshot_lib.TABLES` — the coverage
-      invariant fails loudly if you forget)
-- [ ] Re-bless + audit the new cases
-
----
-
-## 6. The invariant suite
-
-`test_invariants.py` asserts ~25 structural truths that hold for **any**
-ingested data, not just the corpus: every child event row has its parent, every
-domain row traces back to an `SdkSourceEvent`, every audit row points at a real
-queue row, no provisional trips are stored, no duplicate `(user, transport)`
-trips, unrouted tipos never produce audit rows, and the snapshot table list
-matches `sys.tables` exactly (a new ETL target table cannot silently escape
-snapshotting).
-
-All invariant queries are pure SELECTs. They can be pointed read-only at
-**production** as a data-quality smoke check (e.g. from a Claude session via
-the `mssql` MCP server, or any SQL client) — that is their second job, and how
-the `is_processed BIT` bug (§8) generalizes beyond the corpus.
-
-A failing invariant marked `xfail` is a **tracked known bug**: `strict=True`
-means the suite errors the moment the bug is fixed, forcing marker cleanup.
+- [ ] Ruteo agregado en `run()` + handler implementado (+ tests unitarios)
+- [ ] Ejemplos reales de producción cosechados vía `fetch_topup.py` (§5.4)
+- [ ] Snapshot cubre cualquier nueva tabla (`snapshot_lib.TABLES` — el invariante de
+      cobertura falla ruidosamente si se olvida)
+- [ ] Volver a bendecir + auditar los nuevos casos
 
 ---
 
-## 7. The determinism contract
+## 6. La Suite de Invariantes
 
-Why the same corpus always produces byte-identical dumps:
+`test_invariants.py` afirma ~25 verdades estructurales que se mantienen para **cualquier**
+dato ingestado, no solo el corpus: cada fila de evento hijo tiene su padre, cada fila de
+dominio se remonta a un `SdkSourceEvent`, cada fila de auditoría apunta a una fila real de
+la cola, no se almacenan viajes provisionales, no hay viajes `(usuario, transporte)` duplicados,
+los tipos no enrutados nunca producen filas de auditoría, y la lista de tablas del snapshot
+coincide exactamente con `sys.tables` (una nueva tabla objetivo del ETL no puede escapar
+silenciosamente del snapshotting).
 
-1. **Processing order** — the ETL fetch query is `ORDER BY id` (fixed
-   2026-06-11; the docstring always claimed it), the queue is loaded in id
-   order, and the pipeline is single-threaded ⇒ identity values across all 24
-   tables are reproducible.
-2. **Identity reset** — the schema is dropped and recreated each run, so
-   identity seeds always start at 1.
-3. **Run-time timestamp masking** — every `DATETIME` at-or-after
-   `snapshot_lib.CORPUS_EPOCH` (2026-06-10) is masked to `<run-time>`. All
-   corpus events predate the epoch, so any timestamp after it can only be
-   `GETDATE()` / `datetime.now()` noise. The epoch is **absolute, not
-   relative** — masking never changes as wall-clock time passes. Topping up
-   with newer events ⇒ bump the epoch ⇒ re-bless (mechanical diff).
-4. **GZIP decompressed** — `VARBINARY` columns are stored gzip (whose header
-   embeds a timestamp ⇒ raw bytes are not comparable); dumps embed the
-   decompressed JSON, which is also what you want to read in a diff.
-5. **Stable scalars** — decimals rendered via `str()` (scale fixed by column),
-   datetimes truncated to milliseconds, tracebacks reduced to their last line
-   (paths and line numbers would churn with unrelated edits).
-6. **Bulk echoes excluded** — `SentianceEventos.json` / `Errors.raw_json`
-   duplicate corpus inputs and are omitted from dumps.
+Todas las consultas de invariantes son SELECT puros. Se pueden apuntar en solo lectura contra
+**producción** como verificación de calidad de datos (ej. desde una sesión de Claude vía el
+servidor MCP `mssql`, o cualquier cliente SQL) — ese es su segundo trabajo, y cómo el bug
+`is_processed BIT` (§8) se generaliza más allá del corpus.
 
-**Accepted limitation:** inserting a corpus case with an id *between* existing
-ones shifts downstream identity values ⇒ a large mechanical re-bless diff.
-This is deliberate — the alternative (id virtualization) buys diff-stability
-at the cost of dump readability and harness complexity. Corpus edits are rare
-and always end in a re-bless anyway.
+Un invariante fallido marcado como `xfail` es un **bug conocido rastreado**: `strict=True`
+significa que la suite da error en el momento en que el bug se corrige, forzando la limpieza
+del marcador.
 
 ---
 
-## 8. Findings log
+## 7. El Contrato de Determinismo
 
-Real issues surfaced by this suite. Keep appending — this section is the
-suite's track record.
+Por qué el mismo corpus siempre produce volcados idénticos byte a byte:
 
-### 2026-06-11 — `is_processed` BIT collapses the failure marker (first run)
+1. **Orden de procesamiento** — la consulta de fetch del ETL es `ORDER BY id` (corregido
+   el 2026-06-11; el docstring siempre lo afirmó), la cola se carga en orden de id, y el
+   pipeline es monohilo ⇒ los valores de identity en las 24 tablas son reproducibles.
+2. **Reset de identity** — el esquema se elimina y recrea en cada ejecución, por lo que los
+   seeds de identity siempre empiezan en 1.
+3. **Enmascaramiento de timestamps en tiempo de ejecución** — cada `DATETIME` en o después
+   de `snapshot_lib.CORPUS_EPOCH` (2026-06-10) se enmascara como `<run-time>`. Todos los
+   eventos del corpus son anteriores al epoch, por lo que cualquier timestamp posterior solo
+   puede ser ruido de `GETDATE()` / `datetime.now()`. El epoch es **absoluto, no relativo**
+   — el enmascaramiento nunca cambia con el paso del tiempo del reloj. Hacer top-up con
+   eventos más nuevos ⇒ incrementar el epoch ⇒ volver a bendecir (diff mecánico).
+4. **GZIP descomprimido** — las columnas `VARBINARY` se almacenan como gzip (cuyo header
+   embebe un timestamp ⇒ los bytes crudos no son comparables); los volcados embeben el JSON
+   descomprimido, que es también lo que se quiere leer en un diff.
+5. **Escalares estables** — decimales renderizados vía `str()` (escala fija por columna),
+   datetimes truncados a milisegundos, trazas reducidas a su última línea (las rutas y
+   números de línea cambiarían con ediciones no relacionadas).
+6. **Ecos masivos excluidos** — `SentianceEventos.json` / `Errors.raw_json` duplican los
+   inputs del corpus y se omiten de los volcados.
 
-The audit-trail invariant failed on corpus case 707: `is_processed = 1` with
-no `SdkSourceEvent`. Root cause: the ETL treats `is_processed` as tri-state
-(`0` pending / `1` done / `-1` failed-or-skip), but the column is `BIT` in
-`development/sql/init_db.sql` **and in `development/sql/migrate_prod_stage2.sql`
-(line ~96) — so the bug would ship to production at go-live.** SQL Server
-stores any nonzero value in a BIT as 1 ⇒ every failed row and every
-transportId-less orphan is recorded as *successfully processed*. Forensics
-then depend entirely on `SentianceEventos_Errors`, and reprocessing-by-flag is
-impossible. **Status: FIXED (2026-06-17)** — `SMALLINT` in both SQL files, `xfail` marker
-removed from `test_invariants.py`, data dictionary updated. Re-bless required
-after recreating the local DB.
+**Limitación aceptada:** insertar un caso del corpus con un id *entre* los existentes
+desplaza los valores de identity downstream ⇒ un diff de re-bless mecánico grande.
+Esto es deliberado — la alternativa (virtualización de ids) compra estabilidad del diff a
+costa de legibilidad del volcado y complejidad del harness. Las ediciones del corpus son
+raras y siempre terminan en un re-bless de todos modos.
 
-### 2026-06-11 — `process_crash_event` crashes on `location: null`
+---
 
-Corpus case 707 (real VehicleCrash payload with `"location": null`) raised
-`AttributeError` at `sentiance_etl.py:820` — `payload.get("location", {})`
-returned `None` when the key is present-but-null. **Status: FIXED (2026-06-17)**
-— changed to `payload.get("location") or {}`, same idiom already used in
-`process_user_context` / `process_timeline_events`. Unit test added in
+## 8. Registro de Hallazgos
+
+Problemas reales detectados por esta suite. Seguir agregando — esta sección es el historial
+de la suite.
+
+### 2026-06-11 — `is_processed` BIT colapsa el marcador de fallo (primera ejecución)
+
+El invariante de auditoría falló en el caso del corpus 707: `is_processed = 1` sin
+`SdkSourceEvent`. Causa raíz: el ETL trata `is_processed` como tri-estado
+(`0` pendiente / `1` listo / `-1` fallido-u-omitido), pero la columna es `BIT` en
+`development/sql/init_db.sql` **y en `development/sql/migrate_prod_stage2.sql`
+(línea ~96) — por lo que el bug iría a producción al momento del go-live.** SQL Server
+almacena cualquier valor distinto de cero en un BIT como 1 ⇒ cada fila fallida y cada
+huérfano sin transportId se registra como *procesado exitosamente*. La forensia depende
+entonces íntegramente de `SentianceEventos_Errors`, y el reprocesamiento por flag es
+imposible. **Estado: CORREGIDO (2026-06-17)** — `SMALLINT` en ambos archivos SQL, marcador
+`xfail` eliminado de `test_invariants.py`, diccionario de datos actualizado. Se requiere
+re-bless tras recrear la BD local.
+
+### 2026-06-11 — `process_crash_event` falla con `location: null`
+
+El caso del corpus 707 (payload real de VehicleCrash con `"location": null`) lanzaba
+`AttributeError` en `sentiance_etl.py:820` — `payload.get("location", {})` retornaba
+`None` cuando la clave está presente pero es null. **Estado: CORREGIDO (2026-06-17)**
+— cambiado a `payload.get("location") or {}`, mismo idioma ya usado en
+`process_user_context` / `process_timeline_events`. Test unitario agregado en
 `test_param_extraction.py::TestProcessCrashEventParams::test_null_location_does_not_crash`.
-Golden snapshot re-blessed: case 707 now produces a `VehicleCrashEvent` row.
+Golden snapshot re-bendecido: el caso 707 ahora produce una fila en `VehicleCrashEvent`.
 
-### 2026-06-11 — production sends `UserActivityUpdate`, ETL routes `UserActivity`
+### 2026-06-11 — Producción envía `UserActivityUpdate`, el ETL enruta `UserActivity`
 
-112 production rows (Oct 2025) carry `tipo = 'UserActivityUpdate'`, which no
-routing entry matched — they sat at `is_processed = 0` permanently.
-`UserActivityUpdate` is the newer SDK payload format for the same concept as
-`UserActivity` but with different field names (`type` / `tripInfo.type` /
-`stationaryInfo.location` instead of `activityType` / `tripType` /
-`stationaryLocation`). **Status: FIXED (2026-06-17)** — added
-`process_activity_update` handler, wired into the routing filter and dispatch
-branch. 4 corpus cases added (3 shapes: UNKNOWN, STATIONARY, TRIP); golden
-snapshot re-blessed. Unit tests in
+112 filas de producción (Oct 2025) llevaban `tipo = 'UserActivityUpdate'`, que ninguna
+entrada de enrutamiento reconocía — quedaban en `is_processed = 0` permanentemente.
+`UserActivityUpdate` es el formato de payload más nuevo del SDK para el mismo concepto que
+`UserActivity` pero con nombres de campo diferentes (`type` / `tripInfo.type` /
+`stationaryInfo.location` en lugar de `activityType` / `tripType` / `stationaryLocation`).
+**Estado: CORREGIDO (2026-06-17)** — agregado el handler `process_activity_update`,
+conectado al filtro de enrutamiento y la rama de despacho. 4 casos del corpus agregados
+(3 formas: UNKNOWN, STATIONARY, TRIP); golden snapshot re-bendecido. Tests unitarios en
 `test_param_extraction.py::TestProcessActivityUpdateParams`.
 
 ---
 
-## 9. Limits and FAQ
+## 9. Límites y FAQ
 
-**The golden encodes current behavior — including current bugs.** That is by
-design: the suite pins *what is*, the audit (§5.5) and findings log establish
-*what should be*. Fixing a known bug produces a clean, reviewable golden diff.
+**El golden codifica el comportamiento actual — incluyendo bugs actuales.** Eso es por
+diseño: la suite fija *lo que es*, la auditoría (§5.5) y el registro de hallazgos establecen
+*lo que debería ser*. Corregir un bug conocido produce un diff golden limpio y revisable.
 
-**What this suite does NOT cover:** the four gap tipos (no production traffic
-yet), the Movilidad bridge (forced off in the harness; it has its own unit
-tests), DB connection failure/retry behavior (`reconnect()` paths), and true
-concurrency (the pipeline is single-threaded by design).
+**Qué NO cubre esta suite:** los cuatro tipos con gap (sin tráfico de producción aún), el
+bridge Movilidad (forzado a OFF en el harness; tiene sus propios tests unitarios),
+comportamiento de fallo/reintento de conexión BD (rutas de `reconnect()`), y verdadera
+concurrencia (el pipeline es monohilo por diseño).
 
-**Why are corpus payloads committed — isn't that user data?** Same precedent
-as `development/test_small_full.json` (already committed): this is a private
-repo and the corpus is the test's foundation. If policy changes, the corpus
-can be regenerated from sources kept outside git.
+**¿Por qué los payloads del corpus están commiteados — no son datos de usuarios?** Mismo
+precedente que `development/test_small_full.json` (ya commiteado): este es un repositorio
+privado y el corpus es el fundamento del test. Si la política cambia, el corpus puede
+regenerarse desde fuentes mantenidas fuera de git.
 
-**Why not pytest-syrupy / snapshot libraries?** The snapshot is a SQL Server
-dump, not a Python value; the custom dumper is ~150 lines and owns the
-normalization rules, which are the actual hard part.
+**¿Por qué no pytest-syrupy / librerías de snapshot?** El snapshot es un volcado de SQL
+Server, no un valor Python; el dumper personalizado tiene ~150 líneas y es dueño de las
+reglas de normalización, que son la parte realmente difícil.
 
-**Can I run only the invariants against production?** Yes — they are pure
-SELECTs; run them via the read-only `mssql` MCP server or any SQL client.
-Do not point the *snapshot* harness at production: it refuses by construction
-(`harness.assert_local_only`), and keep it that way.
+**¿Puedo ejecutar solo los invariantes contra producción?** Sí — son SELECT puros;
+ejecutarlos vía el servidor MCP `mssql` de solo lectura o cualquier cliente SQL.
+No apuntar el harness de *snapshot* a producción: lo rechaza por construcción
+(`harness.assert_local_only`), y mantenerlo así.

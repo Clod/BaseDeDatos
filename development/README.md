@@ -1,93 +1,93 @@
-# VictaTMTK - Local Development Environment
+# VictaTMTK — Entorno de Desarrollo Local
 
-This directory contains the infrastructure to run a local SQL Server instance for ETL development and regression testing.  
-**Note:** This setup uses **Azure SQL Edge**, which is optimized for Apple Silicon (M1/M2/M3) and ARM64 architectures.
+Este directorio contiene la infraestructura para ejecutar una instancia local de SQL Server para el desarrollo del ETL y los tests de regresión.  
+**Nota:** Este setup utiliza **Azure SQL Edge**, optimizado para Apple Silicon (M1/M2/M3) y arquitecturas ARM64.
 
-## Prerequisites
+## Requisitos Previos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
-- Apple Silicon (Mac) or ARM64 Linux host.
-- [uv](https://github.com/astral-sh/uv) or `pip` to install Python dependencies.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución.
+- Apple Silicon (Mac) o host Linux ARM64.
+- [uv](https://github.com/astral-sh/uv) o `pip` para instalar dependencias Python.
 
-## Getting Started
+## Inicio Rápido
 
-### 1. Spin up SQL Server
+### 1. Levantar SQL Server
 
-From this directory, run:
+Desde este directorio, ejecutar:
 
 ```bash
 docker-compose up -d
 ```
 
-### 2. Initialize the Schema
+### 2. Inicializar el Esquema
 
-Since MSSQL on Docker doesn't automatically run scripts on startup, and some ARM64 images lack internal tools, use the provided Python bootstrapper:
+Como MSSQL en Docker no ejecuta scripts automáticamente al iniciar, y algunas imágenes ARM64 carecen de herramientas internas, usar el bootstrapper Python provisto:
 
 ```bash
-# Ensure your venv is active
+# Asegurarse de que el venv esté activo
 source ../.venv/bin/activate
 
-# Run the bootstrapper
+# Ejecutar el bootstrapper
 python bootstrap_local_db.py
 ```
 
-### 3. Connection Details
+### 3. Datos de Conexión
 
 - **Host:** `localhost`
-- **Port:** `1433`
-- **User:** `sa`
-- **Password:** `SentianceLocal2026!`
-- **Database:** `VictaTMTK`
+- **Puerto:** `1433`
+- **Usuario:** `sa`
+- **Contraseña:** `SentianceLocal2026!`
+- **Base de datos:** `VictaTMTK`
 
-## Local Development Workflow
+## Flujo de Desarrollo Local
 
-1. **Hydrate:** Use the `fetch_sample_data.py` (to be created) to pull real data from RDS.
-2. **Develop:** Update `.env` to point to `localhost,1433`.
-3. **Test:** Run `python sentiance_etl.py` and verify the results in the local tables.
-4. **Reset:** If you want a fresh start, run `docker-compose down -v` to delete all data and start over.
+1. **Hidratar:** Usar `hydrate_local_small.py` para cargar datos de prueba representativos.
+2. **Desarrollar:** Actualizar `.env` para apuntar a `localhost,1433`.
+3. **Probar:** Ejecutar `python sentiance_etl.py` y verificar los resultados en las tablas locales.
+4. **Resetear:** Para empezar de cero, ejecutar `docker-compose down -v` para borrar todos los datos.
 
-Para hacer una prueba desde 0 (con la Base de datos limpia y con una cantidad de SentianceEventos mínima pero representativa)
+### Prueba desde cero (BD limpia con datos mínimos representativos)
 
-Borrar la base de datos y recrearla vacía.
+Borrar la base de datos y recrearla vacía:
 
-```python
-    python hydrate_local_db.py --recreate-only   # Drop & recreate schema only
+```bash
+python hydrate_local_db.py --recreate-only   # Eliminar y recrear el esquema solamente
 ```
 
-Cargar los dos sets de datos: 
+Cargar los dos sets de datos:
 
-- DrivingInsights y DrivingInsights*Event (74 registros)
+- DrivingInsights y DrivingInsights\*Event (74 registros)
 - TimeLine y UserContext (9 registros)
 
-```python
-    python hydrate_local_small.py
-    python hydrate_local_small.py --file test_context_timeline.json
+```bash
+python hydrate_local_small.py
+python hydrate_local_small.py --file test_context_timeline.json
 ```
 
-Para hacer una corrida:
+Ejecutar el ETL:
 
-```python
-    python  sentiance_etl.py
+```bash
+python ../etl/sentiance_etl.py
 ```
 
-Para revisar a mano los resultados:
+Revisar los resultados visualmente:
 
-```python
-    marimo run sentiance_inspector.py
+```bash
+marimo run sentiance_inspector.py
 ```
 
-## Schema Changes
+## Cambios de Esquema
 
-### Trip table — source traceability (added 2026-04-25)
+### Tabla Trip — trazabilidad de origen (agregado 2026-04-25)
 
-Two `BIGINT NULL` columns were added to `Trip` to track which `SdkSourceEvent` row was responsible for creating and last updating each trip:
+Se agregaron dos columnas `BIGINT NULL` a `Trip` para registrar qué fila de `SdkSourceEvent` fue responsable de crear y actualizar por última vez cada viaje:
 
-| Column | Type | FK | Description |
+| Columna | Tipo | FK | Descripción |
 |---|---|---|---|
-| `creating_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Set once on INSERT — the event that first discovered this trip |
-| `last_updated_by_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Updated on every MERGE — the last event that refreshed trip data |
+| `creating_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Asignado una sola vez en INSERT — el evento que descubrió el viaje por primera vez |
+| `last_updated_by_sdk_source_event_id` | `BIGINT NULL` | `SdkSourceEvent` | Actualizado en cada MERGE — el último evento que refrescó los datos del viaje |
 
-To apply to an existing database without a full recreate:
+Para aplicar a una base de datos existente sin recrearla completamente:
 
 ```sql
 ALTER TABLE Trip
@@ -97,13 +97,13 @@ ALTER TABLE Trip
             REFERENCES SdkSourceEvent(sdk_source_event_id);
 ```
 
-### ETL behaviour changes (2026-04-25)
+### Cambios de comportamiento del ETL (2026-04-25)
 
-- **Provisional trips are no longer written to `Trip`.**  
-  `upsert_trip` now returns `None` immediately if `isProvisional = true`.  
-  A trip is only stored once Sentiance marks it as final (`isProvisional = false`).
+- **Los viajes provisionales ya no se escriben en `Trip`.**  
+  `upsert_trip` ahora retorna `None` inmediatamente si `isProvisional = true`.  
+  Un viaje solo se almacena cuando Sentiance lo marca como final (`isProvisional = false`).
 
-- **Trip Sync validation rule in the inspector:**  
-  For each `IN_TRANSPORT` event in a `UserContextUpdate` or `requestUserContext` payload:
-  - `isProvisional = false` → trip **must** exist in `Trip` (✅ if found, ❌ if missing)
-  - `isProvisional = true` → trip **must not** exist in `Trip` (✅ if absent, ❌ if present)
+- **Regla de validación de Trip Sync en el inspector:**  
+  Para cada evento `IN_TRANSPORT` en un payload `UserContextUpdate` o `requestUserContext`:
+  - `isProvisional = false` → el viaje **debe** existir en `Trip` (✅ si se encuentra, ❌ si falta)
+  - `isProvisional = true` → el viaje **no debe** existir en `Trip` (✅ si está ausente, ❌ si está presente)

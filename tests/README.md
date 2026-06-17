@@ -1,64 +1,61 @@
-# Test Suite — `sentiance_etl.py`
+# Suite de Tests — `sentiance_etl.py`
 
-> **94 unit tests, no database required, runs in ~0.2 seconds.**
+> **130 tests unitarios, sin base de datos requerida, se ejecuta en ~0,2 segundos.**
 
-This directory contains the unit test suite for `sentiance_etl.py`. Tests are
-designed to be fast, isolated, and runnable without any database or `.env` file.
-
----
-
-## Table of Contents
-
-1. [Quick Start](#quick-start)
-2. [Directory Structure](#directory-structure)
-3. [How Tests Work (No DB Required)](#how-tests-work-no-db-required)
-4. [Running Tests](#running-tests)
-5. [Test Files Reference](#test-files-reference)
-6. [Fixtures Reference](#fixtures-reference)
-7. [Writing New Tests](#writing-new-tests)
-8. [Understanding the Mock Chain](#understanding-the-mock-chain)
-9. [Bugs Found by These Tests](#bugs-found-by-these-tests)
-10. [Future: Regression Tests](#future-regression-tests)
+Este directorio contiene la suite de tests unitarios para `sentiance_etl.py`. Los tests están diseñados para ser rápidos, aislados y ejecutables sin ninguna base de datos ni archivo `.env`.
 
 ---
 
-## Quick Start
+## Tabla de Contenidos
+
+1. [Inicio Rápido](#inicio-rápido)
+2. [Estructura de Directorios](#estructura-de-directorios)
+3. [Cómo Funcionan los Tests (Sin BD)](#cómo-funcionan-los-tests-sin-bd)
+4. [Ejecutar Tests](#ejecutar-tests)
+5. [Referencia de Archivos de Tests](#referencia-de-archivos-de-tests)
+6. [Referencia de Fixtures](#referencia-de-fixtures)
+7. [Escribir Nuevos Tests](#escribir-nuevos-tests)
+8. [Entendiendo la Cadena de Mocks](#entendiendo-la-cadena-de-mocks)
+9. [Bugs Encontrados por Estos Tests](#bugs-encontrados-por-estos-tests)
+10. [Tests de Regresión](#tests-de-regresión)
+
+---
+
+## Inicio Rápido
 
 ```bash
-# From the project root
+# Desde la raíz del proyecto
 .venv/bin/python3 -m pytest tests/unit/ -v
 ```
 
-That's it. No `.env`, no Docker, no SQL Server.
+Eso es todo. Sin `.env`, sin Docker, sin SQL Server.
 
 ---
 
-## Directory Structure
+## Estructura de Directorios
 
 ```
 tests/
-├── README.md               ← You are here
-├── __init__.py             ← Makes tests/ a Python package
-├── conftest.py             ← Shared fixtures (etl, mock_cursor, etl_with_cursor)
-├── pytest.ini              ← pytest configuration (in project root, not here)
+├── README.md               ← Estás aquí
+├── __init__.py             ← Hace de tests/ un paquete Python
+├── conftest.py             ← Fixtures compartidos (etl, mock_cursor, etl_with_cursor)
+├── pytest.ini              ← Configuración de pytest (en la raíz del proyecto, no aquí)
 └── unit/
     ├── __init__.py
-    ├── test_format_ts.py       ← Phase 1: timestamp formatting
-    ├── test_compress.py        ← Phase 1: GZIP compression round-trips
-    ├── test_hash.py            ← Phase 1: SHA-256 deduplication hashing
-    ├── test_param_extraction.py ← Phase 2: SQL parameter extraction per handler
-    └── test_event_routing.py   ← Phase 2: tipo → process_* dispatch + orphan guard
+    ├── test_format_ts.py       ← Fase 1: formateo de timestamps
+    ├── test_compress.py        ← Fase 1: rondas de compresión GZIP
+    ├── test_hash.py            ← Fase 1: hashing SHA-256 para deduplicación
+    ├── test_param_extraction.py ← Fase 2: extracción de parámetros SQL por handler
+    └── test_event_routing.py   ← Fase 2: despacho tipo → process_* + guardia de huérfanos
 ```
 
 ---
 
-## How Tests Work (No DB Required)
+## Cómo Funcionan los Tests (Sin BD)
 
-`SentianceETL.__init__()` reads environment variables and builds a connection
-string. Normally it would raise `ValueError` if the `.env` file is missing.
+`SentianceETL.__init__()` lee variables de entorno y construye un string de conexión. Normalmente lanzaría `ValueError` si falta el archivo `.env`.
 
-The `conftest.py` **patches `os.getenv`** before instantiating the class, so
-the constructor sees fake-but-valid-looking values:
+El `conftest.py` **parchea `os.getenv`** antes de instanciar la clase, para que el constructor vea valores falsos pero válidos:
 
 ```python
 _FAKE_ENV = {
@@ -70,66 +67,65 @@ _FAKE_ENV = {
 }
 ```
 
-The instance is created but **never connected** (`connect()` is never called).
-All DB interactions in Phase 2 tests go through a `MagicMock` cursor.
+La instancia se crea pero **nunca se conecta** (`connect()` nunca se llama). Todas las interacciones con la BD en los tests de Fase 2 pasan por un cursor `MagicMock`.
 
 ---
 
-## Running Tests
+## Ejecutar Tests
 
-### Run everything
+### Ejecutar todo
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/
 ```
 
-### Run with verbose output (recommended)
+### Con salida detallada (recomendado)
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/ -v
 ```
 
-### Run a single test file
+### Ejecutar un único archivo de tests
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_format_ts.py -v
 ```
 
-### Run a single test class
+### Ejecutar una única clase de tests
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_format_ts.py::TestFormatTsTruncation -v
 ```
 
-### Run a single test by name
+### Ejecutar un test específico por nombre
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_format_ts.py::TestFormatTsTruncation::test_sub_millisecond_is_truncated_to_23_chars -v
 ```
 
-### Run only tests matching a keyword
+### Ejecutar solo tests que coincidan con una palabra clave
 
 ```bash
-# Run all tests with "orphan" in their name
+# Ejecutar todos los tests con "orphan" en el nombre
 .venv/bin/python3 -m pytest tests/unit/ -k "orphan" -v
 
-# Run all tests with "compress" or "hash" in their name
+# Ejecutar todos los tests con "compress" o "hash" en el nombre
 .venv/bin/python3 -m pytest tests/unit/ -k "compress or hash" -v
 ```
 
-### Run and stop at first failure
+### Detener en el primer fallo
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/ -x
 ```
 
-### Show local variable values on failure (more detail)
+### Mostrar valores de variables locales en fallo (más detalle)
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/ -v --tb=long
 ```
 
-### Run quietly (just the summary line)
+### Ejecutar en modo silencioso (solo la línea resumen)
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/ -q
@@ -137,18 +133,17 @@ All DB interactions in Phase 2 tests go through a `MagicMock` cursor.
 
 ---
 
-## Test Files Reference
+## Referencia de Archivos de Tests
 
-### `test_format_ts.py` — Timestamp Formatting (14 tests)
+### `test_format_ts.py` — Formateo de Timestamps (14 tests)
 
-Tests `SentianceETL.format_ts()`, which converts ISO-8601 SDK timestamps to
-SQL Server `DATETIME2(3)` format.
+Testea `SentianceETL.format_ts()`, que convierte timestamps ISO-8601 del SDK al formato `DATETIME2(3)` de SQL Server.
 
-**Key rules being verified:**
-- `"2026-04-01T14:30:00.123Z"` → `"2026-04-01 14:30:00.123"` (`T`→space, no `Z`)
-- Output is **hard-truncated at 23 characters** (3 decimal places max)
-- `None`, `""`, `0` all return `None` (SQL `NULL`)
-- Output never contains `T` or ends with `Z`
+**Reglas clave verificadas:**
+- `"2026-04-01T14:30:00.123Z"` → `"2026-04-01 14:30:00.123"` (`T`→espacio, sin `Z`)
+- La salida se **trunca estrictamente a 23 caracteres** (máximo 3 decimales)
+- `None`, `""`, `0` retornan `None` (SQL `NULL`)
+- La salida nunca contiene `T` ni termina con `Z`
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_format_ts.py -v
@@ -156,16 +151,15 @@ SQL Server `DATETIME2(3)` format.
 
 ---
 
-### `test_compress.py` — GZIP Compression (10 tests)
+### `test_compress.py` — Compresión GZIP (10 tests)
 
-Tests `SentianceETL.compress_data()`, which GZIP-compresses JSON for storage
-in `VARBINARY(MAX)` columns (`waypoints_json`, `transport_tags_json`, etc.).
+Testea `SentianceETL.compress_data()`, que comprime JSON con GZIP para almacenarlo en columnas `VARBINARY(MAX)` (`waypoints_json`, `transport_tags_json`, etc.).
 
-**Key rules being verified:**
-- Output is `bytes` (pyodbc-compatible)
-- Decompressing the output and parsing JSON equals the original Python object
-- Large payloads are actually smaller after compression
-- `None`, `[]`, `{}`, `0`, `False` all return `None` (SQL `NULL`)
+**Reglas clave verificadas:**
+- La salida es `bytes` (compatible con pyodbc)
+- Descomprimir la salida y parsear el JSON es igual al objeto Python original
+- Los payloads grandes son efectivamente más pequeños tras la compresión
+- `None`, `[]`, `{}`, `0`, `False` retornan `None` (SQL `NULL`)
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_compress.py -v
@@ -173,16 +167,15 @@ in `VARBINARY(MAX)` columns (`waypoints_json`, `transport_tags_json`, etc.).
 
 ---
 
-### `test_hash.py` — SHA-256 Deduplication (9 tests)
+### `test_hash.py` — Hashing SHA-256 para Deduplicación (9 tests)
 
-Tests `SentianceETL.get_hash()`, which generates a SHA-256 fingerprint of the
-raw JSON string for the `SdkSourceEvent.payload_hash` column.
+Testea `SentianceETL.get_hash()`, que genera una huella digital SHA-256 del string JSON crudo para la columna `SdkSourceEvent.payload_hash`.
 
-**Key rules being verified:**
-- Same input always produces the same 64-char lowercase hex string
-- Any change to content (even whitespace) produces a different hash
-- Output length ≤ 64 (fits in `VARCHAR(64)`)
-- Cross-validated against Python's stdlib `hashlib.sha256`
+**Reglas clave verificadas:**
+- La misma entrada siempre produce el mismo string hexadecimal de 64 caracteres en minúsculas
+- Cualquier cambio en el contenido (incluso espacios en blanco) produce un hash diferente
+- La longitud de salida ≤ 64 (entra en `VARCHAR(64)`)
+- Validación cruzada contra la stdlib de Python `hashlib.sha256`
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_hash.py -v
@@ -190,17 +183,14 @@ raw JSON string for the `SdkSourceEvent.payload_hash` column.
 
 ---
 
-### `test_param_extraction.py` — SQL Parameter Extraction (26 tests)
+### `test_param_extraction.py` — Extracción de Parámetros SQL (tests de parámetros)
 
-Tests that each `process_*` handler correctly reads the right fields from the
-JSON payload and passes them to `cursor.execute()` in the right order and type.
+Testea que cada handler `process_*` lee correctamente los campos del payload JSON y los pasa a `cursor.execute()` en el orden y tipo correcto.
 
-Uses the `etl_with_cursor` fixture: a real ETL instance connected to a
-`MagicMock` cursor. After calling a handler, the test inspects which SQL
-parameters were passed.
+Usa el fixture `etl_with_cursor`: una instancia ETL real conectada a un cursor `MagicMock`. Después de llamar a un handler, el test inspecciona qué parámetros SQL fueron pasados.
 
-**Handlers covered:**
-| Class | Handler |
+**Handlers cubiertos:**
+| Clase | Handler |
 |-------|---------|
 | `TestProcessDrivingInsightsParams` | `process_driving_insights` |
 | `TestProcessUserContextListenerParams` | `process_user_context` (Listener) |
@@ -209,6 +199,7 @@ parameters were passed.
 | `TestProcessSdkStatusParams` | `process_sdk_status` |
 | `TestProcessMetadataParams` | `process_metadata` |
 | `TestProcessTimelineEventsParams` | `process_timeline_events` |
+| `TestProcessActivityUpdateParams` | `process_activity_update` |
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_param_extraction.py -v
@@ -216,24 +207,20 @@ parameters were passed.
 
 ---
 
-### `test_event_routing.py` — Event Dispatch + Orphan Guard (21 tests)
+### `test_event_routing.py` — Despacho de Eventos + Guardia de Huérfanos (21 tests)
 
-Tests the `run()` method's routing logic and its orphan-child protection.
+Testea la lógica de ruteo del método `run()` y su protección de eventos hijo huérfanos.
 
-**Routing tests (parametrized, 15 event types):**
-Every supported `tipo` value is verified to call the correct `process_*` method.
+**Tests de ruteo (parametrizados, 15 tipos de eventos):**
+Cada valor `tipo` soportado se verifica para llamar al método `process_*` correcto.
 
-**Orphan guard tests (4 tests):**
-When a child event (`DrivingInsightsHarshEvents`, etc.) arrives before its
-parent `DrivingInsights` record, it must be **skipped and left with
-`is_processed=0`** for retry. If it has no `transportId` at all, it must be
-marked `is_processed=-1`.
+**Tests de guardia de huérfanos (4 tests):**
+Cuando un evento hijo (`DrivingInsightsHarshEvents`, etc.) llega antes que su registro padre `DrivingInsights`, debe ser **omitido y dejado con `is_processed=0`** para reintento. Si no tiene `transportId`, debe marcarse `is_processed=-1`.
 
-**`run()` return value tests (3 tests):**
-- Returns `False` when no rows
-- Returns `True` when at least one record was processed
-- Returns `False` when all records in the batch are orphan children (prevents
-  infinite loops in `run_full_pipeline.py`)
+**Tests del valor de retorno de `run()` (3 tests):**
+- Retorna `False` cuando no hay filas
+- Retorna `True` cuando al menos un registro fue procesado
+- Retorna `False` cuando todos los registros del batch son hijos huérfanos (previene bucles infinitos en `run_full_pipeline.py`)
 
 ```bash
 .venv/bin/python3 -m pytest tests/unit/test_event_routing.py -v
@@ -241,42 +228,36 @@ marked `is_processed=-1`.
 
 ---
 
-## Fixtures Reference
+## Referencia de Fixtures
 
-All fixtures are defined in `tests/conftest.py` and are available to all test
-files automatically (pytest discovers `conftest.py` automatically).
+Todos los fixtures están definidos en `tests/conftest.py` y están disponibles para todos los archivos de tests automáticamente (pytest descubre `conftest.py` automáticamente).
 
 ### `etl`
 
-A `SentianceETL` instance with `os.getenv` patched. The instance is
-**not connected** to any database. Use this for Phase 1 tests of pure
-functions (`format_ts`, `compress_data`, `get_hash`).
+Una instancia `SentianceETL` con `os.getenv` parcheado. La instancia **no está conectada** a ninguna base de datos. Usar para tests de Fase 1 de funciones puras (`format_ts`, `compress_data`, `get_hash`).
 
 ```python
-def test_something(etl):
+def test_algo(etl):
     result = etl.format_ts("2026-04-01T10:00:00Z")
     assert result == "2026-04-01 10:00:00"
 ```
 
 ### `mock_cursor`
 
-A `MagicMock` that mimics a `pyodbc` cursor. Its `fetchone()` returns `(999,)`
-by default (simulating `@@IDENTITY` or a `SELECT` result). You can override
-this in individual tests:
+Un `MagicMock` que imita un cursor `pyodbc`. Su `fetchone()` retorna `(999,)` por defecto (simulando `@@IDENTITY` o un resultado `SELECT`). Se puede sobreescribir en tests individuales:
 
 ```python
-def test_something(mock_cursor):
+def test_algo(mock_cursor):
     mock_cursor.fetchone.return_value = (42,)
-    # ... use mock_cursor however you need
+    # ... usar mock_cursor según necesidad
 ```
 
 ### `etl_with_cursor`
 
-An `etl` instance whose `cursor` attribute is set to a `mock_cursor`.
-Use this for Phase 2 tests of `process_*` methods:
+Una instancia `etl` cuyo atributo `cursor` está asignado a un `mock_cursor`. Usar para tests de Fase 2 de métodos `process_*`:
 
 ```python
-def test_something(etl_with_cursor):
+def test_algo(etl_with_cursor):
     etl_with_cursor.process_sdk_status(sid=1, uid="u1", payload={...})
     params = etl_with_cursor.cursor.execute.call_args_list[0].args[1]
     assert params[2] == "STARTED"
@@ -284,124 +265,110 @@ def test_something(etl_with_cursor):
 
 ---
 
-## Writing New Tests
+## Escribir Nuevos Tests
 
-### Adding a test for a new `process_*` method
+### Agregar un test para un nuevo método `process_*`
 
-1. Add a new class to `test_param_extraction.py`
-2. Use the `etl_with_cursor` fixture
-3. Build a minimal realistic payload dict
-4. Call the method
-5. Inspect `_get_call_params(etl_with_cursor.cursor, <call_index>)`
+1. Agregar una nueva clase a `test_param_extraction.py`
+2. Usar el fixture `etl_with_cursor`
+3. Construir un dict de payload mínimo y realista
+4. Llamar al método
+5. Inspeccionar `_get_call_params(etl_with_cursor.cursor, <índice_llamada>)`
 
 ```python
-class TestProcessMyNewHandler:
+class TestProcessMiNuevoHandler:
 
-    def test_my_field_extracted(self, etl_with_cursor):
-        payload = {"myField": "expected_value", ...}
-        etl_with_cursor.process_my_new_handler(sid=1, uid="u1", payload=payload)
+    def test_mi_campo_extraido(self, etl_with_cursor):
+        payload = {"miCampo": "valor_esperado", ...}
+        etl_with_cursor.process_mi_nuevo_handler(sid=1, uid="u1", payload=payload)
         params = _get_call_params(etl_with_cursor.cursor, 0)
-        assert params[3] == "expected_value"
+        assert params[3] == "valor_esperado"
 ```
 
-### Adding a test for a new `tipo` in the routing table
+### Agregar un test para un nuevo `tipo` en la tabla de ruteo
 
-Add a new entry to the `@pytest.mark.parametrize` list in
-`TestEventRouting.test_tipo_dispatches_to_correct_handler`:
+Agregar una nueva entrada a la lista `@pytest.mark.parametrize` en `TestEventRouting.test_tipo_dispatches_to_correct_handler`:
 
 ```python
-("MyNewEventType", "process_my_new_handler"),
+("MiNuevoTipoDeEvento", "process_mi_nuevo_handler"),
 ```
 
-And add the mock to the `routed_etl` fixture:
+Y agregar el mock al fixture `routed_etl`:
 
 ```python
-etl.process_my_new_handler = MagicMock()
+etl.process_mi_nuevo_handler = MagicMock()
 ```
 
-### How to find which `execute()` call to inspect
+### Cómo encontrar qué llamada `execute()` inspeccionar
 
-Each `process_*` method makes multiple `cursor.execute()` calls (one per
-INSERT/SELECT). Use this pattern to find the right one:
+Cada método `process_*` hace múltiples llamadas a `cursor.execute()` (una por INSERT/SELECT). Usar este patrón para encontrar la correcta:
 
 ```python
 all_calls = _execute_calls(etl_with_cursor.cursor)
-# Print all SQL statements and their params for debugging:
+# Imprimir todas las sentencias SQL y sus params para depuración:
 for i, (sql, params) in enumerate(all_calls):
-    print(f"Call {i}: {sql[:60]}...")
+    print(f"Llamada {i}: {sql[:60]}...")
     print(f"  params: {params}")
 ```
 
 ---
 
-## Understanding the Mock Chain
+## Entendiendo la Cadena de Mocks
 
-> ⚠️ This is the most important thing to understand when writing routing tests.
+> ⚠️ Esto es lo más importante que hay que entender al escribir tests de ruteo.
 
-The ETL uses **chained calls**:
+El ETL usa **llamadas encadenadas**:
 
 ```python
-# This is how the ETL queries:
+# Así consulta el ETL:
 result = self.cursor.execute("SELECT ...", params).fetchone()
 ```
 
-In `MagicMock`, `cursor_mock.execute(...).fetchone()` is **not the same** as
-`cursor_mock.fetchone()`. The chained form calls `fetchone` on the
-**return value of `execute()`**, which is a separate Mock object:
+En `MagicMock`, `cursor_mock.execute(...).fetchone()` **no es lo mismo** que `cursor_mock.fetchone()`. La forma encadenada llama a `fetchone` sobre el **valor de retorno de `execute()`**, que es un objeto Mock separado:
 
 ```python
-# ❌ WRONG — configures the wrong mock:
+# ❌ INCORRECTO — configura el mock equivocado:
 cursor_mock.fetchone.return_value = None
 
-# ✅ CORRECT — configures the chained call:
+# ✅ CORRECTO — configura la llamada encadenada:
 cursor_mock.execute.return_value.fetchone.return_value = None
 ```
 
-This distinction matters most for:
-- The orphan parent check: `cursor.execute("SELECT 1 FROM DrivingInsightsTrip...").fetchone()`
-- The `@@IDENTITY` lookup: `cursor.execute("SELECT @@IDENTITY").fetchone()[0]`
-- The `trip_id` lookup: `cursor.execute("SELECT trip_id FROM Trip...").fetchone()`
+Esta distinción importa principalmente para:
+- La verificación del padre huérfano: `cursor.execute("SELECT 1 FROM DrivingInsightsTrip...").fetchone()`
+- La búsqueda de `@@IDENTITY`: `cursor.execute("SELECT @@IDENTITY").fetchone()[0]`
+- La búsqueda de `trip_id`: `cursor.execute("SELECT trip_id FROM Trip...").fetchone()`
 
 ---
 
-## Bugs Found by These Tests
+## Bugs Encontrados por Estos Tests
 
-The test suite discovered **one real production bug** in `sentiance_etl.py`:
+La suite de tests descubrió **un bug real de producción** en `sentiance_etl.py`:
 
-### `AttributeError` on `venue: null` in event payloads
+### `AttributeError` con `venue: null` en payloads de eventos
 
-**Location:** `process_user_context()` and `process_timeline_events()`  
-**Root cause:** `e.get("venue", {})` returns `None` (not `{}`) when the JSON
-payload contains `"venue": null`. The default value `{}` is only used when the
-**key is absent**, not when the key is present with a `null` value.
+**Ubicación:** `process_user_context()` y `process_timeline_events()`  
+**Causa raíz:** `e.get("venue", {})` retorna `None` (no `{}`) cuando el payload JSON contiene `"venue": null`. El valor por defecto `{}` solo se usa cuando la **clave está ausente**, no cuando la clave está presente con valor `null`.
 
 ```python
-# ❌ Before (crashes when venue: null in JSON):
+# ❌ Antes (falla cuando venue: null en JSON):
 e.get("venue", {}).get("significance")
 
-# ✅ After (handles both absent key and null value):
+# ✅ Después (maneja tanto clave ausente como valor null):
 (e.get("venue") or {}).get("significance")
 ```
 
-This crash would occur silently in production (caught by the error handler,
-logged to `SentianceEventos_Errors`) for any stationary event or timeline event
-where the SDK sends an explicit `null` for the venue field.
+Este crash ocurriría silenciosamente en producción (capturado por el manejador de errores, registrado en `SentianceEventos_Errors`) para cualquier evento estacionario o de timeline donde el SDK envíe un `null` explícito para el campo venue.
 
 ---
 
-## Regression Tests (implemented 2026-06-11)
+## Tests de Regresión
 
-The unit suite covers **stateless transformation logic only**. End-to-end
-behavior is covered by the **golden-snapshot regression suite** in
-`tests/regression/`: a frozen corpus of 166 real production events is run
-through the real ETL against the local Docker SQL Server, and the resulting
-state of all 24 tables is compared byte-for-byte against blessed golden files.
-It also includes idempotency, orphan-ordering, and ~25 structural invariants.
+La suite unitaria cubre **únicamente la lógica de transformación sin estado**. El comportamiento de extremo a extremo está cubierto por la **suite de regresión de golden-snapshot** en `tests/regression/`: un corpus congelado de eventos reales de producción se ejecuta a través del ETL real contra el SQL Server Docker local, y el estado resultante de las 24 tablas se compara byte a byte contra archivos golden bendecidos. También incluye idempotencia, ordenamiento de huérfanos y ~25 invariantes estructurales.
 
 ```bash
-# Requires Docker DB running; DROPS the local VictaTMTK database
+# Requiere Docker DB en ejecución; ELIMINA la base de datos local VictaTMTK
 .venv/bin/python3 -m pytest tests/regression --run-regression
 ```
 
-Philosophy, procedures (blessing, corpus top-up, LLM audit) and the findings
-log live in **`tests/regression/README.md`**.
+Filosofía, procedimientos (blessing, top-up del corpus, auditoría LLM) y el registro de hallazgos están en **`tests/regression/README.md`**.
