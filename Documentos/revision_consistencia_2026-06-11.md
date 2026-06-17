@@ -18,7 +18,7 @@
 |-----------|----------|----------------------|
 | 🔴 CRÍTICO | 2 | `TimelineUpdate` se descarta silenciosamente; `SDKStatus` se persiste con todos los campos NULL/0 |
 | 🟠 ALTO | 4 | Campos de velocidad en CallEvent siempre NULL; esquema de producción ≠ esquema documentado; escala de `confidence` inconsistente en 3 documentos y el código; `analisis_mapeo_movilidad.md` §10 desactualizado |
-| 🟡 MEDIO | 8 | Variante lista de Timeline rompe `run()`; `UserActivity` incompatible con el SDK; CLAUDE.md incompleto/impreciso; conteos de tests desactualizados (94/114 vs 122 reales); múltiples enums erróneos en DiccionarioDatos; errores puntuales en MapeoSDK_BD; deriva diseño-vs-DDL del Entregable; development/README desactualizado |
+| 🟡 MEDIO | 8 | Variante lista de Timeline rompe `run()`; `UserActivity` incompatible con el SDK; CLAUDE.md incompleto/impreciso; conteos de tests desactualizados (94/114 vs 122 reales); múltiples enums erróneos en DiccionarioDatos; errores puntuales en MapeoSDK_BD; deriva diseño-vs-DDL del DisenoBaseDeDatos; development/README desactualizado |
 | 🟢 BAJO | 7 | Detalles menores de diagramas, nombres de columnas en docs, logging, conteo de progreso |
 
 Lo estructural (modelo de 24 tablas, mapeo de SafetyScores, TransportEvent, UserContext,
@@ -49,7 +49,7 @@ código ni el SDK.
   `source_event_ref` cae al `id` de `SentianceEventos` (el `event.id` real nunca se extrae).
 - **Documentación:** `MapeoSDK_BD.md` §9 documenta el tipo `TimelineEvents` como "array de
   `Event`" y nunca documenta el tipo `TimelineUpdate` con wrapper `{source, event}`.
-  `Entregable.md` §3.1.1 (nota de equivalencias) tampoco lo registra — su censo de tipos
+  `DisenoBaseDeDatos.md` §3.1.1 (nota de equivalencias) tampoco lo registra — su censo de tipos
   (2026-04-04) es anterior a la aparición de `TimelineUpdate` en el stream.
 - **Recomendación:** en `process_timeline_events()` agregar la rama
   `if "event" in payload: events = [payload["event"]]`, extraer `event.id`/`event.startTime`
@@ -73,12 +73,12 @@ código ni el SDK.
 - **Bug adicional dentro del mismo handler:** lee `isPreciseLocationPermGranted`, pero tanto
   el SDK React Native (`scraped_site/wiki/api-reference/react-native/core/definitions.md`)
   como los payloads reales usan **`isPreciseLocationAuthorizationGranted`**.
-- **Origen del error:** `Entregable.md` §4.7.4 y `MapeoSDK_BD.md` §10 documentan una interfaz
+- **Origen del error:** `DisenoBaseDeDatos.md` §4.7.4 y `MapeoSDK_BD.md` §10 documentan una interfaz
   `SdkStatus` desactualizada (sin wrapper, con `isPreciseLocationPermGranted`, y con un enum
   `DetectionStatus` que no coincide con el actual `DISABLED | EXPIRED | ENABLED_BUT_BLOCKED |
   ENABLED_AND_DETECTING`). El código siguió fielmente a esos documentos.
 - **Recomendación:** en el handler, hacer `status = payload.get("sdkStatus", payload)` y
-  corregir el nombre del campo de precisión; actualizar `Entregable.md` §4.7.4 y
+  corregir el nombre del campo de precisión; actualizar `DisenoBaseDeDatos.md` §4.7.4 y
   `MapeoSDK_BD.md` §10 con la definición actual del wiki; backfillear los 565+ registros.
 
 ---
@@ -119,7 +119,7 @@ Verificado vía MCP `mssql` (host RDS, BD `VictaTMTK`):
   - `CLAUDE.md`: "Both `mssql` and `mssql-local` share this schema" — falso hoy.
   - `README.md`: "Use this in production or for bulk historical loads" — no ejecutable contra
     el RDS actual.
-  - `DiccionarioDatos.md` §1 y `Entregable.md` §3.1.1 describen `SentianceEventos` con
+  - `DiccionarioDatos.md` §1 y `DisenoBaseDeDatos.md` §3.1.1 describen `SentianceEventos` con
     `is_processed`, `BIGINT`, `NVARCHAR(MAX)`, `DATETIME2(3)` y sin `fechahora`.
 - **Interpretación probable:** el modelo relacional VictaTMTK (Stage 2) aún no fue desplegado
   en RDS; producción sigue con el layout legacy (landing zone + tablas estilo Movilidad).
@@ -224,7 +224,7 @@ alinear el handler al SDK, o marcar el tipo como no soportado.
 | §22 `detector_mode` | `HIGH_G_ACCELEROMETER`, `IMPACT_FUSION` | `UNKNOWN`, `TWO_WHEELER`, `CAR` |
 | §23 `detection_status` | `DETECTING`, `NOT_DETECTING`, `DISABLED`, `EXPIRED_DETECTION` | `DISABLED`, `EXPIRED`, `ENABLED_BUT_BLOCKED`, `ENABLED_AND_DETECTING` |
 | §23 `location_permission` | `ALWAYS`, `WHILE_IN_USE` | `ALWAYS`, `ONLY_WHILE_IN_USE`, `NEVER` |
-| §3 `payload_hash` | "MD5/SHA" | El código usa solo SHA-256 (y `Entregable.md` §3.9.1 ya decidió SHA-256) |
+| §3 `payload_hash` | "MD5/SHA" | El código usa solo SHA-256 (y `DisenoBaseDeDatos.md` §3.9.1 ya decidió SHA-256) |
 | §3 `source_event_ref` | "En TimelineEvents/UserContextUpdate almacena el event_id del SDK; en VehicleCrash el ID del choque" | `UserContextUpdate` y `VehicleCrash` no tienen `id` raíz → el código cae al fallback `SentianceEventos.id`. Solo el payload-lista de Timeline extraería `p[0].id` (rama hoy rota, ver M1) |
 | §4 `UserMetadata` | "Actualmente no se usa" | Contradice §24 del mismo documento: el ETL intercepta `label='organizacion'` y puebla `UserOrganization` |
 
@@ -247,14 +247,14 @@ alinear el handler al SDK, o marcar el tipo como no soportado.
 8. §9 documenta solo el tipo `TimelineEvents` como array — falta el tipo real `TimelineUpdate`
    con wrapper `{source, event}` (ver C1).
 
-### M7. `Entregable.md`: recomendaciones de diseño nunca aterrizadas en el DDL
+### M7. `DisenoBaseDeDatos.md`: recomendaciones de diseño nunca aterrizadas en el DDL
 
 Las secciones §3.7 (índices recomendados), §3.8.1 (políticas FK), §3.8.2 (CHECK constraints,
 incluido `chk_criteria_code` con `MANUAL_REQUEST`, marcado "Decisión arquitectónica: Opción A")
 no existen en `development/sql/init_db.sql` (que solo tiene el índice de `UserOrganization` y
 dos FKs en `Trip`). No es necesariamente un error — pero ningún documento aclara si están
 pendientes, descartadas o aplicadas solo en producción (que hoy ni siquiera tiene esas tablas,
-ver H2). **Recomendación:** una nota de estado en Entregable §3.7/§3.8 ("pendiente de
+ver H2). **Recomendación:** una nota de estado en DisenoBaseDeDatos §3.7/§3.8 ("pendiente de
 implementación en DDL") o incorporarlas a `init_db.sql`.
 
 ### M8. `development/README.md` desactualizado
@@ -276,7 +276,7 @@ implementación en DDL") o incorporarlas a `init_db.sql`.
    el diccionario documenta **24**.
 2. **`run_full_pipeline.py:69`**: el reporte de progreso cuenta `is_processed = 0` sin filtrar
    por los tipos que el ETL procesa → con tipos ignorados en cola (p. ej. `DebugLog`,
-   descartado por diseño según Entregable §3.1.1 nota 3) el "remaining" nunca llega a 0.
+   descartado por diseño según DisenoBaseDeDatos §3.1.1 nota 3) el "remaining" nunca llega a 0.
    Cosmético (el loop termina igual por el retorno de `run()`).
 3. **`movilidad_bridge._read_trip()`** (`etl/movilidad_bridge.py:183-221`): no filtra por
    `sentiance_user_id` y el `LEFT JOIN` a `DrivingInsightsTrip` puede devolver varias filas si
@@ -309,7 +309,7 @@ Para balance, lo que se contrastó y está correcto:
   (incl. `development/README.md` § Schema Changes).
 - **UserContext (`UserContextUpdate` y `requestUserContext`):** las dos formas de payload
   coinciden con el SDK; `criteria` enum correcto; `MANUAL_REQUEST` sintético implementado tal
-  como decide Entregable ("Opción A", salvo el CHECK constraint — ver M7); `home`/`work` como
+  como decide DisenoBaseDeDatos ("Opción A", salvo el CHECK constraint — ver M7); `home`/`work` como
   `Venue{location,type}` bien leídos.
 - **Harsh/Phone/Speeding/WrongWay events:** nombres de campos (`type`, `magnitude`,
   `callState`, `waypoints`, tiempos) correctos contra el SDK; el guard de huérfanos
@@ -393,7 +393,7 @@ Distribución de `tipo` por última aparición en `mssql` (prod), corte = últim
 | `DrivingInsightsHarshEvents` | 28 | 15 | 2026-06-06 | activo ✔ |
 | `DrivingInsightsSpeedingEvents` | 16 | 9 | 2026-06-05 | activo ✔ |
 | `VehicleCrash` | 564 | 94 | 2026-06-02 | activo ✔ |
-| `DebugLog` | 150 | 77 | 2026-03-16 | ignorado por diseño (Entregable §3.1.1) |
+| `DebugLog` | 150 | 77 | 2026-03-16 | ignorado por diseño (DisenoBaseDeDatos §3.1.1) |
 | `DrivingInsightsCallEvents` | 2 | 0 | 2026-03-03 | raro (sólo 2 históricos); fix **H1** correcto igual |
 | `TimelineEvents` | 35 | 0 | 2026-02-25 | **legacy** (reemplazado por `TimelineUpdate`) |
 | `SdkStatusUpdate` | 8 | 0 | 2025-12-16 | **legacy/muerto** — no es preocupación de formato vigente |

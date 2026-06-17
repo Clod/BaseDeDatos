@@ -2,7 +2,7 @@
 
 > **Última actualización:** 2026-04-04
 > **Motor:** Microsoft SQL Server (T-SQL)
-> **Fuente de verdad:** Documentación oficial del SDK React Native de Sentiance + `Entregable.md`
+> **Fuente de verdad:** Documentación oficial del SDK React Native de Sentiance + `DisenoBaseDeDatos.md`
 
 Este documento detalla, **campo por campo**, cómo cada propiedad de los payloads emitidos por los listeners del SDK de Sentiance se persiste en las tablas de la base de datos.
 
