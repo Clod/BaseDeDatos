@@ -1,6 +1,6 @@
-# Análisis de Mapeo: Movilidad (CSVs/Offloads) vs. SentianceEventos (SDK/MQTT)
+# Análisis de Mapeo: Movilidad (CSVs/Offloads) vs. SentianceEventos (SDK/REST)
 
-Este documento detalla el análisis y equivalencia entre la información alojada actualmente en las tablas de Movilidad (alimentadas por archivos CSV provenientes de los *Offloads* de la nube de Sentiance) y la recopilación de datos directa desde la tabla origen `SentianceEventos` (obtenida on-device a través del SDK de Sentiance y transmitida vía AWS IoT MQTT).
+Este documento detalla el análisis y equivalencia entre la información alojada actualmente en las tablas de Movilidad (alimentadas por archivos CSV provenientes de los *Offloads* de la nube de Sentiance) y la recopilación de datos directa desde la tabla origen `SentianceEventos` (obtenida on-device a través del SDK de Sentiance y enviada vía REST por la aplicación móvil).
 
 > **Objetivo:** Confirmar que todos los campos y métricas derivadas de los *Offloads* pueden obtenerse, calcularse o subsanarse a partir del payload crudo arrojado por el dispositivo localmente (`DrivingInsight`, `UserContext`, y `TransportEvent`).
 
@@ -115,12 +115,12 @@ Con la retroalimentación del negocio, estas son las definiciones que conformar�
 
 ---
 
-## 8. Arquitectura de Ingesta: CSVs Históricos vs. Datos Crudos (MQTT)
+## 8. Arquitectura de Ingesta: CSVs Históricos vs. Datos Crudos (REST)
 
 Existe una diferencia fundamental entre los archivos CSV heredados y los datos que ahora ingresan a la tabla `SentianceEventos`:
 
-1.  **Archivos CSV (`csv/`)**: Son "snapshots" o exportaciones procesadas que provenían del servicio Cloud de Sentiance (o de un pipeline de agregación anterior). Muestran los datos ya estructurados por la nube de Sentiance. Por eso algunos viajes antiguos tienen eventos allí, que tal vez nunca pasaron por el nuevo pipeline MQTT.
-2.  **Tabla `SentianceEventos`**: Contiene la telemetría **cruda (raw) y más reciente** enviada por la aplicación móvil *directamente* a través de AWS IoT Core y persistida mediante reglas MQTT. Por este motivo, viajes súper recientes (ej. `2925a3a1-18a2-4da6-94f2-3091a0f22709`) se encuentran aquí con todo su nivel de detalle, pero no constan en los CSVs viejos.
+1.  **Archivos CSV (`csv/`)**: Son "snapshots" o exportaciones procesadas que provenían del servicio Cloud de Sentiance (o de un pipeline de agregación anterior). Muestran los datos ya estructurados por la nube de Sentiance. Por eso algunos viajes antiguos tienen eventos allí, que tal vez nunca pasaron por el nuevo pipeline REST.
+2.  **Tabla `SentianceEventos`**: Contiene la telemetría **cruda (raw) y más reciente** enviada directamente por la aplicación móvil vía REST. Por este motivo, viajes súper recientes (ej. `2925a3a1-18a2-4da6-94f2-3091a0f22709`) se encuentran aquí con todo su nivel de detalle, pero no constan en los CSVs viejos.
 
 ### Estructura de Eventos para la Función AWS Lambda
 
@@ -192,7 +192,7 @@ Reporta la manipulación del teléfono.
 *   `DrivingInsightsCallEvents` -> Para popular la columna `llamados`.
 *   `VehicleCrash` -> Para identificar accidentes.
 
-**Estrategia recomendada para la Lambda**: La función de SQS a Lambda deberá leer el `tipo` proveniente del JSON de MQTT, extraer el `transportId`, y ejecutar una sentencia `UPDATE Eventos SET {columna_relevante} = '{nuevo_json}' WHERE viaje = '{transportId}'` utilizando lógica de Upsert, ya que los mensajes pueden llegar de forma asíncrona o desordenada.
+**Estrategia recomendada para la Lambda**: La función de SQS a Lambda deberá leer el `tipo` proveniente del JSON recibido vía REST, extraer el `transportId`, y ejecutar una sentencia `UPDATE Eventos SET {columna_relevante} = '{nuevo_json}' WHERE viaje = '{transportId}'` utilizando lógica de Upsert, ya que los mensajes pueden llegar de forma asíncrona o desordenada.
 
 ---
 
@@ -201,9 +201,9 @@ Reporta la manipulación del teléfono.
 Durante el chequeo cruzado de viajes históricos obtenidos desde la nube de Sentiance (`driving_events_all.csv`) y los recabados localmente por la arquitectura actual dentro de la tabla cruda `SentianceEventos`, se descubrió una condición vital del esquema heredado:
 
 *   **Pérdida de eventos crudos on-device para historial antiguo:** Viajes del pasado (por ejemplo, del 20 de marzo) **SÍ** constan en `SentianceEventos`, **PERO** constan únicamente bajo su registro principal de tipo `DrivingInsights`. Los mensajes separados y granulares de tipo `DrivingInsightsHarshEvents` o `DrivingInsightsPhoneEvents` **no fueron insertados en la base de datos SQL**.
-*   **Motivo:** Probablemente, en ese instante temporal, las reglas de AWS IoT Core o las subscripciones MQTT no interceptaban/insertaban dichos tópicos crudos extra en la BD local, o bien provenían de un proceso que ya la Nube consumía y encapsulaba antes de la actual implementación.
+*   **Motivo:** En ese período, la aplicación móvil no enviaba (o el servidor no persistía) los tópicos granulares extra, o bien provenían de un proceso que la Nube consumía y encapsulaba antes de la implementación actual del endpoint REST.
 *   **Consecuencia de Negocio:** No se puede armar o retroalimentar la tabla `Eventos` de los viajes antiguos usando *únicamente* la SQL `SentianceEventos`, los JSON de las frenadas y teléfonos crudos de esa fecha **se perdieron en el esquema local**.
-*   **Estado Actual:** Esta limitación sólo aplica hacia el pasado. En los registros **nuevos** (recabados recientemente), el sistema envía y almacena exitosamente toda la familia de eventos vinculables bajo el mismo ID de viaje (`transportId`). Por ende, la AWS Lambda se deberá codificar apuntando primordialmente al tráfico en vivo (On-going y futuro) que sí cumple con la entrega en forma distribuida al IoT Core.
+*   **Estado Actual:** Esta limitación sólo aplica hacia el pasado. En los registros **nuevos** (recabados recientemente), el sistema envía y almacena exitosamente toda la familia de eventos vinculables bajo el mismo ID de viaje (`transportId`). Por ende, la AWS Lambda se deberá codificar apuntando primordialmente al tráfico en vivo (On-going y futuro) que sí cumple con la entrega en forma distribuida.
 
 ---
 
@@ -216,7 +216,7 @@ Mientras Operaciones implementa el proceso definitivo que va a leer VictaTMTK y 
 ### Arquitectura
 
 ```
-SentianceEventos (MQTT) ──► sentiance_etl.py ──► VictaTMTK (fuente de verdad)
+SentianceEventos (REST) ──► sentiance_etl.py ──► VictaTMTK (fuente de verdad)
                                   │
                                   └── bridge (al final del batch)
                                         │
