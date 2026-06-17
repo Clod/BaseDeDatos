@@ -385,6 +385,159 @@ See `Documentos/analisis_mapeo_movilidad.md` § 10 for removal instructions.
 
 ---
 
+## Running in Production (AWS Lambda)
+
+Records arrive continuously in `SentianceEventos` via REST. The recommended trigger mechanism is an **EventBridge scheduled rule** that invokes the Lambda periodically. `run_full_pipeline.py` already iterates until the queue is empty, so the Lambda only needs to be triggered frequently enough.
+
+### EventBridge Configuration
+
+Create a scheduled rule in the AWS console or via CLI:
+
+```bash
+# Every 1 minute (max latency ~60 seconds)
+aws events put-rule \
+  --name etl-sentiance-trigger \
+  --schedule-expression "rate(1 minute)" \
+  --state ENABLED
+
+# Every 5 minutes (if latency is acceptable)
+aws events put-rule \
+  --name etl-sentiance-trigger \
+  --schedule-expression "rate(5 minutes)" \
+  --state ENABLED
+```
+
+### Reserved Concurrency = 1 (required)
+
+Prevents two Lambda instances from processing the same rows simultaneously if a previous execution is still running when the next trigger fires:
+
+```bash
+aws lambda put-function-concurrency \
+  --function-name your-lambda-name \
+  --reserved-concurrent-executions 1
+```
+
+### Lambda Timeout
+
+Set the timeout to the **maximum of 15 minutes** to allow enough time when the queue has accumulated records.
+
+---
+
+### Critical Consideration: `pyodbc` on Lambda
+
+`pyodbc` requires the Microsoft ODBC driver (`msodbcsql18`) installed at the operating system level, which is not available in the standard Lambda runtime. There are two options:
+
+---
+
+#### Option A — Container Image (recommended)
+
+Package the Lambda as a Docker image. Easier to maintain: system dependencies are installed just like any Linux environment.
+
+**`Dockerfile`:**
+
+```dockerfile
+FROM public.ecr.aws/lambda/python:3.12
+
+# Install Microsoft ODBC driver
+RUN dnf install -y https://packages.microsoft.com/rhel/9/prod/msodbcsql18-18.*.rpm \
+    unixODBC-devel && \
+    dnf clean all
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy ETL code
+COPY etl/ ./etl/
+
+# Lambda entry point handler
+CMD ["etl.lambda_handler.handler"]
+```
+
+**Handler (`etl/lambda_handler.py`):**
+
+```python
+from etl.run_full_pipeline import run_pipeline
+
+def handler(event, context):
+    run_pipeline()
+    return {"status": "ok"}
+```
+
+**Build and deploy:**
+
+```bash
+# Build and push to ECR
+aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
+docker build -t etl-sentiance .
+docker tag etl-sentiance:latest <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+docker push <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+
+# Create or update the Lambda pointing to the image
+aws lambda update-function-code \
+  --function-name your-lambda-name \
+  --image-uri <account>.dkr.ecr.<region>.amazonaws.com/etl-sentiance:latest
+```
+
+**Pros:** reproducible environment, no compatibility surprises, easy to test locally with `docker run`.  
+**Cons:** slower build, heavier image (~200–400 MB), requires an ECR repository.
+
+---
+
+#### Option B — Lambda Layer with ODBC driver
+
+Package the ODBC driver as a Lambda Layer. The Lambda uses the standard Python runtime and loads the driver from the layer at `/opt`.
+
+**Steps:**
+
+1. Compile or download the driver for Amazon Linux 2023:
+
+```bash
+# On an Amazon Linux 2023 EC2 instance (or equivalent container)
+dnf install -y msodbcsql18 unixODBC-devel
+
+mkdir -p /tmp/layer/lib /tmp/layer/opt/microsoft/msodbcsql18
+cp /usr/lib64/libodbc*.so* /tmp/layer/lib/
+cp -r /opt/microsoft/msodbcsql18 /tmp/layer/opt/microsoft/
+
+cd /tmp && zip -r odbc-layer.zip layer/
+```
+
+2. Publish the layer:
+
+```bash
+aws lambda publish-layer-version \
+  --layer-name msodbcsql18-amzn2023 \
+  --zip-file fileb:///tmp/odbc-layer.zip \
+  --compatible-runtimes python3.12
+```
+
+3. Attach the layer to the Lambda and configure the required environment variables:
+
+```bash
+aws lambda update-function-configuration \
+  --function-name your-lambda-name \
+  --layers arn:aws:lambda:<region>:<account>:layer:msodbcsql18-amzn2023:1 \
+  --environment "Variables={ODBCINI=/opt/layer/odbcinst.ini,ODBCSYSINI=/opt/layer}"
+```
+
+**Pros:** faster deployments, no ECR required, works with standard Lambda CI/CD.  
+**Cons:** more fragile (`.so` paths depend on the exact driver version and runtime), must be repackaged if the runtime or driver changes.
+
+---
+
+### Comparison
+
+| Criterion | Container Image (A) | Lambda Layer (B) |
+|---|---|---|
+| Initial complexity | Medium (ECR + Dockerfile) | High (manual `.so` compilation) |
+| Long-term maintenance | Low | High (fragile on updates) |
+| Cold start time | Slightly higher (~1–3 s) | Lower |
+| Locally testable | Yes (`docker run`) | Difficult |
+| Recommended for this project | ✅ Yes | Only if infrastructure constraints apply |
+
+---
+
 ## Tests
 
 ```bash
