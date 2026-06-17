@@ -364,10 +364,15 @@ Golden snapshot re-blessed: case 707 now produces a `VehicleCrashEvent` row.
 ### 2026-06-11 — production sends `UserActivityUpdate`, ETL routes `UserActivity`
 
 112 production rows (Oct 2025) carry `tipo = 'UserActivityUpdate'`, which no
-routing entry matches — they will sit at `is_processed = 0` forever once
-Stage 2 goes live. Possibly a deprecated SDK name. **Status: OPEN decision** —
-either add it to the routing filter (then harvest corpus cases for it) or
-explicitly document it as ignored (then add it to the negative tipos).
+routing entry matched — they sat at `is_processed = 0` permanently.
+`UserActivityUpdate` is the newer SDK payload format for the same concept as
+`UserActivity` but with different field names (`type` / `tripInfo.type` /
+`stationaryInfo.location` instead of `activityType` / `tripType` /
+`stationaryLocation`). **Status: FIXED (2026-06-17)** — added
+`process_activity_update` handler, wired into the routing filter and dispatch
+branch. 4 corpus cases added (3 shapes: UNKNOWN, STATIONARY, TRIP); golden
+snapshot re-blessed. Unit tests in
+`test_param_extraction.py::TestProcessActivityUpdateParams`.
 
 ---
 

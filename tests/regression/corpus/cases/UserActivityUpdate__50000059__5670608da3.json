@@ -1,0 +1,14 @@
+{
+ "id": 50000059,
+ "sentianceid": "68d1662d35f969070000516c",
+ "tipo": "UserActivityUpdate",
+ "json": "{\"stationaryInfo\":{\"location\":{\"provider\":\"fused\",\"altitude\":49,\"latitude\":-34.684910000000002,\"accuracy\":13,\"longitude\":-58.603169999999999,\"timestamp\":1759538034945}},\"type\":\"USER_ACTIVITY_TYPE_STATIONARY\"}",
+ "meta": {
+  "role": "representative",
+  "shape": "5670608da3",
+  "source": "prod_topup_2026-06-17.json",
+  "created_at": "2025-10-04T00:35:53.987Z",
+  "app_version": null,
+  "source_record_id": 59
+ }
+}

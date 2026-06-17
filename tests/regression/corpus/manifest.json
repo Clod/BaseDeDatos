@@ -1,10 +1,11 @@
 {
-  "built_at": "2026-06-11",
+  "built_at": "2026-06-17",
   "sources_in_order": [
     "sample_payloads.json",
-    "prod_topup_2026-06-11.json"
+    "prod_topup_2026-06-11.json",
+    "prod_topup_2026-06-17.json"
   ],
-  "total_cases": 166,
+  "total_cases": 170,
   "tipos": {
     "CRASH": {
       "cases": 1,
@@ -45,6 +46,10 @@
     "TimelineUpdate": {
       "cases": 6,
       "shapes": 6
+    },
+    "UserActivityUpdate": {
+      "cases": 4,
+      "shapes": 4
     },
     "UserContextUpdate": {
       "cases": 34,

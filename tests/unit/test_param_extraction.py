@@ -318,6 +318,48 @@ class TestProcessCrashEventParams:
         assert params[4] is None  # longitude
 
 
+# process_activity_update
+# ---------------------------------------------------------------------------
+
+class TestProcessActivityUpdateParams:
+
+    def test_stationary_fields_extracted(self, etl_with_cursor):
+        payload = {
+            "type": "USER_ACTIVITY_TYPE_STATIONARY",
+            "stationaryInfo": {
+                "location": {"latitude": -34.68, "longitude": -58.60, "accuracy": 16, "altitude": 49}
+            },
+        }
+        etl_with_cursor.process_activity_update(sid=20, uid="user-7", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "USER_ACTIVITY_TYPE_STATIONARY"  # activity_type
+        assert params[3] is None                             # trip_type
+        assert params[4] == -34.68                           # stationary_latitude
+        assert params[5] == -58.60                           # stationary_longitude
+
+    def test_trip_fields_extracted(self, etl_with_cursor):
+        payload = {"type": "USER_ACTIVITY_TYPE_TRIP", "tripInfo": {"type": "TRIP_TYPE_SDK"}}
+        etl_with_cursor.process_activity_update(sid=21, uid="user-7", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "USER_ACTIVITY_TYPE_TRIP"  # activity_type
+        assert params[3] == "TRIP_TYPE_SDK"            # trip_type
+
+    def test_unknown_type_no_crash(self, etl_with_cursor):
+        payload = {"type": "USER_ACTIVITY_TYPE_UNKNOWN"}
+        etl_with_cursor.process_activity_update(sid=22, uid="user-7", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "USER_ACTIVITY_TYPE_UNKNOWN"
+        assert params[3] is None
+        assert params[4] is None
+
+    def test_null_stationary_info_no_crash(self, etl_with_cursor):
+        payload = {"type": "USER_ACTIVITY_TYPE_STATIONARY", "stationaryInfo": None}
+        etl_with_cursor.process_activity_update(sid=23, uid="user-7", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[4] is None  # stationary_latitude
+        assert params[5] is None  # stationary_longitude
+
+
 # ---------------------------------------------------------------------------
 # process_sdk_status
 # ---------------------------------------------------------------------------

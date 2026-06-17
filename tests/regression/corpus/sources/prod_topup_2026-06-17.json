@@ -1,0 +1,6 @@
+[
+  {"id": 43, "sentianceid": "68e025933e4dc20700002475", "tipo": "UserActivityUpdate", "json": "{\"type\":\"USER_ACTIVITY_TYPE_UNKNOWN\"}", "created_at": "2025-10-04T00:00:03.433Z"},
+  {"id": 45, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "json": "{\"stationaryInfo\":{\"location\":{\"provider\":\"\",\"latitude\":-34.684921264648438,\"accuracy\":16,\"longitude\":-58.603168487548828,\"timestamp\":1759535387499}},\"type\":\"USER_ACTIVITY_TYPE_STATIONARY\"}", "created_at": "2025-10-04T00:25:21.480Z"},
+  {"id": 49, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "json": "{\"tripInfo\":{\"type\":\"TRIP_TYPE_SDK\"},\"type\":\"USER_ACTIVITY_TYPE_TRIP\"}", "created_at": "2025-10-04T00:29:35.447Z"},
+  {"id": 59, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "json": "{\"stationaryInfo\":{\"location\":{\"provider\":\"fused\",\"altitude\":49,\"latitude\":-34.684910000000002,\"accuracy\":13,\"longitude\":-58.603169999999999,\"timestamp\":1759538034945}},\"type\":\"USER_ACTIVITY_TYPE_STATIONARY\"}", "created_at": "2025-10-04T00:35:53.987Z"}
+]

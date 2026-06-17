@@ -62,6 +62,7 @@ ROUTED_TIPOS: tuple[str, ...] = (
     "UserMetadata",
     "TechnicalEvent",
     "UserActivity",
+    "UserActivityUpdate",
     "TimelineUpdate",
 )
 

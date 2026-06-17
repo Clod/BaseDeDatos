@@ -918,6 +918,43 @@ class SentianceETL:
             }
             self.upsert_trip(sid, uid, transport)
 
+    def process_activity_update(self, sid, uid, payload):
+        """Stores a UserActivityUpdate event into UserActivityHistory.
+
+        UserActivityUpdate is the newer SDK payload format for coarse-grained
+        activity signals. It carries the same semantic information as UserActivity
+        but uses different field names:
+          type              → activity_type  (e.g. USER_ACTIVITY_TYPE_TRIP)
+          tripInfo.type     → trip_type      (e.g. TRIP_TYPE_SDK)
+          stationaryInfo.location.{latitude,longitude} → stationary coords
+
+        Args:
+            sid:     sdk_source_event_id of the current SdkSourceEvent row.
+            uid:     Sentiance user ID.
+            payload: parsed UserActivityUpdate JSON dict.
+        """
+        trip_info = payload.get("tripInfo") or {}
+        stationary_loc = (payload.get("stationaryInfo") or {}).get("location") or {}
+        self.cursor.execute(
+            "INSERT INTO UserActivityHistory (sdk_source_event_id, sentiance_user_id, activity_type, trip_type, stationary_latitude, stationary_longitude, payload_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())",
+            (
+                sid,
+                uid,
+                payload.get("type"),
+                trip_info.get("type"),
+                stationary_loc.get("latitude"),
+                stationary_loc.get("longitude"),
+                json.dumps(payload),
+            ),
+        )
+        if trip_info or payload.get("type") == "USER_ACTIVITY_TYPE_TRIP":
+            transport = {
+                "id": sid,
+                "startTime": None,
+                "transportMode": trip_info.get("type"),
+            }
+            self.upsert_trip(sid, uid, transport)
+
     def process_technical_event(self, sid, uid, payload):
         """Stores an internal SDK diagnostic event into TechnicalEventHistory.
 
@@ -994,6 +1031,7 @@ class SentianceETL:
                 "'UserMetadata'",
                 "'TechnicalEvent'",
                 "'UserActivity'",
+                "'UserActivityUpdate'",
                 "'TimelineUpdate'",
             )
             # ORDER BY id: the docstring's "ordered by id" contract, and the
@@ -1114,6 +1152,8 @@ class SentianceETL:
                         self.process_technical_event(sid, uid, p)
                     elif tipo == "UserActivity":
                         self.process_activity_history(sid, uid, p)
+                    elif tipo == "UserActivityUpdate":
+                        self.process_activity_update(sid, uid, p)
                     self.cursor.execute(
                         "UPDATE SentianceEventos SET is_processed = 1 WHERE id = ?",
                         (r_id,),
