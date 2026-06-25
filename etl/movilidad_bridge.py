@@ -101,14 +101,26 @@ class MovilidadBridge:
 
     @staticmethod
     def _build_conn_str(env: dict[str, str]) -> str:
-        return (
-            "DRIVER={ODBC Driver 18 for SQL Server};"
+        available_drivers = pyodbc.drivers()
+        driver = env.get("DB_DRIVER")
+        if not driver:
+            for d in ["ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server", "SQL Server"]:
+                if d in available_drivers:
+                    driver = d
+                    break
+            if not driver:
+                driver = "SQL Server"
+
+        conn_str = (
+            f"DRIVER={{{driver}}};"
             f"SERVER={env['MOVILIDAD_HOST']},{env['MOVILIDAD_PORT']};"
             f"DATABASE={env['MOVILIDAD_DATABASE']};"
             f"UID={env['MOVILIDAD_USER']};"
             f"PWD={env['MOVILIDAD_PASSWORD']};"
-            "Encrypt=yes;TrustServerCertificate=yes"
         )
+        if "ODBC Driver" in driver:
+            conn_str += "Encrypt=yes;TrustServerCertificate=yes"
+        return conn_str
 
     def _ensure_dst_conn(self) -> bool:
         if self._dst_conn is not None:

@@ -108,7 +108,20 @@ class SentianceETL:
         )
         if not all([server, port, user, pwd, db]):
             raise ValueError("Missing database configuration in .env")
-        self.conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server},{port};DATABASE={db};UID={user};PWD={pwd};Encrypt=yes;TrustServerCertificate=yes"
+        
+        available_drivers = pyodbc.drivers()
+        driver = os.getenv("DB_DRIVER")
+        if not driver:
+            for d in ["ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server", "SQL Server"]:
+                if d in available_drivers:
+                    driver = d
+                    break
+            if not driver:
+                driver = "SQL Server"
+
+        self.conn_str = f"DRIVER={{{driver}}};SERVER={server},{port};DATABASE={db};UID={user};PWD={pwd}"
+        if "ODBC Driver" in driver:
+            self.conn_str += ";Encrypt=yes;TrustServerCertificate=yes"
         self.conn, self.cursor = None, None
         # Bridge Movilidad (proyección heredada, temporal).
         self._movilidad_enabled = (

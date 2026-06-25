@@ -19,11 +19,15 @@ import os
 import logging
 import gzip
 import argparse
+from dotenv import load_dotenv
+
+# Load database credentials from the local .env file in the project root
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger("Hydrator")
+logger = logger.getLogger("Hydrator")
 
 
 def _run_sql_file(cursor, sql_file: str):
@@ -42,10 +46,39 @@ def _run_sql_file(cursor, sql_file: str):
         cursor.execute(sql_batch)
 
 
+def _get_conn_str(server, port, database, username, password):
+    """
+    Builds a pyodbc connection string by dynamically choosing the best installed ODBC driver.
+    Only adds modern encryption options if an 'ODBC Driver' (v17+) is selected.
+    """
+    available_drivers = pyodbc.drivers()
+    driver = os.getenv("DB_DRIVER")
+    if not driver:
+        # Preferred drivers list
+        for d in ["ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server", "SQL Server"]:
+            if d in available_drivers:
+                driver = d
+                break
+        if not driver:
+            driver = "SQL Server"
+
+    conn_str = f"DRIVER={{{driver}}};SERVER={server},{port};DATABASE={database};UID={username};PWD={password}"
+
+    # Encrypt and TrustServerCertificate parameters are only supported by modern ODBC Driver 17+
+    if "ODBC Driver" in driver:
+        conn_str += ";Encrypt=yes;TrustServerCertificate=yes"
+
+    return conn_str
+
+
 def recreate_schema():
     """Drop and recreate the VictaTMTK and Movilidad database schemas."""
-    server, username, password = "localhost", "sa", "SentianceLocal2026!"
-    master_conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE=master;UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
+    server = os.getenv("DB_SERVER", "localhost")
+    port = os.getenv("DB_PORT", "1433")
+    username = os.getenv("DB_USER", "sa")
+    password = os.getenv("DB_PASSWORD", "SentianceLocal2026!")
+    db_name = os.getenv("DB_NAME", "VictaTMTK")
+    master_conn_str = _get_conn_str(server, port, "master", username, password)
 
     try:
         logger.info("Connecting to master to drop database...")
@@ -53,24 +86,24 @@ def recreate_schema():
         cursor = conn.cursor()
 
         # Drop database (autocommit mode required for ALTER DATABASE)
-        cursor.execute("""
-            IF EXISTS (SELECT * FROM sys.databases WHERE name = 'VictaTMTK')
+        cursor.execute(f"""
+            IF EXISTS (SELECT * FROM sys.databases WHERE name = '{db_name}')
             BEGIN
-                ALTER DATABASE VictaTMTK SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                DROP DATABASE VictaTMTK;
+                ALTER DATABASE {db_name} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE {db_name};
             END
         """)
-        logger.info("Database 'VictaTMTK' dropped.")
+        logger.info(f"Database '{db_name}' dropped.")
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         sql_file = os.path.join(script_dir, "sql", "init_db.sql")
         logger.info(f"Reading schema from {sql_file}...")
         _run_sql_file(cursor, sql_file)
 
-        logger.info("VictaTMTK schema recreated successfully.")
+        logger.info(f"{db_name} schema recreated successfully.")
         conn.close()
     except Exception as e:
-        logger.error(f"Failed to recreate VictaTMTK schema: {e}")
+        logger.error(f"Failed to recreate {db_name} schema: {e}")
         raise
 
     recreate_movilidad_schema()
@@ -78,43 +111,47 @@ def recreate_schema():
 
 def recreate_movilidad_schema():
     """Drop and recreate the local Movilidad database schema from init_movilidad.sql."""
-    server, username, password = "localhost", "sa", "SentianceLocal2026!"
-    master_conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE=master;UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
+    server = os.getenv("MOVILIDAD_HOST", os.getenv("DB_SERVER", "localhost"))
+    port = os.getenv("MOVILIDAD_PORT", os.getenv("DB_PORT", "1433"))
+    username = os.getenv("MOVILIDAD_USER", os.getenv("DB_USER", "sa"))
+    password = os.getenv("MOVILIDAD_PASSWORD", os.getenv("DB_PASSWORD", "SentianceLocal2026!"))
+    db_name = os.getenv("MOVILIDAD_DATABASE", "Movilidad")
+    master_conn_str = _get_conn_str(server, port, "master", username, password)
 
     try:
-        logger.info("Recreating local Movilidad database...")
+        logger.info(f"Recreating local {db_name} database...")
         conn = pyodbc.connect(master_conn_str, autocommit=True)
         cursor = conn.cursor()
 
-        cursor.execute("""
-            IF EXISTS (SELECT * FROM sys.databases WHERE name = 'Movilidad')
+        cursor.execute(f"""
+            IF EXISTS (SELECT * FROM sys.databases WHERE name = '{db_name}')
             BEGIN
-                ALTER DATABASE Movilidad SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                DROP DATABASE Movilidad;
+                ALTER DATABASE {db_name} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE {db_name};
             END
         """)
-        logger.info("Database 'Movilidad' dropped.")
+        logger.info(f"Database '{db_name}' dropped.")
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         sql_file = os.path.join(script_dir, "sql", "init_movilidad.sql")
         logger.info(f"Reading schema from {sql_file}...")
         _run_sql_file(cursor, sql_file)
 
-        logger.info("Movilidad schema recreated successfully.")
+        logger.info(f"{db_name} schema recreated successfully.")
         conn.close()
     except Exception as e:
-        logger.error(f"Failed to recreate Movilidad schema: {e}")
+        logger.error(f"Failed to recreate {db_name} schema: {e}")
         raise
 
 
 def _clear_movilidad():
     """Delete all rows from the local Movilidad database (no schema drop)."""
-    server, username, password = "localhost", "sa", "SentianceLocal2026!"
-    conn_str = (
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};"
-        f"DATABASE=Movilidad;UID={username};PWD={password};"
-        f"Encrypt=yes;TrustServerCertificate=yes"
-    )
+    server = os.getenv("MOVILIDAD_HOST", os.getenv("DB_SERVER", "localhost"))
+    port = os.getenv("MOVILIDAD_PORT", os.getenv("DB_PORT", "1433"))
+    database = os.getenv("MOVILIDAD_DATABASE", "Movilidad")
+    username = os.getenv("MOVILIDAD_USER", os.getenv("DB_USER", "sa"))
+    password = os.getenv("MOVILIDAD_PASSWORD", os.getenv("DB_PASSWORD", "SentianceLocal2026!"))
+    conn_str = _get_conn_str(server, port, database, username, password)
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
@@ -132,13 +169,12 @@ def _clear_movilidad():
 
 
 def hydrate(json_file="sample_payloads.json.gz", clear_first=True, limit=None):
-    server, database, username, password = (
-        "localhost",
-        "VictaTMTK",
-        "sa",
-        "SentianceLocal2026!",
-    )
-    conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes"
+    server = os.getenv("DB_SERVER", "localhost")
+    port = os.getenv("DB_PORT", "1433")
+    database = os.getenv("DB_NAME", "VictaTMTK")
+    username = os.getenv("DB_USER", "sa")
+    password = os.getenv("DB_PASSWORD", "SentianceLocal2026!")
+    conn_str = _get_conn_str(server, port, database, username, password)
 
     if not os.path.exists(json_file):
         logger.error(f"Sample file '{json_file}' not found.")
