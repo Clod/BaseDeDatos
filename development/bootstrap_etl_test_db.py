@@ -114,14 +114,27 @@ def _build_conn_str() -> tuple[str, str]:
         logger.error("Faltan variables en el .env: %s", ", ".join(missing))
         sys.exit(1)
 
+    # Driver selection mirrors etl/sentiance_etl.py: honor DB_DRIVER if set,
+    # otherwise auto-detect the newest ODBC driver installed (18 → 17 → legacy).
+    driver = os.getenv("DB_DRIVER")
+    if not driver:
+        available = pyodbc.drivers()
+        for d in ("ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server", "SQL Server"):
+            if d in available:
+                driver = d
+                break
+        if not driver:
+            driver = "SQL Server"
+
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{{driver}}};"
         f"SERVER={server},{port};"
         f"DATABASE={db_name};"
         f"UID={user};"
         f"PWD={password};"
-        "Encrypt=yes;TrustServerCertificate=yes"
     )
+    if "ODBC Driver" in driver:
+        conn_str += "Encrypt=yes;TrustServerCertificate=yes"
     return conn_str, db_name
 
 

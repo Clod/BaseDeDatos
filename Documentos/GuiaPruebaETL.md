@@ -197,7 +197,7 @@ mv .env.backup .env 2>/dev/null && echo "Restaurado tu .env original." || echo "
 |---|---|---|
 | `Este script es solo para la base de prueba 'VictaTMTK_ETL'...` | El `.env` tiene `DB_NAME` mal | Revisá el Paso 1.2; tiene que decir `DB_NAME=VictaTMTK_ETL` |
 | `No se pudo conectar` / timeout | Contraseña mal, VPN caída, o el RDS no es alcanzable desde tu red | Verificá que puedas conectarte a la base con un cliente SQL; revisá `.env.rds` |
-| `Data source name not found` / error de driver ODBC | Falta el ODBC Driver 18 de Microsoft | Instalá el driver (ver Requisitos) |
+| `Data source name not found` / error de driver ODBC | No hay un ODBC Driver de Microsoft instalado | Instalá el ODBC Driver 18 (o 17). El script y el ETL autodetectan el que haya. Si tenés uno con nombre distinto, agregá `DB_DRIVER=nombre exacto del driver` al `.env` |
 | `MovilidadBridge requires the 'polyline' package` | Falta la dependencia `polyline` | `uv pip install --python .venv/bin/python polyline` |
 | El resumen muestra `is_processed: NO` | El `ALTER TABLE` no se aplicó | Volvé a correr el script del Paso 2; si sigue, revisá permisos del usuario en la base |
 | Muchas filas en `SentianceEventos_Errors` | Payloads que el ETL no supo mapear | Es esperable que haya algunos; si son muchísimos, avisá a quien mantiene el ETL |
