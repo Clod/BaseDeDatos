@@ -1,1 +1,0 @@
-{"error_id": 1, "original_id": 50000049, "sentiance_user_id": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "error_message": "pyodbc.ProgrammingError: ('42000', '[42000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Error converting data type varchar to numeric. (8114) (SQLExecDirectW)')", "failed_at": "<run-time>"}

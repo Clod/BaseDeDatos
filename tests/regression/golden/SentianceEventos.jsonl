@@ -165,6 +165,6 @@
 {"id": 50000001, "sentianceid": "68e025933e4dc20700002475", "tipo": "CRASH", "created_at": "2025-10-03 19:42:36.657", "is_processed": 0, "procesado": false, "app_version": "regression-corpus"}
 {"id": 50000043, "sentianceid": "68e025933e4dc20700002475", "tipo": "UserActivityUpdate", "created_at": "2025-10-04 00:00:03.433", "is_processed": 1, "procesado": false, "app_version": "regression-corpus"}
 {"id": 50000045, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "created_at": "2025-10-04 00:25:21.480", "is_processed": 1, "procesado": false, "app_version": "regression-corpus"}
-{"id": 50000049, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "created_at": "2025-10-04 00:29:35.447", "is_processed": -1, "procesado": false, "app_version": "regression-corpus"}
+{"id": 50000049, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "created_at": "2025-10-04 00:29:35.447", "is_processed": 1, "procesado": false, "app_version": "regression-corpus"}
 {"id": 50000059, "sentianceid": "68d1662d35f969070000516c", "tipo": "UserActivityUpdate", "created_at": "2025-10-04 00:35:53.987", "is_processed": 1, "procesado": false, "app_version": "regression-corpus"}
 {"id": 50002502, "sentianceid": "68f1442c9202f7080000ce0c", "tipo": "fcm_token", "created_at": "2025-10-28 16:47:16.000", "is_processed": 0, "procesado": false, "app_version": "regression-corpus"}

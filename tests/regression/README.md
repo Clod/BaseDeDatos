@@ -393,9 +393,11 @@ DrivingInsights / Timeline); se eliminó la llamada a `upsert_trip` de
 `process_activity_history` y `process_activity_update`. Tests unitarios de guardia en
 `TestProcessActivityUpdateParams::test_trip_type_does_not_create_trip` y
 `TestProcessActivityHistoryParams::test_in_transport_does_not_create_trip`.
-**Pendiente:** re-bendecir el golden (bloqueado por la BD Docker local corrupta — ver abajo);
-el diff esperado convierte el caso TRIP del corpus de fila de error a fila de
-`UserActivityHistory`.
+Golden re-bendecido (2026-07-03): el caso TRIP del corpus (evento 50000049) pasó de fila de
+error (`SentianceEventos_Errors`, `is_processed = -1`) a fila de `UserActivityHistory`
+(`is_processed = 1`, más su `SdkSourceEvent`), sin crear viaje. Diff mecánico limpio de 4
+archivos golden, sin desplazamiento de ids (la nueva fila de `SdkSourceEvent` rellena el hueco
+de identity que dejaba el rollback del error).
 
 ---
 
