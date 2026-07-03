@@ -516,7 +516,10 @@ class MovilidadBridge:
         """
         legal = float(trip["legal"] or 0)
         suave = float(trip["smooth"] or 0)
-        aten = float(trip["attention"] or 0)
+        # `atencion` de Movilidad sale del `focus_score` de DrivingInsights, NO del
+        # `attention_score`. Verificado contra el Movilidad real (AROCLNDSQL): con
+        # focus_score la coincidencia sube de 33,5% a 99,0% sobre la intersección.
+        aten = float(trip["focus"] or 0)
         prom = float(trip["overall"] or 0)
         params = [
             viaje, uid,

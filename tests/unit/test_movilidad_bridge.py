@@ -394,6 +394,26 @@ def test_upsert_transporte_writes_spanish_mode():
     assert "CAR" not in params
 
 
+def test_puntajes_primarios_atencion_uses_focus_score():
+    """`atencion` de Movilidad sale de focus_score, no de attention_score.
+    En _trip_row: attention=0.75 (row[13]), focus=0.80 (row[15])."""
+    bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
+    src_cursor.fetchone.side_effect = [_trip_row(), (0,), None]
+    src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
+
+    bridge.sync_trips({"trip-xyz"})
+
+    primarios = [
+        call for call in dst_cursor.execute.call_args_list
+        if "MERGE PuntajesPrirmariosTr" in call.args[0]
+    ]
+    assert primarios, "no se ejecutó el MERGE de PuntajesPrirmariosTr"
+    params = primarios[0].args[1]
+    # params = [viaje, uid, legal, suavidad, atencion, promedio, uid, viaje, ...]
+    assert params[4] == 0.80, "atencion debe ser focus_score (0.80)"
+    assert 0.75 not in params, "attention_score (0.75) no debe aparecer"
+
+
 def test_eventos_y_significantes_son_espejo():
     """Eventos y EventosSignificantes deben recibir los mismos arrays JSON."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
