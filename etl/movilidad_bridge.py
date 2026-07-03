@@ -70,10 +70,12 @@ class MovilidadBridge:
     PuntajesSecundariosTr, Eventos, EventosSignificantes, Conduccion,
     PerfilDeUsuario, ChoqueDeVehiculo.
 
-    Limitaciones documentadas (cloud-only en Sentiance, no disponibles vía SDK):
-        - `anticipacion` -> 0
-        - `celular_fijo` -> 0 / "[]"
-        - `pantalla`     -> "[]"
+    Limitaciones documentadas (cloud-only en Sentiance, no disponibles vía SDK).
+    Los scores ausentes se escriben como -1 ("sin dato"), igual que el Movilidad
+    real; las listas de eventos ausentes como "[]":
+        - `anticipacion` (PuntajesSecundarios)          -> -1
+        - `celular_fijo` (PuntajesSecundarios, numérico) -> -1
+        - `celular_fijo` / `pantalla` (Eventos, listas)  -> "[]"
     """
 
     REQUIRED_ENV: tuple[str, ...] = (
@@ -524,6 +526,16 @@ class MovilidadBridge:
         ]
         self._exec_dst(sql, params)
 
+    @staticmethod
+    def _score(value: Any) -> float:
+        """Puntaje para Movilidad: valor real si existe (incluido 0.0), o -1 si falta.
+
+        Movilidad usa -1 como centinela de "sin dato". Cuando el SDK no trae el
+        score (None) escribimos -1 en vez de 0, porque 0 se leería como "pésimo
+        puntaje" y no como "no calculado". Un 0.0 real sí se conserva.
+        """
+        return -1.0 if value is None else float(value)
+
     def _upsert_puntajes_primarios(
         self, viaje: str, uid: str, trip: dict[str, Any]
     ) -> None:
@@ -537,13 +549,13 @@ class MovilidadBridge:
             (usuario, viaje, legal, suavidad, atencion, promedio)
             VALUES (?, ?, ?, ?, ?, ?);
         """
-        legal = float(trip["legal"] or 0)
-        suave = float(trip["smooth"] or 0)
+        legal = self._score(trip["legal"])
+        suave = self._score(trip["smooth"])
         # `atencion` de Movilidad sale del `focus_score` de DrivingInsights, NO del
         # `attention_score`. Verificado contra el Movilidad real (AROCLNDSQL): con
         # focus_score la coincidencia sube de 33,5% a 99,0% sobre la intersección.
-        aten = float(trip["focus"] or 0)
-        prom = float(trip["overall"] or 0)
+        aten = self._score(trip["focus"])
+        prom = self._score(trip["overall"])
         params = [
             viaje, uid,
             legal, suave, aten, prom,
@@ -560,17 +572,19 @@ class MovilidadBridge:
         ON target.viaje = src.viaje AND target.usuario = src.usuario
         WHEN MATCHED THEN UPDATE SET
             concentracion = ?, aceleracion_fuerte = ?, frenado_fuerte = ?,
-            curvas_fuertes = ?, anticipacion = 0, celular_fijo = 0,
+            curvas_fuertes = ?, anticipacion = -1, celular_fijo = -1,
             eventos_fuertes = ?
         WHEN NOT MATCHED THEN INSERT
             (usuario, viaje, concentracion, aceleracion_fuerte, frenado_fuerte,
              curvas_fuertes, anticipacion, celular_fijo, eventos_fuertes)
-            VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?);
+            VALUES (?, ?, ?, ?, ?, ?, -1, -1, ?);
         """
-        focus = float(trip["focus"] or 0)
-        h_acc = float(trip["harsh_acc"] or 0)
-        h_br = float(trip["harsh_brake"] or 0)
-        h_tu = float(trip["harsh_turn"] or 0)
+        # anticipacion / celular_fijo son cloud-only en Sentiance (no llegan por SDK):
+        # se escriben como -1 ("sin dato"), igual que en el Movilidad real.
+        focus = self._score(trip["focus"])
+        h_acc = self._score(trip["harsh_acc"])
+        h_br = self._score(trip["harsh_brake"])
+        h_tu = self._score(trip["harsh_turn"])
         params = [
             viaje, uid,
             focus, h_acc, h_br, h_tu, harsh_count,

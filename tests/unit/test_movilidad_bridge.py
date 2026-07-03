@@ -414,6 +414,28 @@ def test_puntajes_primarios_atencion_uses_focus_score():
     assert 0.75 not in params, "attention_score (0.75) no debe aparecer"
 
 
+def test_score_absent_returns_minus_one_but_keeps_real_zero():
+    """_score: None -> -1 (sin dato); 0.0 real se conserva."""
+    bridge, *_ = _make_bridge()
+    assert bridge._score(None) == -1.0
+    assert bridge._score(0.0) == 0.0
+    assert bridge._score(0.83) == 0.83
+
+
+def test_primarios_absent_score_written_as_sentinel():
+    """Un score ausente (None) se escribe -1, no 0. Un 0.0 real se conserva."""
+    bridge, *_, dst_cursor = _make_bridge()
+    trip = {"legal": None, "smooth": 0.9, "focus": None, "overall": 0.0}
+    bridge._upsert_puntajes_primarios("trip-xyz", "user-abc", trip)
+
+    params = dst_cursor.execute.call_args.args[1]
+    # [viaje, uid, legal, suavidad, atencion, promedio, uid, viaje, ...]
+    assert params[2] == -1.0, "legal ausente -> -1"
+    assert params[3] == 0.9, "suavidad real"
+    assert params[4] == -1.0, "atencion (focus) ausente -> -1"
+    assert params[5] == 0.0, "promedio 0.0 real se conserva"
+
+
 # ---------------------------------------------------------------------------
 # ocupante: traducción al vocabulario español de Movilidad
 # ---------------------------------------------------------------------------
@@ -488,8 +510,9 @@ def test_eventos_y_significantes_son_espejo():
     assert e_params[12:20] == s_params[12:20]
 
 
-def test_secundarios_sets_anticipacion_and_celular_fijo_zero():
-    """Campos cloud-only deben quedar en 0 (NOT NULL en schema real de Movilidad)."""
+def test_secundarios_sets_anticipacion_and_celular_fijo_sentinel():
+    """Campos cloud-only (no llegan por SDK) se escriben como -1 ("sin dato"),
+    igual que el Movilidad real (que tiene -1 en el 100% de las filas)."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
     src_cursor.fetchone.side_effect = [_trip_row(), (3,), None]
     src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
@@ -501,8 +524,8 @@ def test_secundarios_sets_anticipacion_and_celular_fijo_zero():
         if "MERGE PuntajesSecundariosTr" in c.args[0]
     )
     sql = sec_call.args[0]
-    assert "anticipacion = 0" in sql
-    assert "celular_fijo = 0" in sql
+    assert "anticipacion = -1" in sql
+    assert "celular_fijo = -1" in sql
     # eventos_fuertes debería pasarse como el conteo de harsh events (3)
     params = sec_call.args[1]
     assert 3 in params
