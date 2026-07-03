@@ -32,6 +32,7 @@ USO:
 
 from __future__ import annotations
 
+import datetime
 import gzip
 import json
 import logging
@@ -134,6 +135,13 @@ class MovilidadBridge:
          "district": "unknown", "street": "unknown"},
         separators=(",", ":"),
     )
+
+    # harsh_type del SDK -> (type, category) del esquema de Eventos de Movilidad.
+    HARSH_TYPE_MAP: dict[str, tuple[str, str]] = {
+        "ACCELERATION": ("accelerate", "accelerating"),
+        "BRAKING": ("brake", "braking"),
+        "TURN": ("turn", "turning"),
+    }
 
     def _ocupante_movilidad(self, occupant_role: Optional[str]) -> Optional[str]:
         """Traduce el rol del ocupante del SDK al vocabulario español de Movilidad."""
@@ -436,11 +444,14 @@ class MovilidadBridge:
         polyline_str = self._build_polyline(waypoints)
         loc_start, loc_end = self._extract_endpoints(waypoints)
         max_speed = self._max_speed(waypoints)
+        # Offset horario del viaje: reproduce la hora local que usa Movilidad en
+        # todos los timestamps (puntos_recorrido y eventos).
+        offset = self._trip_offset(trip["start_time"], waypoints)
 
         self._upsert_transporte(transport_id, uid, trip, max_speed)
         self._upsert_recorridos(
             transport_id, uid, trip, polyline_str, waypoints,
-            loc_start, loc_end, max_speed,
+            loc_start, loc_end, max_speed, offset,
         )
         # Driving-score tables only apply to motorised trips (those with a
         # DrivingInsights payload). Non-motorised trips (walking, bus, cycling, ...)
@@ -452,7 +463,7 @@ class MovilidadBridge:
             harsh_count = self._count_harsh_events(transport_id, uid)
             self._upsert_puntajes_secundarios(transport_id, uid, trip, harsh_count)
         self._upsert_conduccion(transport_id, uid, trip)
-        eventos = self._build_eventos_payload(transport_id, uid)
+        eventos = self._build_eventos_payload(transport_id, uid, offset)
         self._upsert_eventos(transport_id, uid, eventos)
         self._upsert_eventos_significantes(transport_id, uid, eventos)
         self._upsert_choque(uid)
@@ -512,6 +523,7 @@ class MovilidadBridge:
         loc_start: str,
         loc_end: str,
         max_speed: float,
+        off: datetime.timedelta,
     ) -> None:
         sql = """
         MERGE Recorridos AS target
@@ -532,7 +544,7 @@ class MovilidadBridge:
         distancia = int(round(float(trip["distance_m"] or 0) * 100))
         vmax_kmh = int(round(float(max_speed or 0) * 3.6))
         ubic = self.UBICACION_DESCONOCIDA
-        puntos = json.dumps(waypoints) if waypoints else "[]"  # esquema en Tanda B
+        puntos = self._build_puntos_recorrido(waypoints, off)
         # polyline es NOT NULL en Recorridos — si no hay waypoints, igual va string vacío.
         params = [
             viaje, uid,
@@ -623,7 +635,106 @@ class MovilidadBridge:
         row = cur.fetchone()
         return int(row[0]) if row and row[0] is not None else 0
 
-    def _build_eventos_payload(self, viaje: str, uid: str) -> dict[str, str]:
+    # ------------------------------------------------------------------
+    # Formato temporal / geométrico al esquema de Movilidad
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _first_wp_epoch_ms(waypoints: list[Any]) -> Optional[int]:
+        for wp in waypoints or []:
+            if isinstance(wp, dict) and wp.get("timestamp"):
+                try:
+                    return int(wp["timestamp"])
+                except (TypeError, ValueError):
+                    continue
+        return None
+
+    def _trip_offset(self, start_time: Any, waypoints: list[Any]) -> datetime.timedelta:
+        """Deriva el offset horario del viaje: hora local (`start_time`, que ya viene
+        local) menos el UTC del primer waypoint, redondeado a 15 minutos. Reproduce la
+        hora local de Movilidad sin necesitar una librería de timezones. 0 si no hay datos.
+        """
+        epoch_ms = self._first_wp_epoch_ms(waypoints)
+        if epoch_ms is None or start_time is None:
+            return datetime.timedelta(0)
+        st = start_time if isinstance(start_time, datetime.datetime) else \
+            datetime.datetime.fromisoformat(str(start_time))
+        utc = datetime.datetime.utcfromtimestamp(epoch_ms / 1000)
+        minutes = round((st - utc).total_seconds() / 900) * 15  # a múltiplos de 15'
+        return datetime.timedelta(minutes=minutes)
+
+    @staticmethod
+    def _fmt_offset(off: datetime.timedelta) -> str:
+        total = int(off.total_seconds())
+        sign = "+" if total >= 0 else "-"
+        total = abs(total)
+        return f"{sign}{total // 3600:02d}:{(total % 3600) // 60:02d}"
+
+    def _local_iso(self, value: Any, off: datetime.timedelta) -> Optional[str]:
+        """`datetime`/ISO naive local -> 'YYYY-MM-DDTHH:MM:SS.mmm±HH:MM' (ms de 3 dígitos)."""
+        if value is None:
+            return None
+        dt = value if isinstance(value, datetime.datetime) else \
+            datetime.datetime.fromisoformat(str(value))
+        return f"{dt.strftime('%Y-%m-%dT%H:%M:%S')}.{dt.microsecond // 1000:03d}{self._fmt_offset(off)}"
+
+    def _wp_local_iso(self, epoch_ms: Any, off: datetime.timedelta) -> Optional[str]:
+        """Epoch ms UTC -> ISO en hora local del viaje (UTC + offset)."""
+        if epoch_ms is None:
+            return None
+        try:
+            local = datetime.datetime.utcfromtimestamp(int(epoch_ms) / 1000) + off
+        except (TypeError, ValueError):
+            return None
+        return f"{local.strftime('%Y-%m-%dT%H:%M:%S')}.{local.microsecond // 1000:03d}{self._fmt_offset(off)}"
+
+    @staticmethod
+    def _path(waypoints: Any) -> list[dict[str, float]]:
+        """Waypoints -> lista `[{latitude, longitude}]` (sólo coordenadas)."""
+        out: list[dict[str, float]] = []
+        for wp in waypoints or []:
+            if not isinstance(wp, dict):
+                continue
+            lat = wp.get("latitude", wp.get("lat"))
+            lon = wp.get("longitude", wp.get("lon"))
+            if lat is not None and lon is not None:
+                out.append({"latitude": lat, "longitude": lon})
+        return out
+
+    @staticmethod
+    def _duration(start: Any, end: Any) -> float:
+        try:
+            s = start if isinstance(start, datetime.datetime) else datetime.datetime.fromisoformat(str(start))
+            e = end if isinstance(end, datetime.datetime) else datetime.datetime.fromisoformat(str(end))
+            return round((e - s).total_seconds(), 2)
+        except Exception:
+            return 0.0
+
+    def _build_puntos_recorrido(self, waypoints: list[Any], off: datetime.timedelta) -> str:
+        """Reformatea los waypoints al esquema `puntos_recorrido` de Movilidad."""
+        out: list[dict[str, Any]] = []
+        for wp in waypoints or []:
+            if not isinstance(wp, dict):
+                continue
+            lat = wp.get("latitude", wp.get("lat"))
+            lon = wp.get("longitude", wp.get("lon"))
+            if lat is None or lon is None:
+                continue
+            out.append({
+                "latitude": lat,
+                "longitude": lon,
+                "timestamp": self._wp_local_iso(wp.get("timestamp"), off),
+                "road_type": "unknown",
+                "speed": wp.get("speedInMps", 0.0),
+                "speed_limit": wp.get("speedLimitInMps", 0.0),
+                "distance": -1.0,
+                "speed_v2_confidence": 0.0,
+            })
+        return json.dumps(out, separators=(",", ":")) if out else "[]"
+
+    def _build_eventos_payload(
+        self, viaje: str, uid: str, off: datetime.timedelta
+    ) -> dict[str, str]:
         harsh = self._read_child_events(
             viaje, uid, "DrivingInsightsHarshEvent",
             ["start_time", "end_time", "magnitude", "confidence",
@@ -647,16 +758,74 @@ class MovilidadBridge:
             ["start_time", "end_time", "waypoints_json"],
         )
 
-        def by_type(t: str) -> list[dict[str, Any]]:
-            return [h for h in harsh if h.get("harsh_type") == t]
+        def dump(rows: list[dict[str, Any]]) -> str:
+            return json.dumps(rows, separators=(",", ":"))
+
+        def harsh_of(harsh_type: str) -> list[dict[str, Any]]:
+            tipo, categoria = self.HARSH_TYPE_MAP[harsh_type]
+            rows: list[dict[str, Any]] = []
+            for h in harsh:
+                if h.get("harsh_type") != harsh_type:
+                    continue
+                row = {
+                    "duration": self._duration(h["start_time"], h["end_time"]),
+                    "path": self._path(h.get("waypoints_json")),
+                    "magnitude": h.get("magnitude"),
+                    "start_at": self._local_iso(h["start_time"], off),
+                    "end_at": self._local_iso(h["end_time"], off),
+                    "type": tipo,
+                    "category": categoria,
+                }
+                # Movilidad incluye `mean` (= magnitude) en accelerate/brake, no en turn.
+                if harsh_type in ("ACCELERATION", "BRAKING"):
+                    row["mean"] = h.get("magnitude")
+                rows.append(row)
+            return rows
+
+        uso_telefono = [{
+            "duration": self._duration(p["start_time"], p["end_time"]),
+            "path": self._path(p.get("waypoints_json")),
+            "start_at": self._local_iso(p["start_time"], off),
+            "end_at": self._local_iso(p["end_time"], off),
+            "type": "phone_handling",
+            "category": "phone_handling",
+        } for p in phone]
+
+        llamados = [{
+            "duration": self._duration(c["start_time"], c["end_time"]),
+            "start_at": self._local_iso(c["start_time"], off),
+            "end_at": self._local_iso(c["end_time"], off),
+            "type": "call_events",
+            "category": "call_events",
+        } for c in call]
+
+        def speeding_row(s: dict[str, Any]) -> dict[str, Any]:
+            wps = s.get("waypoints_json") or []
+            limits = sorted({
+                round(w["speedLimitInMps"] * 3.6) for w in wps
+                if isinstance(w, dict) and w.get("speedLimitInMps")
+            })
+            speeds = [
+                round(max(w.get("speedInMps", 0) for w in wps if isinstance(w, dict)) * 3.6, 6)
+            ] if wps else []
+            return {
+                "duration": self._duration(s["start_time"], s["end_time"]),
+                "path": self._path(wps),
+                "start_at": self._local_iso(s["start_time"], off),
+                "end_at": self._local_iso(s["end_time"], off),
+                "type": "speeding",
+                "category": "speeding",
+                "speed_limits": limits,
+                "speeds": speeds,
+            }
 
         return {
-            "aceleracion": json.dumps(by_type("ACCELERATION")),
-            "frenado": json.dumps(by_type("BRAKING")),
-            "curvas": json.dumps(by_type("TURN")),
-            "uso_telefono": json.dumps(phone),
-            "llamados": json.dumps(call),
-            "exceso_de_velocidad": json.dumps(speeding + wrong_way),
+            "aceleracion": dump(harsh_of("ACCELERATION")),
+            "frenado": dump(harsh_of("BRAKING")),
+            "curvas": dump(harsh_of("TURN")),
+            "uso_telefono": dump(uso_telefono),
+            "llamados": dump(llamados),
+            "exceso_de_velocidad": dump([speeding_row(s) for s in (speeding + wrong_way)]),
             "celular_fijo": "[]",
             "pantalla": "[]",
         }

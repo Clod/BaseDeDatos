@@ -530,6 +530,81 @@ def test_secundarios_harsh_subscores_are_sentinel():
     assert p[6] == 3     # eventos_fuertes (conteo real, se mantiene)
 
 
+# ---------------------------------------------------------------------------
+# Tanda B: reformateo de timestamps / puntos_recorrido / Eventos al esquema Movilidad
+# ---------------------------------------------------------------------------
+
+
+def test_trip_offset_derives_local_timezone():
+    import datetime
+    bridge, *_ = _make_bridge()
+    st = datetime.datetime(2026, 7, 3, 11, 6, 49)          # hora local
+    wps = [{"timestamp": 1783087614073}]                    # 14:06:54 UTC
+    off = bridge._trip_offset(st, wps)
+    assert bridge._fmt_offset(off) == "-03:00"
+
+
+def test_local_iso_appends_offset_with_millis():
+    import datetime
+    bridge, *_ = _make_bridge()
+    off = datetime.timedelta(hours=-3)
+    assert bridge._local_iso("2026-07-03T11:10:47.764000", off) == "2026-07-03T11:10:47.764-03:00"
+
+
+def test_wp_local_iso_converts_utc_epoch_to_local():
+    import datetime
+    bridge, *_ = _make_bridge()
+    off = datetime.timedelta(hours=-3)
+    # 1783087614073 = 14:06:54.073 UTC -> 11:06:54.073 -03:00
+    assert bridge._wp_local_iso(1783087614073, off) == "2026-07-03T11:06:54.073-03:00"
+
+
+def test_build_puntos_recorrido_matches_movilidad_schema():
+    import datetime
+    bridge, *_ = _make_bridge()
+    off = datetime.timedelta(hours=-3)
+    wps = [{"latitude": -34.4, "longitude": -58.5, "speedInMps": 10.0,
+            "speedLimitInMps": 16.6, "timestamp": 1783087614073}]
+    p = json.loads(bridge._build_puntos_recorrido(wps, off))[0]
+    assert set(p.keys()) == {
+        "latitude", "longitude", "timestamp", "road_type",
+        "speed", "speed_limit", "distance", "speed_v2_confidence",
+    }
+    assert p["road_type"] == "unknown"
+    assert p["distance"] == -1.0
+    assert p["speed_v2_confidence"] == 0.0
+    assert p["speed"] == 10.0
+    assert p["timestamp"].endswith("-03:00")
+
+
+def test_build_eventos_payload_harsh_schema():
+    import datetime
+    bridge, *_ = _make_bridge()
+    off = datetime.timedelta(hours=-3)
+    harsh = [{
+        "start_time": "2026-07-03T11:10:47.764000",
+        "end_time": "2026-07-03T11:10:47.764000",
+        "magnitude": 2.557, "harsh_type": "ACCELERATION",
+        "waypoints_json": [{"latitude": -34.4, "longitude": -58.5}],
+    }]
+    bridge._read_child_events = lambda v, u, table, cols: (
+        harsh if table == "DrivingInsightsHarshEvent" else []
+    )
+    ev = bridge._build_eventos_payload("v", "u", off)
+    acc = json.loads(ev["aceleracion"])
+    assert len(acc) == 1
+    assert set(acc[0].keys()) == {
+        "duration", "path", "magnitude", "start_at", "end_at", "type", "category", "mean",
+    }
+    assert acc[0]["type"] == "accelerate"
+    assert acc[0]["category"] == "accelerating"
+    assert acc[0]["mean"] == acc[0]["magnitude"] == 2.557
+    assert acc[0]["start_at"] == "2026-07-03T11:10:47.764-03:00"
+    assert acc[0]["path"] == [{"latitude": -34.4, "longitude": -58.5}]
+    assert json.loads(ev["frenado"]) == []
+    assert ev["celular_fijo"] == "[]"
+
+
 def test_eventos_y_significantes_son_espejo():
     """Eventos y EventosSignificantes deben recibir los mismos arrays JSON."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
