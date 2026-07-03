@@ -202,7 +202,8 @@ class MovilidadBridge:
                    t.transport_tags_json, t.waypoints_json,
                    di.legal_score, di.smooth_score, di.attention_score, di.overall_score,
                    di.focus_score, di.harsh_acceleration_score, di.harsh_braking_score,
-                   di.harsh_turning_score
+                   di.harsh_turning_score,
+                   di.driving_insights_trip_id
             FROM Trip t
             LEFT JOIN DrivingInsightsTrip di
               ON di.canonical_transport_event_id = t.canonical_transport_event_id
@@ -230,6 +231,10 @@ class MovilidadBridge:
             "attention": row[13], "overall": row[14],
             "focus": row[15], "harsh_acc": row[16],
             "harsh_brake": row[17], "harsh_turn": row[18],
+            # NULL when the trip has no DrivingInsights (i.e. non-motorised): the
+            # LEFT JOIN found no DrivingInsightsTrip row. Drives whether we write the
+            # driving-score tables for this trip (see _sync_one).
+            "di_id": row[19],
         }
 
     def _read_child_events(
@@ -372,9 +377,15 @@ class MovilidadBridge:
             transport_id, uid, trip, polyline_str, waypoints,
             loc_start, loc_end, max_speed,
         )
-        self._upsert_puntajes_primarios(transport_id, uid, trip)
-        harsh_count = self._count_harsh_events(transport_id, uid)
-        self._upsert_puntajes_secundarios(transport_id, uid, trip, harsh_count)
+        # Driving-score tables only apply to motorised trips (those with a
+        # DrivingInsights payload). Non-motorised trips (walking, bus, cycling, ...)
+        # have no scores, so we skip PuntajesPrirmariosTr / PuntajesSecundariosTr
+        # rather than writing meaningless all-zero rows. Transporte + Recorridos
+        # (the trajectory) are still projected above.
+        if trip.get("di_id") is not None:
+            self._upsert_puntajes_primarios(transport_id, uid, trip)
+            harsh_count = self._count_harsh_events(transport_id, uid)
+            self._upsert_puntajes_secundarios(transport_id, uid, trip, harsh_count)
         self._upsert_conduccion(transport_id, uid, trip)
         eventos = self._build_eventos_payload(transport_id, uid)
         self._upsert_eventos(transport_id, uid, eventos)

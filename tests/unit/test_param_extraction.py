@@ -563,6 +563,17 @@ class TestProcessTimelineEventsParams:
         merge_calls = [s for s in all_sqls if "MERGE Trip" in s]
         assert len(merge_calls) == 1
 
+    def test_timeline_trip_marks_dirty_for_bridge(self, etl_with_cursor, timeline_payload):
+        """A non-DrivingInsights trip (Timeline) must be added to _dirty_transport_ids
+        so the Movilidad bridge syncs it too. Regression: the bridge used to only see
+        DrivingInsights trips, so walking/bus/bike trips never reached Movilidad."""
+        etl_with_cursor._movilidad_enabled = True
+        etl_with_cursor._dirty_transport_ids = set()
+        timeline_payload["events"][0]["isProvisional"] = False
+        tid = timeline_payload["events"][0]["id"]
+        etl_with_cursor.process_timeline_events(sid=30, uid="user-11", payload=timeline_payload)
+        assert tid in etl_with_cursor._dirty_transport_ids
+
     def test_provisional_in_transport_skips_upsert_trip(self, etl_with_cursor, timeline_payload):
         """A provisional IN_TRANSPORT event (isProvisional=True) must NOT write to Trip."""
         assert timeline_payload["events"][0]["isProvisional"] is True  # fixture sanity check

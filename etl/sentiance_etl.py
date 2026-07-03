@@ -323,6 +323,13 @@ class SentianceETL:
             sid,
         ]
         self.cursor.execute(sql, params)
+        # Mark this trip dirty for the optional Movilidad bridge. This is the single
+        # point that covers EVERY trip source — DrivingInsights (motorised) as well as
+        # Timeline / UserContext (walking, bus, cycling, ...). Non-motorised trips reach
+        # Movilidad only because of this: they never carry a DrivingInsights payload, so
+        # the payload-level tracking in run() would miss them.
+        if self._movilidad_enabled:
+            self._dirty_transport_ids.add(tid)
         res = self.cursor.execute(
             "SELECT trip_id FROM Trip WHERE canonical_transport_event_id = ? AND sentiance_user_id = ?",
             (tid, uid),

@@ -244,6 +244,32 @@ def _trip_row():
         0.10,             # harsh_acc
         0.05,             # harsh_brake
         0.20,             # harsh_turn
+        1,                # di_id (motorised: DrivingInsightsTrip row exists)
+    )
+
+
+def _trip_row_non_motorised():
+    """A trip with a real trajectory but NO DrivingInsights (walking / bus / bike).
+    All di.* score columns and di_id come back NULL from the LEFT JOIN."""
+    waypoints_blob = _gzip_json([
+        {"latitude": -34.6, "longitude": -58.4, "speedInMps": 1.2},
+        {"latitude": -34.601, "longitude": -58.401, "speedInMps": 1.5},
+    ])
+    return (
+        2,                # trip_id
+        "user-walk",      # sentiance_user_id
+        "trip-walk",      # canonical_transport_event_id
+        "WALKING",        # transport_mode
+        "2026-03-02 10:00:00.000",
+        "2026-03-02 10:06:00.000",
+        360,              # duration_in_seconds
+        405.0,            # distance_meters
+        None,             # occupant_role
+        None,             # transport_tags_json
+        waypoints_blob,   # waypoints_json
+        None, None, None, None,   # legal/smooth/attention/overall
+        None, None, None, None,   # focus/harsh_acc/harsh_brake/harsh_turn
+        None,             # di_id -> non-motorised
     )
 
 
@@ -284,6 +310,32 @@ def test_sync_one_happy_path_populates_all_movilidad_tables():
     assert "MERGE Conduccion" in executed_sql
     assert "MERGE Eventos" in executed_sql
     assert "MERGE EventosSignificantes" in executed_sql
+
+
+def test_sync_one_non_motorised_writes_trajectory_but_skips_puntajes():
+    """Non-motorised trip (walking/bus/bike): Transporte + Recorridos are written,
+    but the driving-score tables are skipped (no meaningless all-zero rows)."""
+    bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
+    # No _count_harsh_events call happens (puntajes skipped), so the fetchone queue
+    # is just: _read_trip, then _upsert_perfil_usuario.
+    src_cursor.fetchone.side_effect = [_trip_row_non_motorised(), None]
+    src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
+
+    report = bridge.sync_trips({"trip-walk"})
+
+    assert report.synced == 1
+    assert report.failed == 0
+
+    executed_sql = " ".join(
+        call.args[0] for call in dst_cursor.execute.call_args_list
+    )
+    # Trajectory IS projected:
+    assert "MERGE Transporte" in executed_sql
+    assert "MERGE Recorridos" in executed_sql
+    assert "MERGE Conduccion" in executed_sql
+    # Driving-score tables are NOT:
+    assert "MERGE PuntajesPrirmariosTr" not in executed_sql
+    assert "MERGE PuntajesSecundariosTr" not in executed_sql
 
 
 def test_eventos_y_significantes_son_espejo():
