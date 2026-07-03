@@ -891,17 +891,18 @@ class SentianceETL:
         )
 
     def process_activity_history(self, sid, uid, payload):
-        """Stores a UserActivity event into UserActivityHistory and optionally upserts a Trip.
+        """Stores a UserActivity event into UserActivityHistory.
 
         UserActivity is a coarse-grained activity signal (IN_TRANSPORT, STATIONARY,
         etc.) emitted by the legacy activity API. It does not carry the full
         transport detail of DrivingInsights or Timeline events.
 
-        When activityType is IN_TRANSPORT or tripType is set, a minimal Trip record
-        is upserted using the sdk_source_event_id as the canonical transport ID
-        (since UserActivity does not provide a Sentiance transport event ID). This
-        ensures the trip is discoverable even when richer event types have not yet
-        arrived.
+        It does NOT create a Trip: UserActivity provides no Sentiance transport
+        event ID, so there is no valid canonical_transport_event_id to upsert on.
+        The trip detail arrives via DrivingInsights / Timeline events instead.
+        (A previous version passed sid as the transport ID, which made upsert_trip's
+        MERGE compare the VARCHAR canonical_transport_event_id column against an
+        integer and fail with "converting varchar to numeric" — error 8114.)
 
         Args:
             sid:     sdk_source_event_id of the current SdkSourceEvent row.
@@ -923,13 +924,6 @@ class SentianceETL:
                 json.dumps(payload),
             ),
         )
-        if payload.get("tripType") or payload.get("activityType") == "IN_TRANSPORT":
-            transport = {
-                "id": sid,
-                "startTime": payload.get("startTime"),
-                "transportMode": payload.get("tripType"),
-            }
-            self.upsert_trip(sid, uid, transport)
 
     def process_activity_update(self, sid, uid, payload):
         """Stores a UserActivityUpdate event into UserActivityHistory.
@@ -960,13 +954,13 @@ class SentianceETL:
                 json.dumps(payload),
             ),
         )
-        if trip_info or payload.get("type") == "USER_ACTIVITY_TYPE_TRIP":
-            transport = {
-                "id": sid,
-                "startTime": None,
-                "transportMode": trip_info.get("type"),
-            }
-            self.upsert_trip(sid, uid, transport)
+        # NOTE: UserActivityUpdate does NOT create a Trip. It carries no Sentiance
+        # transport event ID, so there is no valid canonical_transport_event_id to
+        # upsert on — the trip detail arrives via DrivingInsights / Timeline events.
+        # A previous version passed sid as the transport ID, which made upsert_trip's
+        # MERGE compare the VARCHAR canonical_transport_event_id column against an
+        # integer, forcing SQL Server to convert every existing (string) canonical ID
+        # to numeric and failing with "converting varchar to numeric" (error 8114).
 
     def process_technical_event(self, sid, uid, payload):
         """Stores an internal SDK diagnostic event into TechnicalEventHistory.

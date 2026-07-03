@@ -344,6 +344,15 @@ class TestProcessActivityUpdateParams:
         assert params[2] == "USER_ACTIVITY_TYPE_TRIP"  # activity_type
         assert params[3] == "TRIP_TYPE_SDK"            # trip_type
 
+    def test_trip_type_does_not_create_trip(self, etl_with_cursor):
+        """Regression guard (error 8114): a TRIP-type UserActivityUpdate must NOT
+        call upsert_trip. Passing sid as the transport ID made the MERGE compare the
+        VARCHAR canonical_transport_event_id column against an integer and crash.
+        Only the UserActivityHistory INSERT should run — exactly one execute call."""
+        payload = {"type": "USER_ACTIVITY_TYPE_TRIP", "tripInfo": {"type": "TRIP_TYPE_SDK"}}
+        etl_with_cursor.process_activity_update(sid=21, uid="user-7", payload=payload)
+        assert len(_execute_calls(etl_with_cursor.cursor)) == 1
+
     def test_unknown_type_no_crash(self, etl_with_cursor):
         payload = {"type": "USER_ACTIVITY_TYPE_UNKNOWN"}
         etl_with_cursor.process_activity_update(sid=22, uid="user-7", payload=payload)
@@ -358,6 +367,28 @@ class TestProcessActivityUpdateParams:
         params = _get_call_params(etl_with_cursor.cursor, 0)
         assert params[4] is None  # stationary_latitude
         assert params[5] is None  # stationary_longitude
+
+
+class TestProcessActivityHistoryParams:
+    """The legacy UserActivity handler (process_activity_history)."""
+
+    def test_fields_extracted(self, etl_with_cursor):
+        payload = {
+            "activityType": "STATIONARY",
+            "stationaryLocation": {"latitude": -34.6, "longitude": -58.4},
+        }
+        etl_with_cursor.process_activity_history(sid=30, uid="user-8", payload=payload)
+        params = _get_call_params(etl_with_cursor.cursor, 0)
+        assert params[2] == "STATIONARY"  # activity_type
+        assert params[4] == -34.6         # stationary_latitude
+
+    def test_in_transport_does_not_create_trip(self, etl_with_cursor):
+        """Regression guard (error 8114): same defect as UserActivityUpdate — the
+        legacy handler must NOT call upsert_trip for IN_TRANSPORT / tripType rows.
+        Only the UserActivityHistory INSERT should run — exactly one execute call."""
+        payload = {"activityType": "IN_TRANSPORT", "tripType": "TRIP_TYPE_SDK"}
+        etl_with_cursor.process_activity_history(sid=31, uid="user-8", payload=payload)
+        assert len(_execute_calls(etl_with_cursor.cursor)) == 1
 
 
 # ---------------------------------------------------------------------------

@@ -375,6 +375,28 @@ conectado al filtro de enrutamiento y la rama de despacho. 4 casos del corpus ag
 (3 formas: UNKNOWN, STATIONARY, TRIP); golden snapshot re-bendecido. Tests unitarios en
 `test_param_extraction.py::TestProcessActivityUpdateParams`.
 
+### 2026-07-03 — `UserActivity`/`UserActivityUpdate` rompen `upsert_trip` (varchar→numeric)
+
+Detectado corriendo el ETL contra `VictaTMTK_ETL` (sandbox de RDS con datos reales;
+ver `Documentos/GuiaPruebaETL.md`). Ambos handlers de actividad creaban un viaje pasando
+`sid` (un entero, el `sdk_source_event_id`) como `"id"` del transporte. `upsert_trip`
+hace `MERGE ... ON canonical_transport_event_id = source.tid`; como esa columna es
+`VARCHAR` y `tid` llegaba como entero, SQL Server —por precedencia de tipos— intentaba
+convertir **toda la columna a numérico** y fallaba con `8114: Error converting varchar to
+numeric` apenas hubiera un viaje con id string en la tabla (siempre). Cada `UserActivity` /
+`UserActivityUpdate` con info de viaje terminaba en `SentianceEventos_Errors` (con rollback
+de su fila de `UserActivityHistory`) en vez de generar datos. **La regresión no lo agarró**
+porque sus casos `UserActivityUpdate` no ejercitan la rama de viaje contra una tabla `Trip`
+ya poblada. **Estado: CORREGIDO (2026-07-03)** — un `UserActivity(Update)` no trae transport
+id real de Sentiance, así que ya **no crea viaje** (el detalle del viaje llega vía
+DrivingInsights / Timeline); se eliminó la llamada a `upsert_trip` de
+`process_activity_history` y `process_activity_update`. Tests unitarios de guardia en
+`TestProcessActivityUpdateParams::test_trip_type_does_not_create_trip` y
+`TestProcessActivityHistoryParams::test_in_transport_does_not_create_trip`.
+**Pendiente:** re-bendecir el golden (bloqueado por la BD Docker local corrupta — ver abajo);
+el diff esperado convierte el caso TRIP del corpus de fila de error a fila de
+`UserActivityHistory`.
+
 ---
 
 ## 9. Límites y FAQ
