@@ -1,39 +1,40 @@
 """
-ETL Test-DB Bootstrapper — VictaTMTK_ETL (RDS sandbox)
-======================================================
+Bootstrapper de la base de prueba del ETL — VictaTMTK_ETL (sandbox en RDS)
+=========================================================================
 
-DESCRIPTION:
-Prepares the `VictaTMTK_ETL` database on the RDS server so the Stage-2 ETL
-(etl/sentiance_etl.py) can be run against a real production-sized copy of the
-data WITHOUT touching the live `VictaTMTK` database.
+DESCRIPCIÓN:
+Prepara la base `VictaTMTK_ETL` en el servidor RDS para que el ETL Stage-2
+(etl/sentiance_etl.py) se pueda correr contra una copia real, del tamaño de
+producción, SIN tocar la base productiva `VictaTMTK`.
 
-`VictaTMTK_ETL` already contains the 14 legacy tables and ~78k rows in
-`SentianceEventos`, but it is missing the 22 Stage-2 domain tables and the
-`is_processed` column that the ETL needs. This script adds exactly those,
-idempotently.
+`VictaTMTK_ETL` ya contiene las 14 tablas legacy y ~78k filas en
+`SentianceEventos`, pero le faltan las 22 tablas de dominio Stage-2 y la columna
+`is_processed` que el ETL necesita. Este script agrega exactamente eso, de forma
+idempotente.
 
-WHY A DEDICATED SCRIPT:
-`development/sql/init_db.sql` hardcodes `USE master / CREATE DATABASE VictaTMTK /
-USE VictaTMTK`, so it cannot be pointed at `VictaTMTK_ETL` as-is. This script
-reuses the SAME CREATE TABLE definitions from that file but strips the database
-preamble, so every table lands in whatever database `.env` points at.
+POR QUÉ UN SCRIPT DEDICADO:
+`development/sql/init_db.sql` tiene hardcodeado `USE master / CREATE DATABASE
+VictaTMTK / USE VictaTMTK`, así que no se puede apuntar a `VictaTMTK_ETL` tal
+cual. Este script reutiliza las MISMAS definiciones de CREATE TABLE de ese
+archivo pero elimina el preámbulo de base de datos, de modo que cada tabla cae
+en la base a la que apunte el `.env`.
 
-This script NEVER runs `development/sql/migrate_prod_stage2.sql` (that file is a
-human-only production artifact). It applies only the minimal schema deltas the
-test run needs.
+Este script NUNCA ejecuta `development/sql/migrate_prod_stage2.sql` (ese archivo
+es un artefacto de producción de ejecución manual únicamente). Solo aplica los
+deltas de esquema mínimos que la corrida de prueba necesita.
 
-SAFETY:
-- Refuses to run unless DB_NAME == 'VictaTMTK_ETL' (override with --force).
-- Never issues CREATE DATABASE and never runs any USE statement, so it can only
-  affect the database it connects to.
-- --reset drops and recreates ONLY the 22 Stage-2 tables; it never touches
-  `SentianceEventos` data nor the legacy/bridge tables (Transporte, Eventos, ...).
+SEGURIDAD:
+- Se niega a correr salvo que DB_NAME == 'VictaTMTK_ETL' (se puede forzar con --force).
+- Nunca emite CREATE DATABASE ni ejecuta ninguna sentencia USE, así que solo
+  puede afectar la base a la que se conecta.
+- --reset elimina y recrea SOLO las 22 tablas Stage-2; nunca toca los datos de
+  `SentianceEventos` ni las tablas legacy/bridge (Transporte, Eventos, ...).
 
-USAGE:
-    # First-time setup (creates Stage-2 tables + is_processed column):
+USO:
+    # Preparación inicial (crea las tablas Stage-2 + la columna is_processed):
     .venv/bin/python development/bootstrap_etl_test_db.py
 
-    # Wipe Stage-2 output and re-arm the queue to test again from scratch:
+    # Borrar la salida Stage-2 y re-armar la cola para probar de nuevo desde cero:
     .venv/bin/python development/bootstrap_etl_test_db.py --reset
 """
 
@@ -55,9 +56,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ETL-TestDB-Bootstrap")
 
-# The 22 Stage-2 domain tables (everything init_db.sql creates EXCEPT the two
-# landing-zone tables SentianceEventos / SentianceEventos_Errors, which already
-# exist in VictaTMTK_ETL and hold the source data we want to keep).
+# Las 22 tablas de dominio Stage-2 (todo lo que crea init_db.sql EXCEPTO las dos
+# tablas de landing SentianceEventos / SentianceEventos_Errors, que ya existen en
+# VictaTMTK_ETL y contienen los datos fuente que queremos conservar).
 STAGE2_TABLES: tuple[str, ...] = (
     "SdkSourceEvent",
     "UserMetadata",
@@ -83,16 +84,16 @@ STAGE2_TABLES: tuple[str, ...] = (
     "UserOrganization",
 )
 
-# Batches from init_db.sql that manage the DATABASE itself (not tables). We skip
-# these so the schema lands in the already-connected database.
+# Batches de init_db.sql que gestionan la BASE DE DATOS en sí (no tablas). Los
+# salteamos para que el esquema caiga en la base ya conectada.
 _SKIP_BATCH_RE = re.compile(
     r"\bCREATE\s+DATABASE\b|\bUSE\s+(?:master|VictaTMTK)\b", re.IGNORECASE
 )
 
 
 def _build_conn_str() -> tuple[str, str]:
-    """Build an ODBC connection string from the DB_* env vars (same ones the
-    ETL uses). Returns (conn_str, db_name)."""
+    """Arma un connection string ODBC a partir de las variables de entorno DB_*
+    (las mismas que usa el ETL). Devuelve (conn_str, db_name)."""
     server = os.getenv("DB_SERVER")
     port = os.getenv("DB_PORT")
     user = os.getenv("DB_USER")
@@ -114,8 +115,9 @@ def _build_conn_str() -> tuple[str, str]:
         logger.error("Faltan variables en el .env: %s", ", ".join(missing))
         sys.exit(1)
 
-    # Driver selection mirrors etl/sentiance_etl.py: honor DB_DRIVER if set,
-    # otherwise auto-detect the newest ODBC driver installed (18 → 17 → legacy).
+    # La selección de driver refleja la de etl/sentiance_etl.py: respeta DB_DRIVER
+    # si está seteado, si no autodetecta el driver ODBC más nuevo instalado
+    # (18 → 17 → legacy).
     driver = os.getenv("DB_DRIVER")
     if not driver:
         available = pyodbc.drivers()
@@ -139,8 +141,8 @@ def _build_conn_str() -> tuple[str, str]:
 
 
 def _load_stage2_batches() -> list[str]:
-    """Read init_db.sql and return only the batches that create Stage-2 objects,
-    with the CREATE DATABASE / USE preamble stripped out."""
+    """Lee init_db.sql y devuelve solo los batches que crean objetos Stage-2, con
+    el preámbulo de CREATE DATABASE / USE ya eliminado."""
     script_path = os.path.join(os.path.dirname(__file__), "sql", "init_db.sql")
     if not os.path.exists(script_path):
         logger.error("No se encontró el esquema en: %s", script_path)
@@ -155,7 +157,7 @@ def _load_stage2_batches() -> list[str]:
         if not batch:
             continue
         if _SKIP_BATCH_RE.search(batch):
-            continue  # database-level statement — not for a test DB
+            continue  # sentencia a nivel de base de datos — no va en una base de prueba
         batches.append(batch)
     return batches
 
@@ -167,14 +169,14 @@ def _run_batches(cursor: pyodbc.Cursor, batches: list[str]) -> None:
         except Exception as exc:  # noqa: BLE001
             msg = str(exc).lower()
             if "already exists" in msg or "there is already an object" in msg:
-                continue  # idempotent re-run
+                continue  # re-ejecución idempotente
             logger.error("Error ejecutando un batch: %s", exc)
 
 
 def _ensure_is_processed(cursor: pyodbc.Cursor) -> None:
-    """Add SentianceEventos.is_processed (SMALLINT) if it is missing. The table
-    pre-exists in VictaTMTK_ETL, so init_db.sql's IF NOT EXISTS guard skips it
-    and never adds this column — we add it explicitly here."""
+    """Agrega SentianceEventos.is_processed (SMALLINT) si falta. La tabla ya
+    existe en VictaTMTK_ETL, así que el guard IF NOT EXISTS de init_db.sql la
+    saltea y nunca agrega esta columna — la agregamos explícitamente acá."""
     cursor.execute(
         """
         IF NOT EXISTS (
@@ -186,7 +188,7 @@ def _ensure_is_processed(cursor: pyodbc.Cursor) -> None:
                     CONSTRAINT DF_SentianceEventos_is_processed DEFAULT 0;
         """
     )
-    # Filtered index that backs the queue scan (WHERE is_processed = 0).
+    # Índice filtrado que respalda el escaneo de la cola (WHERE is_processed = 0).
     cursor.execute(
         """
         IF NOT EXISTS (
@@ -201,11 +203,11 @@ def _ensure_is_processed(cursor: pyodbc.Cursor) -> None:
 
 
 def _reset_stage2(cursor: pyodbc.Cursor) -> None:
-    """Drop the 22 Stage-2 tables (FKs first) and re-arm the queue. Source data
-    in SentianceEventos and the legacy/bridge tables are left untouched."""
+    """Elimina las 22 tablas Stage-2 (primero las FKs) y re-arma la cola. Los
+    datos fuente en SentianceEventos y las tablas legacy/bridge quedan intactos."""
     names_sql = ", ".join(f"'{t}'" for t in STAGE2_TABLES)
 
-    # 1. Drop every FK that touches a Stage-2 table (as parent or as referenced).
+    # 1. Eliminar toda FK que toque una tabla Stage-2 (como padre o como referenciada).
     cursor.execute(
         f"""
         SELECT 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name)
@@ -220,17 +222,17 @@ def _reset_stage2(cursor: pyodbc.Cursor) -> None:
     for (stmt,) in cursor.fetchall():
         cursor.execute(stmt)
 
-    # 2. Drop the tables themselves.
+    # 2. Eliminar las tablas en sí.
     for table in STAGE2_TABLES:
         cursor.execute(f"IF OBJECT_ID('dbo.{table}', 'U') IS NOT NULL DROP TABLE dbo.{table};")
 
-    # 3. Re-arm the whole queue so the next ETL run reprocesses everything.
+    # 3. Re-armar toda la cola para que la próxima corrida del ETL reprocese todo.
     cursor.execute("UPDATE dbo.SentianceEventos SET is_processed = 0;")
     logger.info("Reset OK: tablas Stage-2 recreadas y cola re-armada (is_processed = 0).")
 
 
-# Tables to show a row count for in the summary (ETL output + bridge output).
-# The count is only shown if the table exists.
+# Tablas para las que mostrar un conteo de filas en el resumen (salida del ETL +
+# salida del bridge). El conteo solo se muestra si la tabla existe.
 _COUNT_STAGE2 = ("SdkSourceEvent", "Trip", "DrivingInsightsTrip", "UserContextHeader",
                  "TimelineEventHistory", "VehicleCrashEvent")
 _COUNT_BRIDGE = ("Transporte", "Recorridos", "Eventos", "PuntajesPrirmariosTr")
@@ -318,7 +320,7 @@ def main() -> None:
 
         if args.reset:
             _reset_stage2(cursor)
-            # Recreate the freshly-dropped tables.
+            # Recrear las tablas recién eliminadas.
             _run_batches(cursor, batches)
 
         _print_summary(cursor, db_name)
