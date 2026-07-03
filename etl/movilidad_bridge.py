@@ -127,6 +127,14 @@ class MovilidadBridge:
         "UNAVAILABLE": "No disponible",
     }
 
+    # Movilidad nunca resuelve geocoding inverso: guarda este objeto constante en
+    # ubicacion_inicio / ubicacion_fin en el 100% de sus filas. Lo reproducimos igual.
+    UBICACION_DESCONOCIDA: str = json.dumps(
+        {"country": "unknown", "region": "unknown", "city": "unknown",
+         "district": "unknown", "street": "unknown"},
+        separators=(",", ":"),
+    )
+
     def _ocupante_movilidad(self, occupant_role: Optional[str]) -> Optional[str]:
         """Traduce el rol del ocupante del SDK al vocabulario español de Movilidad."""
         if occupant_role is None:
@@ -483,12 +491,14 @@ class MovilidadBridge:
         metadata = self._decode_tags(trip["transport_tags_gzip"])
         modo = self._modo_movilidad(trip["transport_mode"])
         duracion = int(trip["duration_s"] or 0)
+        # Movilidad no computa velocidad máxima a nivel Transporte: guarda -1 en el
+        # 100% de sus filas. La velocidad real (km/h) va en Recorridos.maxima_velocidad.
         params = [
             viaje, uid,
             modo, trip["start_time"], trip["end_time"], duracion,
-            metadata, max_speed,
+            metadata, -1.0,
             uid, viaje, modo, trip["start_time"], trip["end_time"], duracion,
-            metadata, max_speed,
+            metadata, -1.0,
         ]
         self._exec_dst(sql, params)
 
@@ -515,14 +525,20 @@ class MovilidadBridge:
              ubicacion_inicio, ubicacion_fin, maxima_velocidad)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """
-        distancia = float(trip["distance_m"] or 0)
-        puntos = json.dumps(waypoints) if waypoints else "[]"
+        # Formato / orden de magnitud de Movilidad: distancia en centímetros
+        # (metros x 100, entero), velocidad máxima en km/h entero (m/s x 3.6), y
+        # ubicacion_* como el objeto "unknown" constante. No buscamos el valor
+        # exacto de su algoritmo, sino reproducir formato y magnitud.
+        distancia = int(round(float(trip["distance_m"] or 0) * 100))
+        vmax_kmh = int(round(float(max_speed or 0) * 3.6))
+        ubic = self.UBICACION_DESCONOCIDA
+        puntos = json.dumps(waypoints) if waypoints else "[]"  # esquema en Tanda B
         # polyline es NOT NULL en Recorridos — si no hay waypoints, igual va string vacío.
         params = [
             viaje, uid,
-            distancia, polyline_str, puntos, loc_start, loc_end, max_speed,
+            distancia, polyline_str, puntos, ubic, ubic, vmax_kmh,
             uid, viaje, distancia, polyline_str, puntos,
-            loc_start, loc_end, max_speed,
+            ubic, ubic, vmax_kmh,
         ]
         self._exec_dst(sql, params)
 
@@ -582,9 +598,9 @@ class MovilidadBridge:
         # anticipacion / celular_fijo son cloud-only en Sentiance (no llegan por SDK):
         # se escriben como -1 ("sin dato"), igual que en el Movilidad real.
         focus = self._score(trip["focus"])
-        h_acc = self._score(trip["harsh_acc"])
-        h_br = self._score(trip["harsh_brake"])
-        h_tu = self._score(trip["harsh_turn"])
+        # Movilidad tampoco computa los sub-scores de harsh (aceleración/frenado/curvas):
+        # tiene -1 en el 100% de sus filas. Reproducimos ese centinela.
+        h_acc = h_br = h_tu = -1.0
         params = [
             viaje, uid,
             focus, h_acc, h_br, h_tu, harsh_count,

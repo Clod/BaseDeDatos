@@ -484,6 +484,52 @@ def test_upsert_conduccion_writes_spanish_role():
     assert "DRIVER" not in params
 
 
+# ---------------------------------------------------------------------------
+# Formato / orden de magnitud (paridad con Movilidad, no valor exacto)
+# ---------------------------------------------------------------------------
+
+
+def _sync_motorised(bridge, src_cursor, harsh_count=0):
+    src_cursor.fetchone.side_effect = [_trip_row(), (harsh_count,), None]
+    src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
+    bridge.sync_trips({"trip-xyz"})
+
+
+def test_transporte_velocidad_maxima_is_sentinel():
+    """Movilidad guarda -1 en Transporte.velocidad_maxima (no lo computa)."""
+    bridge, _sc, src_cursor, _dc, dst_cursor = _make_bridge()
+    _sync_motorised(bridge, src_cursor)
+    t = next(c for c in dst_cursor.execute.call_args_list if "MERGE Transporte" in c.args[0])
+    assert t.args[1][7] == -1.0  # velocidad_maxima
+
+
+def test_recorridos_format_and_magnitude():
+    """distancia en cm (x100), vmax en km/h (x3.6 entero), ubicacion = objeto unknown."""
+    bridge, _sc, src_cursor, _dc, dst_cursor = _make_bridge()
+    _sync_motorised(bridge, src_cursor)
+    r = next(c for c in dst_cursor.execute.call_args_list if "MERGE Recorridos" in c.args[0])
+    p = r.args[1]
+    # [viaje, uid, distancia, polyline, puntos, ubic_ini, ubic_fin, vmax, ...]
+    assert p[2] == 1250050  # 12500.5 m -> cm
+    assert p[7] == 72       # 20 m/s -> 72 km/h
+    assert p[5] == bridge.UBICACION_DESCONOCIDA
+    assert p[6] == bridge.UBICACION_DESCONOCIDA
+    assert '"country":"unknown"' in bridge.UBICACION_DESCONOCIDA
+
+
+def test_secundarios_harsh_subscores_are_sentinel():
+    """Movilidad tiene -1 en aceleracion/frenado/curvas; eventos_fuertes = conteo real."""
+    bridge, _sc, src_cursor, _dc, dst_cursor = _make_bridge()
+    _sync_motorised(bridge, src_cursor, harsh_count=3)
+    s = next(c for c in dst_cursor.execute.call_args_list if "MERGE PuntajesSecundariosTr" in c.args[0])
+    p = s.args[1]
+    # [viaje, uid, concentracion, acel, frenado, curvas, eventos, ...]
+    assert p[3] == -1.0  # aceleracion_fuerte
+    assert p[4] == -1.0  # frenado_fuerte
+    assert p[5] == -1.0  # curvas_fuertes
+    assert p[6] == 3     # eventos_fuertes (conteo real, se mantiene)
+
+
 def test_eventos_y_significantes_son_espejo():
     """Eventos y EventosSignificantes deben recibir los mismos arrays JSON."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
