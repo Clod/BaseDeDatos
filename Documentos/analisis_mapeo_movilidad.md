@@ -11,7 +11,7 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 **Campos:** `modo_transporte`, `comienzo`, `fin`, `duracion`, `metadata`, `velocidad_maxima`
 
 **Equivalencia en el SDK (`TransportEvent` / `DrivingInsight`):**
-*   **`modo_transporte`:** Mapeado directo a `transportMode` (ej. `CAR`, `BUS`).
+*   **`modo_transporte`:** El SDK entrega `transportMode` en inglés (`CAR`, `BUS`, `WALKING`, …); el bridge lo **traduce al vocabulario español** que usa Movilidad: `CAR→Auto`, `BUS→Colectivo`, `MOTORCYCLE→Moto`, `WALKING→Caminando`, `BICYCLE→Bicicleta`, `TRAIN→Tren`, `TRAM→Subte`, `UNKNOWN→Desconocido` (`IDLE`/`RUNNING` se conservan en inglés, igual que Movilidad). Validado contra el Movilidad real (2026-07-03): 100% de coincidencia sobre la intersección.
 *   **`comienzo`, `fin`:** Mapeado a `startTimeEpoch` / `endTimeEpoch` (y `startTime` / `endTime` ISO strings).
 *   **`duracion`:** Mapeado a `durationInSeconds`.
 *   **`velocidad_maxima`:** El SDK no expone globalmente este valor en el nivel primario de la clase `TransportEvent`, pero puede ser inferido fácilmente iterando sobre los elementos del vector `waypoints` y obteniendo el máximo de la propiedad `speedInMps`.
@@ -40,9 +40,9 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 **Campos vitales:** `ocupante` (Driver, Passenger).
 
 **Equivalencia en el SDK:**
-*   **`ocupante`:** Mapeado directamente al campo `occupantRole` provisto bajo `TransportEvent`. Los valores emitidos por SDK son explícitamente `"DRIVER"`, `"PASSENGER"` y `"UNAVAILABLE"`.
+*   **`ocupante`:** El SDK entrega `occupantRole` en inglés (`"DRIVER"`, `"PASSENGER"`, `"UNAVAILABLE"`); el bridge lo **traduce** a `Conductor`, `Pasajero`, `No disponible` (vocabulario de Movilidad). Validado contra el Movilidad real (2026-07-03): 100% de coincidencia.
 
-✅ **Conclusión:** Mapeo directo y transparente.
+✅ **Conclusión:** Mapeo directo, con traducción del vocabulario al español.
 
 ---
 
@@ -53,8 +53,9 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 **Equivalencia en el SDK (`DrivingInsight.safetyScores`):**
 *   **`legal`:** `legalScore`
 *   **`suavidad`:** `smoothScore`
-*   **`atencion`:** `attentionScore`
+*   **`atencion`:** `focusScore` (⚠️ **no** `attentionScore`). Verificado contra el Movilidad real (2026-07-03): con `focusScore` la coincidencia es 99% vs 33% con `attentionScore`. Nota: tanto `atencion` (acá) como `concentracion` (Secundarios) salen del mismo `focusScore`.
 *   **`promedio`:** `overallScore`
+*   *Scores ausentes:* si el SDK no trae un score (`null`), se escribe `-1` ("sin dato"), no `0` — igual que el Movilidad real. Un `0.0` real se conserva.
 
 ✅ **Conclusión:** Completo soporte mediante la inferencia base del SDK, el objeto `SafetyScores` proporciona los niveles primarios crudos.
 
@@ -70,8 +71,8 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 *   **`frenado_fuerte`:** `harshBrakingScore`
 *   **`curvas_fuertes`:** `harshTurningScore`
 *   **`eventos_fuertes`:** Debe procesarse en Backend haciendo la cuenta total o suma de los arreglos locales de Harsh Events recibidos en cada viaje del SDK.
-*   **`anticipacion`:** ❌ **No está disponible en el SDK**. Sentiance Cloud procesa el *Anticipative Score* agregando reglas complejas cruzadas entre giros y mapas, lo que no sucede de forma on-device. Su propiedad carece de un mapping dentro de los interfaces TS/Swift/Kotlin de la SDK local provista.
-*   **`celular_fijo` (score/count global):** ❌ Las detecciones globales de celular montadose realizan en la nube (`Mounted`). La alternativa es estimarlo mediante eventos específicos de telefonía y su `handsFreeState` devuelto.
+*   **`anticipacion`:** ❌ **No está disponible en el SDK**. Sentiance Cloud procesa el *Anticipative Score* agregando reglas complejas cruzadas entre giros y mapas, lo que no sucede de forma on-device. Su propiedad carece de un mapping dentro de los interfaces TS/Swift/Kotlin de la SDK local provista. Se escribe **`-1`** ("sin dato"), igual que el Movilidad real (que tiene `-1` en el 100% de sus filas).
+*   **`celular_fijo` (score/count global):** ❌ Las detecciones globales de celular montadose realizan en la nube (`Mounted`). La alternativa es estimarlo mediante eventos específicos de telefonía y su `handsFreeState` devuelto. Se escribe **`-1`** ("sin dato"), igual que el Movilidad real.
 
 ⚠️ **Conclusión:** Limitación importante: El puntaje de anticipación no se replica si se corta el proceso Cloud. Los scores base de frenos y aceleración sí persisten.
 
@@ -106,7 +107,7 @@ El SDK expone eventos a través de arrays obtenidos asíncronamente luego del tr
 Con la retroalimentación del negocio, estas son las definiciones que conformarán las reglas de la función de Ingesta (AWL Lambda):
 
 1.  **Omisión de Novedades No-Soportadas Nativamente:** 
-    *   `anticipacion`, `celular_fijo` y `pantalla` **no bloquearán** el desarrollo porque se ignorarán completamente. Se guardarán como valores en cero (0) o nulos en las DBs para cumplir con los schemas, sin detener la importación del viaje.
+    *   `anticipacion`, `celular_fijo` y `pantalla` **no bloquearán** el desarrollo porque se ignorarán completamente. Los scores numéricos (`anticipacion`, `celular_fijo` en Secundarios) se guardan como **`-1`** ("sin dato", igual que Movilidad); las columnas de listas JSON (`pantalla`, `celular_fijo` en Eventos) como `"[]"`. Así se cumple el schema sin detener la importación del viaje.
 2.  **Tabla de Recorridos (`polyline`):**
     *   Actualmente la BD SQL requiere estrictamente la string de la columna (campo NOT NULL).
     *   Para satisfacer este esquema actual, la función Lambda construirá automáticamente el string cifrado *Polyline* a partir del listado serializado de `waypoints` crudos extraídos de la Payload (`TransportEvent.waypoints`). No interviene procesamiento extra-complejo, sino una simple librería de encoding (ej. la librería de Python `polyline` o `google-polyline` de NodeJS en Lambda).
@@ -235,9 +236,12 @@ SentianceEventos (REST) ──► sentiance_etl.py ──► VictaTMTK (fuente d
 | `polyline` | Codificado con la librería `polyline` de PyPI (`pip install polyline`). |
 | `ubicacion_inicio` / `ubicacion_fin` | Coordenadas `"lat,lon"` del primer/último waypoint. **No** se hace geocoding inverso. |
 | `EventosSignificantes` | Espejo idéntico de `Eventos` hasta que Operaciones defina umbrales (sección 7.3). Atención: la columna se llama `exceso_velocidad` (sin `_de_`). |
-| `anticipacion` | `NULL` (cloud-only ML, no expuesto por SDK). |
-| `celular_fijo` / `pantalla` | `0` / `"[]"` (cloud-only ML). |
-| `Conduccion` | Fuera de scope — la tabla no existe en el esquema Movilidad real. |
+| `anticipacion` | `-1` ("sin dato"; cloud-only ML, no expuesto por SDK). |
+| `celular_fijo` (Secundarios, numérico) / `pantalla` (Eventos, lista) | `-1` / `"[]"` (cloud-only ML). |
+| Scores ausentes (`legal`/`suavidad`/`atencion`/`promedio`) | `-1` si el SDK no los trae (no `0`); `0.0` real se conserva. |
+| `modo_transporte` / `ocupante` | Traducidos al vocabulario español de Movilidad (validado 100%). |
+| `atencion` | Sale de `focusScore`, **no** `attentionScore` (validado 99% vs 33%). |
+| `Conduccion` | **Sí existe** en el Movilidad real; se puebla con `ocupante` traducido. |
 
 ### Variables de entorno
 
