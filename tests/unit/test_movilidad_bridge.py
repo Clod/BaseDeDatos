@@ -338,6 +338,62 @@ def test_sync_one_non_motorised_writes_trajectory_but_skips_puntajes():
     assert "MERGE PuntajesSecundariosTr" not in executed_sql
 
 
+# ---------------------------------------------------------------------------
+# modo_transporte: traducción al vocabulario español de Movilidad
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "sdk_mode, expected",
+    [
+        ("CAR", "Auto"),
+        ("BUS", "Colectivo"),
+        ("MOTORCYCLE", "Moto"),
+        ("WALKING", "Caminando"),
+        ("BICYCLE", "Bicicleta"),
+        ("TRAIN", "Tren"),
+        ("TRAM", "Subte"),
+        ("UNKNOWN", "Desconocido"),
+        ("IDLE", "IDLE"),        # estado de actividad: Movilidad lo conserva en inglés
+        ("RUNNING", "RUNNING"),  # idem
+        ("car", "Auto"),         # case-insensitive
+        (None, "Desconocido"),   # None -> UNKNOWN -> Desconocido
+    ],
+)
+def test_modo_movilidad_translates_sdk_vocabulary(sdk_mode, expected):
+    bridge, *_ = _make_bridge()
+    assert bridge._modo_movilidad(sdk_mode) == expected
+
+
+def test_modo_movilidad_unknown_mode_falls_back_raw_and_warns(caplog):
+    import logging
+
+    bridge, *_ = _make_bridge()
+    with caplog.at_level(logging.WARNING):
+        result = bridge._modo_movilidad("BOAT")
+    # Un modo desconocido se deja crudo (visible) en vez de enmascararse:
+    assert result == "BOAT"
+    assert any("sin mapeo" in r.getMessage() for r in caplog.records)
+
+
+def test_upsert_transporte_writes_spanish_mode():
+    """Un viaje CAR debe escribir 'Auto' en Transporte, no 'CAR'."""
+    bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
+    src_cursor.fetchone.side_effect = [_trip_row(), (0,), None]
+    src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
+
+    bridge.sync_trips({"trip-xyz"})
+
+    transporte_calls = [
+        call for call in dst_cursor.execute.call_args_list
+        if "MERGE Transporte" in call.args[0]
+    ]
+    assert transporte_calls, "no se ejecutó el MERGE de Transporte"
+    params = transporte_calls[0].args[1]
+    assert "Auto" in params
+    assert "CAR" not in params
+
+
 def test_eventos_y_significantes_son_espejo():
     """Eventos y EventosSignificantes deben recibir los mismos arrays JSON."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()

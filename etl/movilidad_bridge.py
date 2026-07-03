@@ -84,6 +84,38 @@ class MovilidadBridge:
         "MOVILIDAD_PASSWORD",
     )
 
+    # Vocabulario de `modo_transporte` que espera el Movilidad legacy (en español).
+    # El SDK de Sentiance entrega el modo en inglés; el Movilidad existente (cargado
+    # históricamente vía CSV) lo almacena traducido. Para reproducir ese sistema, el
+    # bridge traduce con este mapeo. `IDLE` y `RUNNING` son estados de actividad —no
+    # modos de transporte— y Movilidad los conserva en inglés. Un modo no mapeado se
+    # deja crudo (y se loguea) para que un modo nuevo del SDK aparezca visible en vez
+    # de enmascararse silenciosamente como "Desconocido".
+    MODO_TRANSPORTE_MAP: dict[str, str] = {
+        "CAR": "Auto",
+        "BUS": "Colectivo",
+        "MOTORCYCLE": "Moto",
+        "WALKING": "Caminando",
+        "BICYCLE": "Bicicleta",
+        "TRAIN": "Tren",
+        "TRAM": "Subte",
+        "UNKNOWN": "Desconocido",
+        "IDLE": "IDLE",
+        "RUNNING": "RUNNING",
+    }
+
+    def _modo_movilidad(self, transport_mode: Optional[str]) -> str:
+        """Traduce el modo de transporte del SDK al vocabulario español de Movilidad."""
+        raw = (transport_mode or "UNKNOWN").upper()
+        modo = self.MODO_TRANSPORTE_MAP.get(raw)
+        if modo is None:
+            logger.warning(
+                "MovilidadBridge: modo de transporte sin mapeo '%s'; se escribe crudo. "
+                "Agregarlo a MODO_TRANSPORTE_MAP.", raw,
+            )
+            return raw
+        return modo
+
     def __init__(
         self,
         victatmtk_conn: pyodbc.Connection,
@@ -424,7 +456,7 @@ class MovilidadBridge:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """
         metadata = self._decode_tags(trip["transport_tags_gzip"])
-        modo = trip["transport_mode"] or "UNKNOWN"
+        modo = self._modo_movilidad(trip["transport_mode"])
         duracion = int(trip["duration_s"] or 0)
         params = [
             viaje, uid,
