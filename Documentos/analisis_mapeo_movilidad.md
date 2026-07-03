@@ -14,7 +14,7 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 *   **`modo_transporte`:** El SDK entrega `transportMode` en inglés (`CAR`, `BUS`, `WALKING`, …); el bridge lo **traduce al vocabulario español** que usa Movilidad: `CAR→Auto`, `BUS→Colectivo`, `MOTORCYCLE→Moto`, `WALKING→Caminando`, `BICYCLE→Bicicleta`, `TRAIN→Tren`, `TRAM→Subte`, `UNKNOWN→Desconocido` (`IDLE`/`RUNNING` se conservan en inglés, igual que Movilidad). Validado contra el Movilidad real (2026-07-03): 100% de coincidencia sobre la intersección.
 *   **`comienzo`, `fin`:** Mapeado a `startTimeEpoch` / `endTimeEpoch` (y `startTime` / `endTime` ISO strings).
 *   **`duracion`:** Mapeado a `durationInSeconds`.
-*   **`velocidad_maxima`:** El SDK no expone globalmente este valor en el nivel primario de la clase `TransportEvent`, pero puede ser inferido fácilmente iterando sobre los elementos del vector `waypoints` y obteniendo el máximo de la propiedad `speedInMps`.
+*   **`velocidad_maxima`:** El SDK no expone globalmente este valor a nivel `TransportEvent`. **Movilidad tampoco lo computa en `Transporte`: guarda `-1` en el 100% de sus filas**, así que el bridge escribe `-1` acá. La velocidad máxima real (derivada del máximo de `speedInMps` en `waypoints`, en km/h) va en `Recorridos.maxima_velocidad`.
 *   **`metadata`:** El objeto `transportTags` incluye la metadata asociada configurada en el viaje.
 
 ✅ **Conclusión:** Plenamente representable partiendo de la estructura del SDK.
@@ -26,12 +26,15 @@ Este documento detalla el análisis y equivalencia entre la información alojada
 **Campos:** `distancia_m`, `polyline`, `puntos_recorrido`, `ubicacion_inicio`, `ubicacion_fin`, `maxima_velocidad`
 
 **Equivalencia en el SDK (`TransportEvent`):**
-*   **`distancia_m`:** Mapeado a `distance`.
-*   **`puntos_recorrido`:** Mapeado directamente a la lista en `waypoints` (arrays de objetos con lat, lon, precisiòn, velocidad y límites).
-*   **`polyline`:** El payload del SDK **no devuelve un string Polyline codificado**. Generar la Polyline se debe realizar on-backend utilizando los `waypoints` recolectados o librerías estándar en el Lambda (p. ej: polyline.js / python polyline decoder).
-*   **`ubicacion_inicio` / `ubicacion_fin`:** Geocoding reverso textual (ej. texto de una calle o ciudad) no está resuelto nativamente a nivel `TransportEvent`. Se requieren las coordenadas del primer/ultimo waypoint o usar nodos semánticos (Locations) del payload `UserContext` para obtener su equivalencia.
+*   **`distancia_m`:** `distance` **× 100** — Movilidad guarda la distancia en **centímetros** (entero), no en metros.
+*   **`maxima_velocidad`:** máximo de `speedInMps` en `waypoints` **× 3.6** (km/h entero). Movilidad usa su propio algoritmo, así que el valor exacto difiere; reproducimos formato y orden de magnitud.
+*   **`puntos_recorrido`:** cada waypoint reformateado al esquema de Movilidad: `{latitude, longitude, timestamp (ISO en hora local del viaje), road_type:"unknown", speed (m/s), speed_limit (m/s), distance:-1.0, speed_v2_confidence:0.0}`.
+*   **`polyline`:** El payload del SDK **no devuelve un string Polyline codificado**; se genera on-backend con la librería `polyline` (PyPI) a partir de los `waypoints`.
+*   **`ubicacion_inicio` / `ubicacion_fin`:** **Movilidad nunca resuelve geocoding reverso**: guarda el objeto constante `{"country":"unknown","region":"unknown","city":"unknown","district":"unknown","street":"unknown"}` en el 100% de sus filas. El bridge escribe ese mismo objeto (no coordenadas ni geocoding).
 
-⚠️ **Conclusión:** Información geoespacial está ahí (`waypoints`), pero métricas formales como textos geocodificados (Geo-decoding inverso) deberán procesarse en backend para suplir aquello que la nube Sentiance realizaba previamente.
+✅ **Conclusión:** Reproducible partiendo de `waypoints`. Se prioriza formato + orden de magnitud (no el valor exacto de los algoritmos internos de Movilidad).
+
+> **Nota sobre la hora local:** los timestamps de `puntos_recorrido` (y de `Eventos`, sección 6) usan la hora local del viaje. El offset se deriva por viaje comparando `Trip.start_time` (que ya viene en local) contra el UTC del primer waypoint, redondeado a 15 minutos — sin librería de timezones.
 
 ---
 
@@ -92,9 +95,17 @@ El SDK expone eventos a través de arrays obtenidos asíncronamente luego del tr
 *   **`exceso_de_velocidad`:** Emitido bajo `SpeedingEvent` / `WrongWayDrivingEvent`.
 *   **`pantalla`:** ❌ **Aviso Crítico.** Sentiance realiza la categorización y separación de eventos base en "Screen Usage" y "Phone Handling" apoyado en modelos de ML en la nube. A nivel SDK on-device, este detalle *Screen Use* no viene especificado en sí. Deben apalancarse de `PhoneUsageEvent` como entidad unificadora, lo cual puede implicar pérdida de granularidad entre sólo prender la pantalla vs. teclear activamente.
 *   **`celular_fijo`:** El único registro local donde Sentiance reporta *mounted* de forma similar es usando la propiedad `handsFreeState == "HANDS_FREE"` en `CallEvent`. No existe un sub-evento general y global de montar el celular a nivel de *Timeline SDK*.
-*   **Eventos significantes:** Si desean separar "Todos" de "Significantes", se tendrán usar de las propiedades `magnitude` y `confidence` presentes en eventos como `HarshDrivingEvent` para segmentarlos lógicamente en la BD en base a umbrales propios.
+*   **Eventos significantes:** hoy `EventosSignificantes` es un espejo idéntico de `Eventos` (sin umbral aún; ver Decisiones §7.3).
 
-⚠️ **Conclusión:** Gran parte está mapeable con reestructuración en el parsing Backend. Existen brechas conceptuales menores, originadas porque las versiones de eventos que la Nube Sentiance expone, atraviesan modelos de Machine Learning superiores que separan "pantalla", "manipulación" y "soporte" con más rigurosidad de lo que el chip móvil computa por su cuenta.
+**Esquema de salida (formato exacto de Movilidad que reproduce el bridge):**
+Cada columna es un array JSON. Los timestamps van en hora local del viaje (ver §2, nota de hora local).
+*   **`aceleracion` / `frenado` / `curvas`** (de `HarshDrivingEvent`): `{duration, path:[{latitude,longitude}], magnitude, start_at, end_at, type, category}`. `type`/`category`: `accelerate`/`accelerating`, `brake`/`braking`, `turn`/`turning`. `aceleracion` y `frenado` incluyen además `mean` (= `magnitude`); `curvas` no.
+*   **`uso_telefono`** (de `PhoneUsageEvent`): `{duration, path, start_at, end_at, type:"phone_handling", category:"phone_handling"}`.
+*   **`llamados`** (de `CallEvent`): `{duration, start_at, end_at, type:"call_events", category:"call_events"}` (sin `path`).
+*   **`exceso_de_velocidad`** (de `SpeedingEvent` + `WrongWayDrivingEvent`): `{duration, path, start_at, end_at, type:"speeding", category:"speeding", speed_limits:[km/h], speeds:[km/h]}` (derivados de `speedLimitInMps` / `speedInMps` de los waypoints).
+*   **`celular_fijo` / `pantalla`:** `"[]"` (cloud-only, no disponible por SDK).
+
+✅ **Conclusión:** El **formato** de todas las columnas de eventos es idéntico al de Movilidad (validado campo a campo). El **contenido** puede diferir porque el CSV histórico de Movilidad tiene eventos que la ventana del SDK no capturó, pero el esquema que consume el cliente es el mismo.
 
 ---
 
@@ -234,7 +245,12 @@ SentianceEventos (REST) ──► sentiance_etl.py ──► VictaTMTK (fuente d
 | Idempotencia | `MERGE` en SQL Server por clave `(viaje, usuario)` en cada upsert. |
 | Tolerancia a fallos | Si Movilidad está caída, log warning y se continúa. No bloquea el ETL principal. |
 | `polyline` | Codificado con la librería `polyline` de PyPI (`pip install polyline`). |
-| `ubicacion_inicio` / `ubicacion_fin` | Coordenadas `"lat,lon"` del primer/último waypoint. **No** se hace geocoding inverso. |
+| `distancia_m` | Metros × 100 (Movilidad guarda **centímetros**, entero). |
+| `maxima_velocidad` (Recorridos) | m/s × 3.6 (**km/h** entero). Formato+magnitud, no el valor exacto de su algoritmo. |
+| `velocidad_maxima` (Transporte) | `-1` (Movilidad no lo computa a nivel Transporte). |
+| `ubicacion_inicio` / `ubicacion_fin` | Objeto constante `{"country":"unknown",...}` — Movilidad **nunca** geocodifica. |
+| `puntos_recorrido` / `Eventos` | Reformateados al esquema JSON exacto de Movilidad (§2 y §6); timestamps en hora local del viaje. |
+| Criterio de paridad | **Formato (obligatorio) + orden de magnitud**, no el valor exacto — para no romper software del cliente que consume estas columnas. |
 | `EventosSignificantes` | Espejo idéntico de `Eventos` hasta que Operaciones defina umbrales (sección 7.3). Atención: la columna se llama `exceso_velocidad` (sin `_de_`). |
 | `anticipacion` | `-1` ("sin dato"; cloud-only ML, no expuesto por SDK). |
 | `celular_fijo` (Secundarios, numérico) / `pantalla` (Eventos, lista) | `-1` / `"[]"` (cloud-only ML). |
