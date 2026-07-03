@@ -1,13 +1,31 @@
 # Guía: Probar el ETL contra `VictaTMTK_ETL`
 
-> **Objetivo:** correr el ETL completo (incluido el bridge de Movilidad) contra una
-> copia real de producción, **sin tocar la base productiva `VictaTMTK`**.
+> **Objetivo:** correr todo el proceso contra una copia real de producción, **sin
+> tocar la base de verdad (`VictaTMTK`)**.
 >
-> `VictaTMTK_ETL` es una base sandbox en el mismo servidor RDS. Ya tiene ~78.000
-> registros reales en `SentianceEventos`, pero le faltan las tablas nuevas que el
-> ETL necesita. Esta guía las crea, corre el ETL y verifica el resultado.
+> `VictaTMTK_ETL` es una **base de prueba** (una copia) en el mismo servidor de
+> Amazon. Ya tiene ~78.000 registros reales, pero le faltan algunas tablas que el
+> proceso necesita. Esta guía las crea, corre el proceso y verifica el resultado.
 >
 > **Tiempo estimado:** 15–30 minutos (según cuánto tarde en procesar los 78k registros).
+
+---
+
+## Diccionario rápido (para no perderse)
+
+Antes de arrancar, tres términos que vas a ver todo el tiempo:
+
+- **El ETL** — el programa que agarra los registros crudos que manda la app
+  (guardados en la tabla `SentianceEventos`) y los transforma en tablas ordenadas
+  y consultables (viajes, eventos de manejo, contexto del usuario, etc.).
+- **Tablas "Stage-2"** — son justamente esas **tablas de destino donde el ETL
+  guarda los datos ya procesados** (`Trip`, `DrivingInsightsTrip`,
+  `UserContextHeader`, y 19 más). "Stage-2" es solo una etiqueta para
+  diferenciarlas de la tabla cruda de entrada. En esta base todavía no existen:
+  el primer paso de la guía las crea.
+- **El bridge de Movilidad** — un paso extra al final que **copia** los viajes ya
+  procesados hacia las tablas del sistema viejo Movilidad (`Transporte`,
+  `Eventos`, `Recorridos`, etc.), para que Movilidad las siga viendo.
 
 ---
 
@@ -58,7 +76,7 @@ terminal (tomará automáticamente la contraseña desde tu `.env.rds`):
 PWD_RDS=$(grep '^DB_PASSWORD=' .env.rds | cut -d= -f2-)
 
 cat > .env <<EOF
-# ===== Prueba del ETL contra la base sandbox VictaTMTK_ETL =====
+# ===== Prueba del ETL contra la base de prueba VictaTMTK_ETL =====
 DB_SERVER=ltkbase003.cjo9vciowl0y.us-east-1.rds.amazonaws.com
 DB_PORT=9433
 DB_USER=ClaudioVicta
@@ -77,18 +95,20 @@ EOF
 echo "Listo. .env creado apuntando a VictaTMTK_ETL."
 ```
 
-> **¿Por qué el bridge apunta a `VictaTMTK_ETL`?** Porque querés probar el bridge
-> dentro de la misma base. Las tablas destino del bridge (`Transporte`, `Eventos`,
-> `Recorridos`, etc.) ya existen en `VictaTMTK_ETL`, así que el bridge escribe ahí
-> mismo. Si algún día querés probar contra la Movilidad real, cambiás estas 5
-> variables `MOVILIDAD_*`.
+> **¿Por qué el bridge apunta a `VictaTMTK_ETL`?** Porque querés probar esa copia
+> hacia Movilidad dentro de la misma base. Las tablas destino (`Transporte`,
+> `Eventos`, `Recorridos`, etc.) ya existen en `VictaTMTK_ETL`, así que el bridge
+> escribe ahí mismo. Si algún día querés probar contra la Movilidad de verdad,
+> cambiás estas 5 variables `MOVILIDAD_*`.
 
 ---
 
 ## Paso 2 — Crear el esquema de prueba
 
-Este comando crea las 22 tablas que faltan y agrega la columna `is_processed`.
-Es **idempotente**: podés correrlo las veces que quieras sin romper nada.
+Este comando crea las 22 tablas que faltan (las tablas de destino "Stage-2") y
+agrega la columna `is_processed`, que es la que marca qué registros ya se
+procesaron. Podés correrlo las veces que quieras sin romper nada: si algo ya
+está creado, lo saltea.
 
 ```bash
 .venv/bin/python development/bootstrap_etl_test_db.py
@@ -108,6 +128,9 @@ Salida del ETL (Stage-2):
 La base está lista para correr el ETL.
 ```
 
+(Donde dice "Stage-2" son las tablas de destino que mencionamos en el diccionario;
+todavía están en 0 porque el ETL no corrió aún.)
+
 Si dice **`22 / 22`** y **`is_processed: sí`**, quedó todo listo. Si no, revisá los
 mensajes de error de más arriba (casi siempre es la conexión o la contraseña).
 
@@ -125,15 +148,15 @@ Sirve para confirmar que todo funciona antes de largar los 78k:
 Mirá que termine **sin errores**. Si hay filas problemáticas, el ETL las manda a la
 tabla `SentianceEventos_Errors` y sigue — no se cae.
 
-**3.2. Procesar toda la cola.** Cuando la primera pasada anduvo bien, largá el pipeline
-completo, que itera hasta vaciar la cola (los ~78k registros):
+**3.2. Procesar todo.** Cuando la primera pasada anduvo bien, largá el proceso completo,
+que repite hasta terminar con todos los registros pendientes (los ~78k):
 
 ```bash
 .venv/bin/python etl/run_full_pipeline.py
 ```
 
-Esto puede tardar varios minutos. El bridge de Movilidad se dispara **automáticamente**
-al final de cada lote que haya procesado viajes nuevos.
+Esto puede tardar varios minutos. La copia hacia Movilidad (el bridge) se dispara
+**automáticamente** al final de cada tanda que haya procesado viajes nuevos.
 
 ---
 
@@ -148,12 +171,13 @@ cambia nada, solo te muestra el resumen actualizado con los conteos:
 
 Ahora deberías ver:
 
-- **`0 pendientes de procesar`** (o un número muy chico) → la cola se procesó.
-- **Salida del ETL (Stage-2)** con números > 0 en `SdkSourceEvent`, `Trip`,
-  `DrivingInsightsTrip`, `UserContextHeader`, etc.
-- **Salida del bridge Movilidad** con `Transporte`, `Recorridos`, `Eventos` poblados.
+- **`0 pendientes de procesar`** (o un número muy chico) → se procesó todo.
+- **Salida del ETL (las tablas de destino)** con números > 0 en `SdkSourceEvent`,
+  `Trip`, `DrivingInsightsTrip`, `UserContextHeader`, etc.
+- **Salida del bridge Movilidad** (la copia hacia el sistema viejo) con
+  `Transporte`, `Recorridos`, `Eventos` poblados.
 
-Si esos números crecieron respecto al Paso 2, **el ETL y el bridge funcionaron**. ✅
+Si esos números crecieron respecto al Paso 2, **el proceso funcionó de punta a punta**. ✅
 
 > **¿Quedaron filas con error?** El ETL nunca se cae por un registro malo: lo registra
 > en `SentianceEventos_Errors`. Si querés ver cuántos hubo, pedile a alguien con acceso
@@ -164,10 +188,11 @@ Si esos números crecieron respecto al Paso 2, **el ETL y el bridge funcionaron*
 
 ## Paso 5 — Volver a probar desde cero (opcional)
 
-Si querés repetir la prueba limpia (por ejemplo, después de cambiar código del ETL),
-usá `--reset`. Esto **borra solo la salida del ETL** (las 22 tablas Stage-2) y vuelve a
-marcar los 78k registros como pendientes. **No borra** los registros originales de
-`SentianceEventos` ni los datos de las tablas legacy:
+Si querés repetir la prueba desde cero (por ejemplo, después de cambiar código del
+ETL), usá `--reset`. Esto **borra solo lo que generó el ETL** (las 22 tablas de
+destino) y vuelve a marcar los 78k registros como pendientes. **No borra** los
+registros originales de `SentianceEventos` ni los datos de las tablas del sistema
+viejo:
 
 ```bash
 .venv/bin/python development/bootstrap_etl_test_db.py --reset
@@ -175,9 +200,10 @@ marcar los 78k registros como pendientes. **No borra** los registros originales 
 
 Después repetí el Paso 3.
 
-> **Nota sobre el bridge:** las tablas del bridge (`Transporte`, `Eventos`, ...) se
-> actualizan con MERGE idempotente, así que volver a correr el ETL simplemente las
-> re-sincroniza. `--reset` no las vacía (contienen datos espejo que conviene conservar).
+> **Nota sobre el bridge:** las tablas de Movilidad (`Transporte`, `Eventos`, ...) se
+> actualizan sin duplicar (si un viaje ya está, lo actualiza en vez de repetirlo), así
+> que volver a correr el ETL simplemente las vuelve a sincronizar. `--reset` no las
+> vacía, porque contienen datos que conviene conservar.
 
 ---
 
