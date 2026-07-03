@@ -414,6 +414,54 @@ def test_puntajes_primarios_atencion_uses_focus_score():
     assert 0.75 not in params, "attention_score (0.75) no debe aparecer"
 
 
+# ---------------------------------------------------------------------------
+# ocupante: traducción al vocabulario español de Movilidad
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "sdk_role, expected",
+    [
+        ("DRIVER", "Conductor"),
+        ("PASSENGER", "Pasajero"),
+        ("UNAVAILABLE", "No disponible"),
+        ("driver", "Conductor"),   # case-insensitive
+        (None, None),              # None se conserva None
+    ],
+)
+def test_ocupante_movilidad_translates_sdk_vocabulary(sdk_role, expected):
+    bridge, *_ = _make_bridge()
+    assert bridge._ocupante_movilidad(sdk_role) == expected
+
+
+def test_ocupante_movilidad_unknown_role_falls_back_raw_and_warns(caplog):
+    import logging
+
+    bridge, *_ = _make_bridge()
+    with caplog.at_level(logging.WARNING):
+        result = bridge._ocupante_movilidad("PILOT")
+    assert result == "PILOT"
+    assert any("sin mapeo" in r.getMessage() for r in caplog.records)
+
+
+def test_upsert_conduccion_writes_spanish_role():
+    """Un viaje con occupant_role='DRIVER' debe escribir 'Conductor' en Conduccion."""
+    bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
+    src_cursor.fetchone.side_effect = [_trip_row(), (0,), None]
+    src_cursor.fetchall.side_effect = [[], [], [], [], [], []]
+
+    bridge.sync_trips({"trip-xyz"})
+
+    conduccion = [
+        call for call in dst_cursor.execute.call_args_list
+        if "MERGE Conduccion" in call.args[0]
+    ]
+    assert conduccion, "no se ejecutó el MERGE de Conduccion"
+    params = conduccion[0].args[1]
+    assert "Conductor" in params
+    assert "DRIVER" not in params
+
+
 def test_eventos_y_significantes_son_espejo():
     """Eventos y EventosSignificantes deben recibir los mismos arrays JSON."""
     bridge, src_conn, src_cursor, dst_conn, dst_cursor = _make_bridge()
@@ -482,7 +530,7 @@ def test_polyline_is_passed_into_recorridos_upsert():
 
 
 def test_upsert_conduccion_merges_occupant_role():
-    """_upsert_conduccion debe pasar occupant_role como `ocupante`."""
+    """_upsert_conduccion debe pasar occupant_role traducido como `ocupante`."""
     bridge, *_, dst_cursor = _make_bridge()
     trip = {"occupant_role": "DRIVER"}
     bridge._upsert_conduccion("trip-xyz", "user-abc", trip)
@@ -490,7 +538,7 @@ def test_upsert_conduccion_merges_occupant_role():
     call = dst_cursor.execute.call_args
     sql, params = call.args[0], call.args[1]
     assert "MERGE Conduccion" in sql
-    assert params == ["trip-xyz", "user-abc", "DRIVER", "user-abc", "trip-xyz", "DRIVER"]
+    assert params == ["trip-xyz", "user-abc", "Conductor", "user-abc", "trip-xyz", "Conductor"]
 
 
 def test_upsert_conduccion_accepts_none_occupant():

@@ -116,6 +116,29 @@ class MovilidadBridge:
             return raw
         return modo
 
+    # Vocabulario de `ocupante` (rol del ocupante) que espera Movilidad, en español.
+    # El SDK entrega DRIVER / PASSENGER / UNAVAILABLE; Movilidad los almacena traducidos.
+    # Verificado contra el Movilidad real (AROCLNDSQL): son los 3 únicos valores.
+    OCUPANTE_MAP: dict[str, str] = {
+        "DRIVER": "Conductor",
+        "PASSENGER": "Pasajero",
+        "UNAVAILABLE": "No disponible",
+    }
+
+    def _ocupante_movilidad(self, occupant_role: Optional[str]) -> Optional[str]:
+        """Traduce el rol del ocupante del SDK al vocabulario español de Movilidad."""
+        if occupant_role is None:
+            return None
+        raw = occupant_role.upper()
+        ocupante = self.OCUPANTE_MAP.get(raw)
+        if ocupante is None:
+            logger.warning(
+                "MovilidadBridge: rol de ocupante sin mapeo '%s'; se escribe crudo. "
+                "Agregarlo a OCUPANTE_MAP.", raw,
+            )
+            return raw
+        return ocupante
+
     def __init__(
         self,
         victatmtk_conn: pyodbc.Connection,
@@ -669,7 +692,7 @@ class MovilidadBridge:
         WHEN MATCHED THEN UPDATE SET ocupante = ?
         WHEN NOT MATCHED THEN INSERT (usuario, viaje, ocupante) VALUES (?, ?, ?);
         """
-        ocupante = trip.get("occupant_role")
+        ocupante = self._ocupante_movilidad(trip.get("occupant_role"))
         self._exec_dst(sql, [viaje, uid, ocupante, uid, viaje, ocupante])
 
     def _upsert_choque(self, uid: str) -> None:
