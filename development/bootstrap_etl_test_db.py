@@ -290,7 +290,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    load_dotenv()
+    # override=True: the .env file wins over any DB_* vars already exported in the
+    # shell (e.g. a local-dev config in ~/.zshrc), so the guard below actually sees
+    # what the .env says instead of a stale shell export.
+    load_dotenv(override=True)
     conn_str, db_name = _build_conn_str()
 
     if db_name != "VictaTMTK_ETL" and not args.force:

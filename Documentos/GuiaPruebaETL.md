@@ -55,6 +55,13 @@ Necesitás, en la máquina donde vas a correr esto:
 > Nunca `VictaTMTK` a secas (esa es la base productiva). El script de preparación
 > se niega a correr si apuntás a la base equivocada, así que es difícil equivocarse.
 
+> ℹ️ **Sobre el `.env` y tu shell:** el ETL y el script de preparación cargan el
+> `.env` con `override=True`, así que **el `.env` manda** por encima de cualquier
+> variable `DB_*` / `MOVILIDAD_*` que tengas exportada en tu terminal (por ejemplo
+> desde `~/.zshrc`). No hace falta hacer `unset` de nada: lo que pongas en el `.env`
+> es lo que se usa. Igual, el script imprime a qué base se conecta (`Conectando a
+> VictaTMTK_ETL ...`) para que lo confirmes de un vistazo.
+
 ---
 
 ## Paso 1 — Preparar el archivo `.env`

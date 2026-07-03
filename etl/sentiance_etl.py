@@ -53,8 +53,13 @@ import traceback
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load database credentials from the local .env file
-load_dotenv()
+# Load database credentials from the local .env file.
+# override=True makes .env the single source of truth: it wins over any DB_* /
+# MOVILIDAD_* variables already exported in the shell profile. Without this, a
+# stale export (e.g. a local-dev DB_NAME in ~/.zshrc) would silently override the
+# .env and make the ETL run against the wrong database. In production (Lambda) no
+# .env file is bundled, so this is a no-op there and the Lambda env vars are used.
+load_dotenv(override=True)
 
 # Optional Movilidad bridge — temporary projection layer.
 # See movilidad_bridge.py for design notes and removal instructions.

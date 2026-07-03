@@ -31,7 +31,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import pyodbc
 from dotenv import load_dotenv
 
-load_dotenv()
+# override=True: .env is the source of truth, winning over any DB_* / MOVILIDAD_*
+# variables already exported in the shell (avoids silently hitting the wrong DB).
+load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,
