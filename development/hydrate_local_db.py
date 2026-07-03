@@ -27,7 +27,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-logger = logger.getLogger("Hydrator")
+logger = logging.getLogger("Hydrator")
 
 
 def _run_sql_file(cursor, sql_file: str):
