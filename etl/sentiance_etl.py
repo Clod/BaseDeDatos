@@ -364,15 +364,51 @@ class SentianceETL:
         scores = payload.get("safetyScores", {})
         trip_id = self.upsert_trip(sid, uid, transport)
 
-        # DrivingInsightsTrip: parent-of-safety-events, FK->Trip, no geo/waypoints
-        sql = """INSERT INTO DrivingInsightsTrip (sdk_source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
-                 smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
-                 harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score,
-                 distance_meters, occupant_role, transport_tags_json, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())"""
+        # DrivingInsightsTrip: parent-of-safety-events, FK->Trip, no geo/waypoints.
+        # Idempotent MERGE on (canonical_transport_event_id, sentiance_user_id): a
+        # reprocess (is_processed reset to 0 and re-run) UPDATEs the existing row in
+        # place instead of inserting a duplicate parent — which would otherwise double
+        # the child safety-event counts resolved through this row's FK. created_at is
+        # preserved on match; only the INSERT branch stamps it.
+        sql = """
+        MERGE DrivingInsightsTrip AS target
+        USING (SELECT ? AS cid, ? AS uid) AS source
+        ON target.canonical_transport_event_id = source.cid AND target.sentiance_user_id = source.uid
+        WHEN MATCHED THEN
+            UPDATE SET sdk_source_event_id = ?, trip_id = ?, smooth_score = ?, focus_score = ?,
+                       legal_score = ?, call_while_moving_score = ?, overall_score = ?, harsh_braking_score = ?,
+                       harsh_turning_score = ?, harsh_acceleration_score = ?, wrong_way_driving_score = ?,
+                       attention_score = ?, distance_meters = ?, occupant_role = ?, transport_tags_json = ?
+        WHEN NOT MATCHED THEN
+            INSERT (sdk_source_event_id, trip_id, sentiance_user_id, canonical_transport_event_id,
+                    smooth_score, focus_score, legal_score, call_while_moving_score, overall_score, harsh_braking_score,
+                    harsh_turning_score, harsh_acceleration_score, wrong_way_driving_score, attention_score,
+                    distance_meters, occupant_role, transport_tags_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE());
+        """
+        _tags = self.compress_data(transport.get("transportTags"))
         self.cursor.execute(
             sql,
             (
+                transport.get("id"),
+                uid,
+                # WHEN MATCHED
+                sid,
+                trip_id,
+                scores.get("smoothScore"),
+                scores.get("focusScore"),
+                scores.get("legalScore"),
+                scores.get("callWhileMovingScore"),
+                scores.get("overallScore"),
+                scores.get("harshBrakingScore"),
+                scores.get("harshTurningScore"),
+                scores.get("harshAccelerationScore"),
+                scores.get("wrongWayDrivingScore"),
+                scores.get("attentionScore"),
+                transport.get("distance"),
+                transport.get("occupantRole"),
+                _tags,
+                # WHEN NOT MATCHED
                 sid,
                 trip_id,
                 uid,
@@ -389,7 +425,7 @@ class SentianceETL:
                 scores.get("attentionScore"),
                 transport.get("distance"),
                 transport.get("occupantRole"),
-                self.compress_data(transport.get("transportTags")),
+                _tags,
             ),
         )
 
@@ -435,8 +471,13 @@ class SentianceETL:
             f"Found driving_insights_trip_id={di_trip_id}, inserting {len(payload.get('events', []))} events"
         )
         for e in payload.get("events", []):
+            # NOT EXISTS guard makes reprocessing idempotent: the same harsh event
+            # (parent + start epoch + type + magnitude) is never inserted twice.
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                """INSERT INTO DrivingInsightsHarshEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, magnitude, confidence, harsh_type, waypoints_json)
+                   SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                   WHERE NOT EXISTS (SELECT 1 FROM DrivingInsightsHarshEvent
+                                     WHERE driving_insights_trip_id = ? AND start_time_epoch = ? AND harsh_type = ?)""",
                 (
                     sid,
                     di_trip_id,
@@ -448,6 +489,9 @@ class SentianceETL:
                     e.get("confidence"),
                     e.get("type"),
                     self.compress_data(e.get("waypoints")),
+                    di_trip_id,
+                    e.get("startTimeEpoch"),
+                    e.get("type"),
                 ),
             )
 
@@ -477,8 +521,12 @@ class SentianceETL:
             return
         di_trip_id = di_res[0]
         for e in payload.get("events", []):
+            # NOT EXISTS guard: idempotent on reprocess by (parent, start/end epoch, call_state).
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                """INSERT INTO DrivingInsightsPhoneEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, call_state, waypoints_json)
+                   SELECT ?, ?, ?, ?, ?, ?, ?, ?
+                   WHERE NOT EXISTS (SELECT 1 FROM DrivingInsightsPhoneEvent
+                                     WHERE driving_insights_trip_id = ? AND start_time_epoch = ? AND end_time_epoch = ? AND call_state = ?)""",
                 (
                     sid,
                     di_trip_id,
@@ -488,6 +536,10 @@ class SentianceETL:
                     e.get("endTimeEpoch"),
                     e.get("callState"),
                     self.compress_data(e.get("waypoints")),
+                    di_trip_id,
+                    e.get("startTimeEpoch"),
+                    e.get("endTimeEpoch"),
+                    e.get("callState"),
                 ),
             )
 
@@ -516,8 +568,12 @@ class SentianceETL:
             return
         di_trip_id = di_res[0]
         for e in payload.get("events", []):
+            # NOT EXISTS guard: idempotent on reprocess by (parent, start/end epoch, hands_free_state).
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                """INSERT INTO DrivingInsightsCallEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, min_traveled_speed_mps, max_traveled_speed_mps, hands_free_state, waypoints_json)
+                   SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                   WHERE NOT EXISTS (SELECT 1 FROM DrivingInsightsCallEvent
+                                     WHERE driving_insights_trip_id = ? AND start_time_epoch = ? AND end_time_epoch = ? AND hands_free_state = ?)""",
                 (
                     sid,
                     di_trip_id,
@@ -529,6 +585,10 @@ class SentianceETL:
                     e.get("maxTraveledSpeedInMps"),
                     e.get("handsFreeState"),
                     self.compress_data(e.get("waypoints")),
+                    di_trip_id,
+                    e.get("startTimeEpoch"),
+                    e.get("endTimeEpoch"),
+                    e.get("handsFreeState"),
                 ),
             )
 
@@ -554,8 +614,12 @@ class SentianceETL:
             return
         di_trip_id = di_res[0]
         for e in payload.get("events", []):
+            # NOT EXISTS guard: idempotent on reprocess by (parent, start/end epoch).
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                """INSERT INTO DrivingInsightsSpeedingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json)
+                   SELECT ?, ?, ?, ?, ?, ?, ?
+                   WHERE NOT EXISTS (SELECT 1 FROM DrivingInsightsSpeedingEvent
+                                     WHERE driving_insights_trip_id = ? AND start_time_epoch = ? AND end_time_epoch = ?)""",
                 (
                     sid,
                     di_trip_id,
@@ -564,6 +628,9 @@ class SentianceETL:
                     self.format_ts(e.get("endTime")),
                     e.get("endTimeEpoch"),
                     self.compress_data(e.get("waypoints")),
+                    di_trip_id,
+                    e.get("startTimeEpoch"),
+                    e.get("endTimeEpoch"),
                 ),
             )
 
@@ -589,8 +656,12 @@ class SentianceETL:
             return
         di_trip_id = di_res[0]
         for e in payload.get("events", []):
+            # NOT EXISTS guard: idempotent on reprocess by (parent, start/end epoch).
             self.cursor.execute(
-                "INSERT INTO DrivingInsightsWrongWayDrivingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                """INSERT INTO DrivingInsightsWrongWayDrivingEvent (sdk_source_event_id, driving_insights_trip_id, start_time, start_time_epoch, end_time, end_time_epoch, waypoints_json)
+                   SELECT ?, ?, ?, ?, ?, ?, ?
+                   WHERE NOT EXISTS (SELECT 1 FROM DrivingInsightsWrongWayDrivingEvent
+                                     WHERE driving_insights_trip_id = ? AND start_time_epoch = ? AND end_time_epoch = ?)""",
                 (
                     sid,
                     di_trip_id,
@@ -599,6 +670,9 @@ class SentianceETL:
                     self.format_ts(e.get("endTime")),
                     e.get("endTimeEpoch"),
                     self.compress_data(e.get("waypoints")),
+                    di_trip_id,
+                    e.get("startTimeEpoch"),
+                    e.get("endTimeEpoch"),
                 ),
             )
 
