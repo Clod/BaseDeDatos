@@ -376,9 +376,10 @@ python etl/run_full_pipeline.py
 
 Targets the DB in `.env`. **Purge complete windows** (by `--uid` or a wide date
 range): a shared `Trip` is deleted when any targeted event created or last updated
-it, and is only rebuilt if its source events are reprocessed too. `UserMetadata`
-(keyed by user+label, no `SdkSourceEvent` link) is left untouched. Validated by
-`tests/regression/test_purge_reprocess.py`.
+it, and is only rebuilt if its source events are reprocessed too. `UserMetadata` is
+skipped by the purge but reprocess-safe on its own (`process_metadata` guards its
+INSERT with `NOT EXISTS` on user+label+value). Validated by
+`tests/regression/test_purge_reprocess.py` and `test_reprocess.py`.
 
 ### Why is Movilidad still empty after running the ETL?
 

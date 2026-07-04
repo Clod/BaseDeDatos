@@ -41,8 +41,10 @@ updated it; the trip is rebuilt only if its source events are reprocessed too.
 Target whole trips (by ``--uid`` or a wide ``--since/--until``), not arbitrary
 individual rows, or a trip may be dropped without being rebuilt.
 
-Not covered: ``UserMetadata`` is keyed by (user, label) with no SdkSourceEvent
-link, so it is left untouched; it is tiny and per-user.
+``UserMetadata`` has no SdkSourceEvent link so the purge skips it, but it does
+not need purging: ``process_metadata`` guards its INSERT with NOT EXISTS on
+(user, label, value), so reprocessing never duplicates it (distinct values for
+a label still accumulate on purpose).
 """
 
 from __future__ import annotations

@@ -143,9 +143,10 @@ python etl/run_full_pipeline.py
 
 Targets the DB in `.env`. **Purge complete windows** (by `--uid` or a wide date
 range) — a shared `Trip` is dropped when any targeted event created/updated it and
-is only rebuilt if its source events are reprocessed too. `UserMetadata`
-(keyed by user+label, no `SdkSourceEvent` link) is left untouched.
-Covered by `tests/regression/test_purge_reprocess.py`.
+is only rebuilt if its source events are reprocessed too. `UserMetadata` is skipped
+by the purge but is reprocess-safe on its own (`process_metadata` guards its INSERT
+with `NOT EXISTS` on user+label+value). Covered by
+`tests/regression/test_purge_reprocess.py` and `test_reprocess.py`.
 
 ---
 

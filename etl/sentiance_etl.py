@@ -859,8 +859,10 @@ class SentianceETL:
         """Stores a custom user metadata label-value pair into UserMetadata.
 
         Metadata records are arbitrary key-value tags set by the host application
-        (e.g. vehicle type, driver tier, fleet ID). Multiple records with the same
-        label are allowed; deduplication is the responsibility of the consumer.
+        (e.g. vehicle type, driver tier, fleet ID). Distinct values for a label
+        still accumulate (a value history is intentional), but an exact
+        (user, label, value) triple is never inserted twice: a NOT EXISTS guard
+        keeps reprocessing (is_processed reset + re-run) from duplicating rows.
 
         Special case: when label == 'organizacion' (case-insensitive), the value
         is also upserted into UserOrganization for multi-tenant filtering.
@@ -874,8 +876,11 @@ class SentianceETL:
         """
         label, val = payload.get("label"), payload.get("value")
         self.cursor.execute(
-            "INSERT INTO UserMetadata (sentiance_user_id, label, value, updated_at) VALUES (?, ?, ?, GETDATE())",
-            (uid, label, str(val)),
+            """INSERT INTO UserMetadata (sentiance_user_id, label, value, updated_at)
+               SELECT ?, ?, ?, GETDATE()
+               WHERE NOT EXISTS (SELECT 1 FROM UserMetadata
+                                 WHERE sentiance_user_id = ? AND label = ? AND value = ?)""",
+            (uid, label, str(val), uid, label, str(val)),
         )
         if label and label.lower() == "organizacion" and val:
             self._upsert_user_organization(uid, str(val))

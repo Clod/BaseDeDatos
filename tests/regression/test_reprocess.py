@@ -72,3 +72,37 @@ def test_reprocess_does_not_duplicate_driving_insights(local_db, pipeline_state)
         f"{dup_parents} (canonical_transport_event_id, sentiance_user_id) pair(s) "
         "have more than one DrivingInsightsTrip after reprocess"
     )
+
+
+def test_process_metadata_is_idempotent_but_keeps_value_history(local_db, pipeline_state) -> None:
+    """UserMetadata: re-sending an identical (user, label, value) inserts once;
+    a new value for the same label still accumulates (history is intentional)."""
+    uid = "test-metadata-idempotency-uid"
+    etl = harness.make_etl(local_db)
+    etl.connect()
+    try:
+        etl.cursor.execute("DELETE FROM UserMetadata WHERE sentiance_user_id = ?", (uid,))
+        etl.conn.commit()
+
+        # Same triple twice -> one row (reprocess is a no-op).
+        etl.process_metadata(uid, {"label": "vehicle_type", "value": "van"})
+        etl.process_metadata(uid, {"label": "vehicle_type", "value": "van"})
+        etl.conn.commit()
+        etl.cursor.execute(
+            "SELECT COUNT(*) FROM UserMetadata WHERE sentiance_user_id = ? AND label = 'vehicle_type'",
+            (uid,),
+        )
+        assert etl.cursor.fetchone()[0] == 1, "identical UserMetadata triple was duplicated"
+
+        # New value for the same label -> a second row (value history preserved).
+        etl.process_metadata(uid, {"label": "vehicle_type", "value": "truck"})
+        etl.conn.commit()
+        etl.cursor.execute(
+            "SELECT COUNT(*) FROM UserMetadata WHERE sentiance_user_id = ? AND label = 'vehicle_type'",
+            (uid,),
+        )
+        assert etl.cursor.fetchone()[0] == 2, "distinct UserMetadata value did not accumulate"
+    finally:
+        etl.cursor.execute("DELETE FROM UserMetadata WHERE sentiance_user_id = ?", (uid,))
+        etl.conn.commit()
+        etl.close()
