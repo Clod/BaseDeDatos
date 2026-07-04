@@ -118,6 +118,37 @@ Both `mssql` and `mssql-local` share this schema.
 
 ---
 
+## Reprocessing a Window
+
+The ETL processes each `SentianceEventos` row once (gated by `is_processed`).
+`Trip` and `DrivingInsightsTrip` are MERGE-idempotent, and the `DrivingInsights*`
+child tables are guarded with `NOT EXISTS`, so re-running them is safe. The other
+domain tables (Timeline, UserContext sub-tree, SdkStatus, UserActivity, ...) are
+append-only, so simply resetting `is_processed=0` and re-running would **duplicate**
+them.
+
+To reprocess a window cleanly, run **`scripts/purge_for_reprocess.py`** first. It
+deletes every downstream row produced by the targeted `SentianceEventos` rows
+(following the `SdkSourceEvent` audit link and the UserContext sub-tree), resets
+those rows to `is_processed=0`, and leaves a clean slate for the next ETL run.
+
+```bash
+# Preview what would be deleted (writes nothing)
+python scripts/purge_for_reprocess.py --since 2026-07-01 --until 2026-08-01 --dry-run
+
+# Purge, then reprocess
+python scripts/purge_for_reprocess.py --uid <sentianceid>   # or --ids / --since / --until
+python etl/run_full_pipeline.py
+```
+
+Targets the DB in `.env`. **Purge complete windows** (by `--uid` or a wide date
+range) — a shared `Trip` is dropped when any targeted event created/updated it and
+is only rebuilt if its source events are reprocessed too. `UserMetadata`
+(keyed by user+label, no `SdkSourceEvent` link) is left untouched.
+Covered by `tests/regression/test_purge_reprocess.py`.
+
+---
+
 ## Movilidad Bridge (Temporary)
 
 `movilidad_bridge.py` projects consolidated VictaTMTK data into the legacy Movilidad schema at the end of every ETL batch. Designed to be removed once Operaciones implements its own dedicated process.

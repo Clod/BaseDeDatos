@@ -100,6 +100,8 @@ corpus/cases/*.json ──┐  (170 eventos reales congelados, cargados con sus 
 | `test_snapshot.py` | Comparación golden + verificación de estado terminal; `--bless` |
 | `test_idempotency.py` | Un segundo pass sobre la cola vaciada no debe cambiar nada |
 | `test_orphan_ordering.py` | Hijo-antes-que-padre debe esperar, luego completarse |
+| `test_reprocess.py` | Resetear `is_processed` y reprocesar no debe duplicar el subárbol DrivingInsights (MERGE + guardas `NOT EXISTS`) |
+| `test_purge_reprocess.py` | `scripts/purge_for_reprocess.py` + reproceso: purga limpia y reconstrucción sin duplicados ni pérdidas |
 | `test_invariants.py` | Verdades estructurales + verificación de drift de cobertura del snapshot |
 | `golden/*.jsonl` | Un JSONL canónico por tabla — el estado bendecido |
 | `prompts/blessing_audit.md` | Prompt LLM para auditar un blessing |

@@ -38,6 +38,7 @@ etl/                        Production ETL code
 
 scripts/
   sync_movilidad.py         Backfill utility — syncs existing trips to Movilidad
+  purge_for_reprocess.py    Clean-slate purge of a window so it can be reprocessed
 
 development/                Local development tooling
   docker-compose.yml        Local SQL Server (Azure SQL Edge, ARM64-compatible)
@@ -349,6 +350,35 @@ python development/hydrate_local_db.py --recreate
 # 2. Run ETL — bridge fires automatically
 python etl/run_full_pipeline.py
 ```
+
+## Reprocessing a Window
+
+The ETL processes each `SentianceEventos` row once (gated by `is_processed`).
+`Trip` and `DrivingInsightsTrip` are MERGE-idempotent and the `DrivingInsights*`
+child tables are `NOT EXISTS`-guarded, so re-running them is safe — but the other
+domain tables (Timeline, UserContext sub-tree, SdkStatus, UserActivity, ...) are
+append-only, so just resetting `is_processed=0` and re-running would **duplicate**
+them.
+
+Run `scripts/purge_for_reprocess.py` first. It deletes every downstream row
+produced by the targeted `SentianceEventos` rows (following the `SdkSourceEvent`
+audit link and the UserContext sub-tree) and resets those rows to
+`is_processed=0`, leaving a clean slate.
+
+```bash
+# Preview only — counts what would be deleted, writes nothing
+python scripts/purge_for_reprocess.py --since 2026-07-01 --until 2026-08-01 --dry-run
+
+# Purge by user / ids / date range, then reprocess
+python scripts/purge_for_reprocess.py --uid <sentianceid>
+python etl/run_full_pipeline.py
+```
+
+Targets the DB in `.env`. **Purge complete windows** (by `--uid` or a wide date
+range): a shared `Trip` is deleted when any targeted event created or last updated
+it, and is only rebuilt if its source events are reprocessed too. `UserMetadata`
+(keyed by user+label, no `SdkSourceEvent` link) is left untouched. Validated by
+`tests/regression/test_purge_reprocess.py`.
 
 ### Why is Movilidad still empty after running the ETL?
 
